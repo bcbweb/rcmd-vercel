@@ -32,7 +32,7 @@ function createDefaultBlock(id: string, type: string, userId: string | undefined
 export default function EditProfilePage() {
 	const { supabase, session } = useSupabase();
 	const [blocks, setBlocks] = useState<ProfileBlock[]>([]);
-	const [username, setUsername] = useState<string>("");
+	const [username] = useState<string>("");
 	const [isLoading, setIsLoading] = useState(false);
 
 	// Fetch existing blocks on component mount
