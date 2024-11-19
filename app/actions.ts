@@ -19,53 +19,24 @@ export const signUpAction = async (formData: FormData) => {
 		);
 	}
 
-	// First, create the auth user
-	const { data: authData, error: authError } = await supabase.auth.signUp({
+	const { error } = await supabase.auth.signUp({
 		email,
 		password,
 		options: {
 			emailRedirectTo: `${origin}/auth/callback`,
-			data: {
-				profile_created: false, // Add metadata to track profile creation
-				onboarding_completed: false // Add metadata to track profile creation
-			}
 		},
 	});
 
-	if (authError) {
-		console.error(authError.code + " " + authError.message);
-		return encodedRedirect("error", "/sign-up", authError.message);
+	if (error) {
+		console.error(error.code + " " + error.message);
+		return encodedRedirect("error", "/sign-up", error.message);
+	} else {
+		return encodedRedirect(
+			"success",
+			"/sign-up",
+			"Thanks for signing up! Please check your email for a verification link.",
+		);
 	}
-
-	// If auth user was created successfully, create the profile
-	if (authData.user) {
-		const { error: profileError } = await supabase
-			.from('profiles')
-			.insert([
-				{
-					auth_user_id: authData.user.id,
-					email: authData.user.email,
-					// Add any other default profile fields you need
-				}
-			]);
-
-		if (profileError) {
-			console.error("Profile creation failed:", profileError);
-			// You might want to delete the auth user here if profile creation fails
-			// Or implement a cleanup job for auth users without profiles
-			return encodedRedirect(
-				"error",
-				"/sign-up",
-				"Account creation failed"
-			);
-		}
-	}
-
-	return encodedRedirect(
-		"success",
-		"/sign-up",
-		"Thanks for signing up! Please check your email for a verification link.",
-	);
 };
 
 export const signInAction = async (formData: FormData) => {
