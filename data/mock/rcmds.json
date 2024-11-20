@@ -1,0 +1,40 @@
+[
+  {
+    "id": "rcmd_007",
+    "title": "Quantum Computing Console",
+    "description": "Revolutionary home quantum computing device for enthusiasts and developers.",
+    "featured_image": "https://picsum.photos/seed/quantum/800/600",
+    "type": "product",
+    "tags": [
+      "technology",
+      "quantum-computing",
+      "gadgets",
+      "innovation"
+    ],
+    "like_count": null,
+    "save_count": null,
+    "share_count": null,
+    "view_count": null,
+    "created_at": "2024-04-15T14:20:00Z",
+    "updated_at": null,
+    "is_sponsored": null,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 999,
+      "max": 1999,
+      "currency": "USD"
+    },
+    "creator_id": null,
+    "owner_id": null,
+    "commission_rate": null,
+    "monetization_enabled": null,
+    "metadata": {},
+    "url": null,
+    "location": {},
+    "sponsor_details": {
+      "brand": "QuantumTech",
+      "campaign": "Future Computing"
+    }
+  }
+]

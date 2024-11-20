@@ -1,0 +1,212 @@
+[
+  {
+    "id": "1",
+    "auth_user_id": "auth0|1",
+    "profile_picture_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "John",
+    "last_name": "Doe",
+    "handle": "johndoe",
+    "email": "john.doe@example.com",
+    "bio": "Full-stack developer passionate about web3 and decentralized systems",
+    "tags": [
+      "developer",
+      "blockchain",
+      "react"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "johndoe",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  },
+  {
+    "id": "2",
+    "auth_user_id": "auth0|2",
+    "profile_picture_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "Sarah",
+    "last_name": "Smith",
+    "handle": "sarahcodes",
+    "email": "sarah.smith@example.com",
+    "bio": "UI/UX Designer turning ideas into beautiful, intuitive experiences",
+    "tags": [
+      "design",
+      "ui/ux",
+      "figma"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "sarahcodes",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  },
+  {
+    "id": "3",
+    "auth_user_id": "auth0|3",
+    "profile_picture_url": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "Mike",
+    "last_name": "Johnson",
+    "handle": "mikej",
+    "email": "mike.johnson@example.com",
+    "bio": "Product Manager bridging the gap between tech and business",
+    "tags": [
+      "product",
+      "startup",
+      "tech"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "mikej",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  },
+  {
+    "id": "4",
+    "auth_user_id": "auth0|4",
+    "profile_picture_url": "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "Amy",
+    "last_name": "Chen",
+    "handle": "amychen",
+    "email": "amy.chen@example.com",
+    "bio": "Data Scientist exploring the frontiers of AI and machine learning",
+    "tags": [
+      "data",
+      "AI",
+      "python"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "amychen",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  },
+  {
+    "id": "5",
+    "auth_user_id": "auth0|5",
+    "profile_picture_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "Raja",
+    "last_name": "Patel",
+    "handle": "rajap",
+    "email": "raja.patel@example.com",
+    "bio": "DevOps engineer specializing in cloud infrastructure and automation",
+    "tags": [
+      "devops",
+      "aws",
+      "kubernetes"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "rajap",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  },
+  {
+    "id": "6",
+    "auth_user_id": "auth0|6",
+    "profile_picture_url": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "Elena",
+    "last_name": "Rodriguez",
+    "handle": "elenarodz",
+    "email": "elena.rodriguez@example.com",
+    "bio": "Mobile app developer creating seamless experiences for iOS and Android",
+    "tags": [
+      "mobile",
+      "swift",
+      "kotlin"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "elenarodz",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  },
+  {
+    "id": "7",
+    "auth_user_id": "auth0|7",
+    "profile_picture_url": "https://images.unsplash.com/photo-1500048993953-d23a436266cf?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "Tom",
+    "last_name": "Wilson",
+    "handle": "tomw",
+    "email": "tom.wilson@example.com",
+    "bio": "Security researcher focused on blockchain and smart contract auditing",
+    "tags": [
+      "security",
+      "ethereum",
+      "defi"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "tomw",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  },
+  {
+    "id": "8",
+    "auth_user_id": "auth0|8",
+    "profile_picture_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "Lisa",
+    "last_name": "Kim",
+    "handle": "lisakim",
+    "email": "lisa.kim@example.com",
+    "bio": "Game developer passionate about VR/AR and immersive experiences",
+    "tags": [
+      "gaming",
+      "unity",
+      "vr"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "lisakim",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  },
+  {
+    "id": "9",
+    "auth_user_id": "auth0|9",
+    "profile_picture_url": "https://images.unsplash.com/photo-1489980557514-251d61e3eeb6?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "David",
+    "last_name": "Thompson",
+    "handle": "davidt",
+    "email": "david.thompson@example.com",
+    "bio": "Technical writer making complex concepts accessible to everyone",
+    "tags": [
+      "documentation",
+      "writing",
+      "education"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "davidt",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  },
+  {
+    "id": "10",
+    "auth_user_id": "auth0|10",
+    "profile_picture_url": "https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=200&h=200&fit=crop&crop=faces",
+    "first_name": "Nina",
+    "last_name": "Patel",
+    "handle": "ninap",
+    "email": "nina.patel@example.com",
+    "bio": "Frontend architect specializing in performance and accessibility",
+    "tags": [
+      "frontend",
+      "a11y",
+      "performance"
+    ],
+    "interests": null,
+    "location": null,
+    "is_onboarded": true,
+    "username": "ninap",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": null
+  }
+]
