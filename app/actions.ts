@@ -53,6 +53,16 @@ export const signInAction = async (formData: FormData) => {
 		return encodedRedirect("error", "/sign-in", error.message);
 	}
 
+	// Check onboarding status after successful sign in
+	const { data: profile } = await supabase
+		.from('profiles')
+		.select('is_onboarded')
+		.single();
+
+	if (!profile?.is_onboarded) {
+		return redirect("/protected/onboarding");
+	}
+
 	return redirect("/protected/profile");
 };
 

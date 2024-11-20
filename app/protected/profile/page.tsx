@@ -1,8 +1,8 @@
 "use client";
 
-import AddBlockButton from "@/components/profile/AddBlockButton";
-import ProfileBlocks from "@/components/profile/ProfileBlocks";
-import ShareButton from "@/components/profile/ShareButton";
+import AddBlockButton from "@/components/profile/add-block-button";
+import ProfileBlocks from "@/components/profile/profile-blocks";
+import ShareButton from "@/components/profile/share-button";
 import { useSupabase } from "@/components/providers/supabase-provider";
 import type { ProfileBlock } from "@/types";
 import { useCallback, useEffect, useState } from "react";
