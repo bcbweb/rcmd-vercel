@@ -1,0 +1,596 @@
+[
+  {
+    "id": "2927563a-376c-43a9-83c2-5388af72c897",
+    "owner_id": "040d12a5-2132-4b19-8d88-accd055fa637",
+    "name": "The Green Kitchen",
+    "slug": "the-green-kitchen",
+    "description": "Sustainable farm-to-table restaurant serving organic dishes made with locally-sourced ingredients.",
+    "type": "restaurant",
+    "status": "active",
+    "verification_status": "verified",
+    "email": "contact@thegreenkitchen.com",
+    "phone": "+1-555-0123",
+    "website": "https://thegreenkitchen.com",
+    "social_links": {
+      "x": "https://x.com/thegreenkitchen"
+    },
+    "primary_location": null,
+    "operating_hours": {
+      "friday": {
+        "open": "11:00",
+        "close": "23:00"
+      },
+      "monday": {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "sunday": {
+        "open": "10:00",
+        "close": "21:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "saturday": {
+        "open": "10:00",
+        "close": "23:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "22:00"
+      }
+    },
+    "logo_url": "https://api.dicebear.com/7.x/initials/svg?seed=The+Green+Kitchen",
+    "cover_photo_url": "https://picsum.photos/seed/kitchen123/800/600",
+    "photo_gallery": null,
+    "categories": null,
+    "tags": null,
+    "attributes": null,
+    "business_registration_number": null,
+    "tax_id": null,
+    "verification_documents": null,
+    "verified_at": null,
+    "rating_avg": 0,
+    "rating_count": 0,
+    "view_count": 0,
+    "rcmd_count": 0,
+    "stripe_account_id": null,
+    "payment_enabled": false,
+    "commission_rate": null,
+    "created_at": "2024-11-20 15:41:59.142162+00",
+    "updated_at": "2024-11-20 15:41:59.142162+00"
+  },
+  {
+    "id": "3927563b-376c-43a9-83c2-5388af72c898",
+    "owner_id": "040d12a5-2132-4b19-8d88-accd055fa638",
+    "name": "Bistro Luminescence",
+    "slug": "bistro-luminescence",
+    "description": "Intimate French bistro with romantic lighting and classic Parisian cuisine.",
+    "type": "restaurant",
+    "status": "active",
+    "verification_status": "verified",
+    "email": "contact@bistroluminescence.com",
+    "phone": "+1-555-0124",
+    "website": "https://bistroluminescence.com",
+    "social_links": {
+      "x": "https://x.com/bistroluminescence"
+    },
+    "primary_location": null,
+    "operating_hours": {
+      "friday": {
+        "open": "17:00",
+        "close": "23:00"
+      },
+      "monday": {
+        "open": "17:00",
+        "close": "22:00"
+      },
+      "sunday": {
+        "open": "17:00",
+        "close": "22:00"
+      },
+      "tuesday": {
+        "open": "17:00",
+        "close": "22:00"
+      },
+      "saturday": {
+        "open": "17:00",
+        "close": "23:00"
+      },
+      "thursday": {
+        "open": "17:00",
+        "close": "22:00"
+      },
+      "wednesday": {
+        "open": "17:00",
+        "close": "22:00"
+      }
+    },
+    "logo_url": "https://api.dicebear.com/7.x/initials/svg?seed=Bistro+Luminescence",
+    "cover_photo_url": "https://picsum.photos/seed/bistro234/800/600",
+    "photo_gallery": null,
+    "categories": null,
+    "tags": null,
+    "attributes": null,
+    "business_registration_number": null,
+    "tax_id": null,
+    "verification_documents": null,
+    "verified_at": null,
+    "rating_avg": 0,
+    "rating_count": 0,
+    "view_count": 0,
+    "rcmd_count": 0,
+    "stripe_account_id": null,
+    "payment_enabled": false,
+    "commission_rate": null,
+    "created_at": "2024-11-20 15:41:59.142162+00",
+    "updated_at": "2024-11-20 15:41:59.142162+00"
+  },
+  {
+    "id": "4927563c-376c-43a9-83c2-5388af72c899",
+    "owner_id": "040d12a5-2132-4b19-8d88-accd055fa639",
+    "name": "The Rustic Cork",
+    "slug": "the-rustic-cork",
+    "description": "Cozy wine bar featuring local vintages and artisanal cheese plates.",
+    "type": "bar",
+    "status": "active",
+    "verification_status": "verified",
+    "email": "info@therusticcork.com",
+    "phone": "+1-555-0125",
+    "website": "https://therusticcork.com",
+    "social_links": {
+      "x": "https://x.com/therusticcork"
+    },
+    "primary_location": null,
+    "operating_hours": {
+      "friday": {
+        "open": "16:00",
+        "close": "00:00"
+      },
+      "monday": {
+        "open": "16:00",
+        "close": "23:00"
+      },
+      "sunday": {
+        "open": "16:00",
+        "close": "22:00"
+      },
+      "tuesday": {
+        "open": "16:00",
+        "close": "23:00"
+      },
+      "saturday": {
+        "open": "16:00",
+        "close": "00:00"
+      },
+      "thursday": {
+        "open": "16:00",
+        "close": "23:00"
+      },
+      "wednesday": {
+        "open": "16:00",
+        "close": "23:00"
+      }
+    },
+    "logo_url": "https://api.dicebear.com/7.x/initials/svg?seed=The+Rustic+Cork",
+    "cover_photo_url": "https://picsum.photos/seed/wine345/800/600",
+    "photo_gallery": null,
+    "categories": null,
+    "tags": null,
+    "attributes": null,
+    "business_registration_number": null,
+    "tax_id": null,
+    "verification_documents": null,
+    "verified_at": null,
+    "rating_avg": 0,
+    "rating_count": 0,
+    "view_count": 0,
+    "rcmd_count": 0,
+    "stripe_account_id": null,
+    "payment_enabled": false,
+    "commission_rate": null,
+    "created_at": "2024-11-20 15:41:59.142162+00",
+    "updated_at": "2024-11-20 15:41:59.142162+00"
+  },
+  {
+    "id": "5927563d-376c-43a9-83c2-5388af72c900",
+    "owner_id": "040d12a5-2132-4b19-8d88-accd055fa640",
+    "name": "Moonlight Cafe",
+    "slug": "moonlight-cafe",
+    "description": "Late-night cafe serving specialty coffees and homemade desserts under string lights.",
+    "type": "cafe",
+    "status": "active",
+    "verification_status": "verified",
+    "email": "hello@moonlightcafe.com",
+    "phone": "+1-555-0126",
+    "website": "https://moonlightcafe.com",
+    "social_links": {
+      "x": "https://x.com/moonlightcafe"
+    },
+    "primary_location": null,
+    "operating_hours": {
+      "friday": {
+        "open": "18:00",
+        "close": "02:00"
+      },
+      "monday": {
+        "open": "18:00",
+        "close": "00:00"
+      },
+      "sunday": {
+        "open": "18:00",
+        "close": "00:00"
+      },
+      "tuesday": {
+        "open": "18:00",
+        "close": "00:00"
+      },
+      "saturday": {
+        "open": "18:00",
+        "close": "02:00"
+      },
+      "thursday": {
+        "open": "18:00",
+        "close": "00:00"
+      },
+      "wednesday": {
+        "open": "18:00",
+        "close": "00:00"
+      }
+    },
+    "logo_url": "https://api.dicebear.com/7.x/initials/svg?seed=Moonlight+Cafe",
+    "cover_photo_url": "https://picsum.photos/seed/cafe456/800/600",
+    "photo_gallery": null,
+    "categories": null,
+    "tags": null,
+    "attributes": null,
+    "business_registration_number": null,
+    "tax_id": null,
+    "verification_documents": null,
+    "verified_at": null,
+    "rating_avg": 0,
+    "rating_count": 0,
+    "view_count": 0,
+    "rcmd_count": 0,
+    "stripe_account_id": null,
+    "payment_enabled": false,
+    "commission_rate": null,
+    "created_at": "2024-11-20 15:41:59.142162+00",
+    "updated_at": "2024-11-20 15:41:59.142162+00"
+  },
+  {
+    "id": "6927563e-376c-43a9-83c2-5388af72c901",
+    "owner_id": "040d12a5-2132-4b19-8d88-accd055fa641",
+    "name": "The Brick Oven",
+    "slug": "the-brick-oven",
+    "description": "Artisanal pizzeria with wood-fired pizzas and rustic Italian ambiance.",
+    "type": "restaurant",
+    "status": "active",
+    "verification_status": "verified",
+    "email": "orders@thebrickoven.com",
+    "phone": "+1-555-0127",
+    "website": "https://thebrickoven.com",
+    "social_links": {
+      "x": "https://x.com/thebrickoven"
+    },
+    "primary_location": null,
+    "operating_hours": {
+      "friday": {
+        "open": "12:00",
+        "close": "23:00"
+      },
+      "monday": {
+        "open": "12:00",
+        "close": "22:00"
+      },
+      "sunday": {
+        "open": "12:00",
+        "close": "21:00"
+      },
+      "tuesday": {
+        "open": "12:00",
+        "close": "22:00"
+      },
+      "saturday": {
+        "open": "12:00",
+        "close": "23:00"
+      },
+      "thursday": {
+        "open": "12:00",
+        "close": "22:00"
+      },
+      "wednesday": {
+        "open": "12:00",
+        "close": "22:00"
+      }
+    },
+    "logo_url": "https://api.dicebear.com/7.x/initials/svg?seed=The+Brick+Oven",
+    "cover_photo_url": "https://picsum.photos/seed/pizza567/800/600",
+    "photo_gallery": null,
+    "categories": null,
+    "tags": null,
+    "attributes": null,
+    "business_registration_number": null,
+    "tax_id": null,
+    "verification_documents": null,
+    "verified_at": null,
+    "rating_avg": 0,
+    "rating_count": 0,
+    "view_count": 0,
+    "rcmd_count": 0,
+    "stripe_account_id": null,
+    "payment_enabled": false,
+    "commission_rate": null,
+    "created_at": "2024-11-20 15:41:59.142162+00",
+    "updated_at": "2024-11-20 15:41:59.142162+00"
+  },
+  {
+    "id": "7927563f-376c-43a9-83c2-5388af72c902",
+    "owner_id": "040d12a5-2132-4b19-8d88-accd055fa642",
+    "name": "The Copper Kettle",
+    "slug": "the-copper-kettle",
+    "description": "Traditional British pub with craft beers and hearty comfort food.",
+    "type": "pub",
+    "status": "active",
+    "verification_status": "verified",
+    "email": "info@thecopperkettle.com",
+    "phone": "+1-555-0128",
+    "website": "https://thecopperkettle.com",
+    "social_links": {
+      "x": "https://x.com/copperkettle"
+    },
+    "primary_location": null,
+    "operating_hours": {
+      "friday": {
+        "open": "11:00",
+        "close": "01:00"
+      },
+      "monday": {
+        "open": "11:00",
+        "close": "23:00"
+      },
+      "sunday": {
+        "open": "12:00",
+        "close": "22:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "23:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "01:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "23:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "23:00"
+      }
+    },
+    "logo_url": "https://api.dicebear.com/7.x/initials/svg?seed=The+Copper+Kettle",
+    "cover_photo_url": "https://picsum.photos/seed/pub678/800/600",
+    "photo_gallery": null,
+    "categories": null,
+    "tags": null,
+    "attributes": null,
+    "business_registration_number": null,
+    "tax_id": null,
+    "verification_documents": null,
+    "verified_at": null,
+    "rating_avg": 0,
+    "rating_count": 0,
+    "view_count": 0,
+    "rcmd_count": 0,
+    "stripe_account_id": null,
+    "payment_enabled": false,
+    "commission_rate": null,
+    "created_at": "2024-11-20 15:41:59.142162+00",
+    "updated_at": "2024-11-20 15:41:59.142162+00"
+  },
+  {
+    "id": "8927563g-376c-43a9-83c2-5388af72c903",
+    "owner_id": "040d12a5-2132-4b19-8d88-accd055fa643",
+    "name": "Sweet & Savory",
+    "slug": "sweet-and-savory",
+    "description": "Charming bakery cafe offering fresh pastries and light lunch options.",
+    "type": "bakery",
+    "status": "active",
+    "verification_status": "verified",
+    "email": "hello@sweetandsavory.com",
+    "phone": "+1-555-0129",
+    "website": "https://sweetandsavory.com",
+    "social_links": {
+      "x": "https://x.com/sweetandsavory"
+    },
+    "primary_location": null,
+    "operating_hours": {
+      "friday": {
+        "open": "07:00",
+        "close": "19:00"
+      },
+      "monday": {
+        "open": "07:00",
+        "close": "18:00"
+      },
+      "sunday": {
+        "open": "08:00",
+        "close": "16:00"
+      },
+      "tuesday": {
+        "open": "07:00",
+        "close": "18:00"
+      },
+      "saturday": {
+        "open": "07:00",
+        "close": "19:00"
+      },
+      "thursday": {
+        "open": "07:00",
+        "close": "18:00"
+      },
+      "wednesday": {
+        "open": "07:00",
+        "close": "18:00"
+      }
+    },
+    "logo_url": "https://api.dicebear.com/7.x/initials/svg?seed=Sweet+And+Savory",
+    "cover_photo_url": "https://picsum.photos/seed/bakery789/800/600",
+    "photo_gallery": null,
+    "categories": null,
+    "tags": null,
+    "attributes": null,
+    "business_registration_number": null,
+    "tax_id": null,
+    "verification_documents": null,
+    "verified_at": null,
+    "rating_avg": 0,
+    "rating_count": 0,
+    "view_count": 0,
+    "rcmd_count": 0,
+    "stripe_account_id": null,
+    "payment_enabled": false,
+    "commission_rate": null,
+    "created_at": "2024-11-20 15:41:59.142162+00",
+    "updated_at": "2024-11-20 15:41:59.142162+00"
+  },
+  {
+    "id": "9927563h-376c-43a9-83c2-5388af72c904",
+    "owner_id": "040d12a5-2132-4b19-8d88-accd055fa644",
+    "name": "Sushi Lantern",
+    "slug": "sushi-lantern",
+    "description": "Modern Japanese restaurant specializing in creative sushi rolls and sake.",
+    "type": "restaurant",
+    "status": "active",
+    "verification_status": "verified",
+    "email": "contact@sushilantern.com",
+    "phone": "+1-555-0130",
+    "website": "https://sushilantern.com",
+    "social_links": {
+      "x": "https://x.com/sushilantern"
+    },
+    "primary_location": null,
+    "operating_hours": {
+      "friday": {
+        "open": "11:30",
+        "close": "22:30"
+      },
+      "monday": {
+        "open": "11:30",
+        "close": "21:30"
+      },
+      "sunday": {
+        "open": "12:00",
+        "close": "21:00"
+      },
+      "tuesday": {
+        "open": "11:30",
+        "close": "21:30"
+      },
+      "saturday": {
+        "open": "11:30",
+        "close": "22:30"
+      },
+      "thursday": {
+        "open": "11:30",
+        "close": "21:30"
+      },
+      "wednesday": {
+        "open": "11:30",
+        "close": "21:30"
+      }
+    },
+    "logo_url": "https://api.dicebear.com/7.x/initials/svg?seed=Sushi+Lantern",
+    "cover_photo_url": "https://picsum.photos/seed/sushi890/800/600",
+    "photo_gallery": null,
+    "categories": null,
+    "tags": null,
+    "attributes": null,
+    "business_registration_number": null,
+    "tax_id": null,
+    "verification_documents": null,
+    "verified_at": null,
+    "rating_avg": 0,
+    "rating_count": 0,
+    "view_count": 0,
+    "rcmd_count": 0,
+    "stripe_account_id": null,
+    "payment_enabled": false,
+    "commission_rate": null,
+    "created_at": "2024-11-20 15:41:59.142162+00",
+    "updated_at": "2024-11-20 15:41:59.142162+00"
+  },
+  {
+    "id": "0927563i-376c-43a9-83c2-5388af72c905",
+    "owner_id": "040d12a5-2132-4b19-8d88-accd055fa645",
+    "name": "The Olive Branch",
+    "slug": "the-olive-branch",
+    "description": "Mediterranean restaurant with a garden patio and fresh seasonal menu.",
+    "type": "restaurant",
+    "status": "active",
+    "verification_status": "verified",
+    "email": "info@theolivebranch.com",
+    "phone": "+1-555-0131",
+    "website": "https://theolivebranch.com",
+    "social_links": {
+      "x": "https://x.com/olivebranch"
+    },
+    "primary_location": null,
+    "operating_hours": {
+      "friday": {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "monday": {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      "sunday": {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      "tuesday": {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      "saturday": {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "thursday": {
+        "open": "11:00",
+        "close": "21:00"
+      },
+      "wednesday": {
+        "open": "11:00",
+        "close": "21:00"
+      }
+    },
+    "logo_url": "https://api.dicebear.com/7.x/initials/svg?seed=The+Olive+Branch",
+    "cover_photo_url": "https://picsum.photos/seed/olive901/800/600",
+    "photo_gallery": null,
+    "categories": null,
+    "tags": null,
+    "attributes": null,
+    "business_registration_number": null,
+    "tax_id": null,
+    "verification_documents": null,
+    "verified_at": null,
+    "rating_avg": 0,
+    "rating_count": 0,
+    "view_count": 0,
+    "rcmd_count": 0,
+    "stripe_account_id": null,
+    "payment_enabled": false,
+    "commission_rate": null,
+    "created_at": "2024-11-20 15:41:59.142162+00",
+    "updated_at": "2024-11-20 15:41:59.142162+00"
+  }
+]

@@ -1,5 +1,46 @@
 [
   {
+    "id": "rcmd_001",
+    "title": "Coastal Meditation Retreat",
+    "description": "3-day mindfulness retreat on the rocky shores of Maine with expert instructors.",
+    "featured_image": "https://picsum.photos/seed/retreat/800/600",
+    "type": "event",
+    "tags": [
+      "wellness",
+      "meditation",
+      "nature",
+      "mindfulness"
+    ],
+    "like_count": 342,
+    "save_count": 89,
+    "share_count": 56,
+    "view_count": 1205,
+    "created_at": "2024-03-10T09:00:00Z",
+    "updated_at": null,
+    "is_sponsored": false,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 599,
+      "max": 899,
+      "currency": "USD"
+    },
+    "creator_id": "usr_789",
+    "owner_id": "org_123",
+    "commission_rate": null,
+    "monetization_enabled": true,
+    "metadata": {
+      "duration": "3 days",
+      "location": "Acadia, Maine"
+    },
+    "url": "/events/coastal-meditation-retreat",
+    "location": {
+      "city": "Bar Harbor",
+      "state": "Maine",
+      "country": "USA"
+    }
+  },
+  {
     "id": "rcmd_007",
     "title": "Quantum Computing Console",
     "description": "Revolutionary home quantum computing device for enthusiasts and developers.",
@@ -36,5 +77,309 @@
       "brand": "QuantumTech",
       "campaign": "Future Computing"
     }
+  },
+  {
+    "id": "rcmd_008",
+    "title": "Mountain Photography Workshop",
+    "description": "2-day intensive workshop in capturing stunning mountain landscapes.",
+    "featured_image": "https://picsum.photos/seed/mountain/800/600",
+    "type": "event",
+    "tags": [
+      "photography",
+      "mountains",
+      "workshop",
+      "outdoor"
+    ],
+    "like_count": 245,
+    "save_count": 167,
+    "share_count": 42,
+    "view_count": 892,
+    "created_at": "2024-04-18T10:30:00Z",
+    "updated_at": null,
+    "is_sponsored": false,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 399,
+      "max": 499,
+      "currency": "USD"
+    },
+    "creator_id": "usr_456",
+    "owner_id": "org_789",
+    "commission_rate": 10,
+    "monetization_enabled": true,
+    "metadata": {
+      "duration": "2 days",
+      "skill_level": "intermediate"
+    },
+    "url": "/events/mountain-photography-workshop",
+    "location": {
+      "city": "Boulder",
+      "state": "Colorado",
+      "country": "USA"
+    }
+  },
+  {
+    "id": "rcmd_009",
+    "title": "Smart Home Security Bundle",
+    "description": "Complete home security system with AI-powered monitoring.",
+    "featured_image": "https://picsum.photos/seed/security/800/600",
+    "type": "product",
+    "tags": [
+      "smart-home",
+      "security",
+      "technology",
+      "IoT"
+    ],
+    "like_count": 567,
+    "save_count": 234,
+    "share_count": 89,
+    "view_count": 2341,
+    "created_at": "2024-04-20T08:15:00Z",
+    "updated_at": null,
+    "is_sponsored": true,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 299,
+      "max": 799,
+      "currency": "USD"
+    },
+    "creator_id": "usr_234",
+    "owner_id": "org_567",
+    "commission_rate": 15,
+    "monetization_enabled": true,
+    "metadata": {
+      "warranty": "2 years",
+      "installation": "included"
+    },
+    "url": "/products/smart-home-security",
+    "location": {}
+  },
+  {
+    "id": "rcmd_010",
+    "title": "Virtual Reality Fitness Program",
+    "description": "Immersive VR workout experience with personal trainer.",
+    "featured_image": "https://picsum.photos/seed/vrfitness/800/600",
+    "type": "service",
+    "tags": [
+      "fitness",
+      "VR",
+      "technology",
+      "health"
+    ],
+    "like_count": 789,
+    "save_count": 432,
+    "share_count": 156,
+    "view_count": 3567,
+    "created_at": "2024-04-22T15:45:00Z",
+    "updated_at": null,
+    "is_sponsored": false,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 49,
+      "max": 99,
+      "currency": "USD"
+    },
+    "creator_id": "usr_890",
+    "owner_id": "org_345",
+    "commission_rate": 20,
+    "monetization_enabled": true,
+    "metadata": {
+      "subscription": "monthly",
+      "equipment": "included"
+    },
+    "url": "/services/vr-fitness",
+    "location": {}
+  },
+  {
+    "id": "rcmd_011",
+    "title": "Sustainable Fashion Workshop",
+    "description": "Learn eco-friendly fashion design and sustainable practices.",
+    "featured_image": "https://picsum.photos/seed/fashion/800/600",
+    "type": "event",
+    "tags": [
+      "fashion",
+      "sustainability",
+      "workshop",
+      "design"
+    ],
+    "like_count": 423,
+    "save_count": 198,
+    "share_count": 67,
+    "view_count": 1567,
+    "created_at": "2024-04-25T13:00:00Z",
+    "updated_at": null,
+    "is_sponsored": false,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 199,
+      "max": 299,
+      "currency": "USD"
+    },
+    "creator_id": "usr_567",
+    "owner_id": "org_901",
+    "commission_rate": 12,
+    "monetization_enabled": true,
+    "metadata": {
+      "duration": "1 day",
+      "materials": "included"
+    },
+    "url": "/events/sustainable-fashion-workshop",
+    "location": {
+      "city": "Portland",
+      "state": "Oregon",
+      "country": "USA"
+    }
+  },
+  {
+    "id": "rcmd_012",
+    "title": "AI Art Generator Pro",
+    "description": "Professional AI-powered art creation software suite.",
+    "featured_image": "https://picsum.photos/seed/aiart/800/600",
+    "type": "product",
+    "tags": [
+      "AI",
+      "art",
+      "software",
+      "creative"
+    ],
+    "like_count": 892,
+    "save_count": 456,
+    "share_count": 234,
+    "view_count": 4567,
+    "created_at": "2024-04-28T09:30:00Z",
+    "updated_at": null,
+    "is_sponsored": true,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 149,
+      "max": 399,
+      "currency": "USD"
+    },
+    "creator_id": "usr_123",
+    "owner_id": "org_456",
+    "commission_rate": 25,
+    "monetization_enabled": true,
+    "metadata": {
+      "license": "perpetual",
+      "updates": "1 year"
+    },
+    "url": "/products/ai-art-generator",
+    "location": {}
+  },
+  {
+    "id": "rcmd_013",
+    "title": "Urban Farming Starter Kit",
+    "description": "Complete hydroponic system for indoor vegetable growing.",
+    "featured_image": "https://picsum.photos/seed/farming/800/600",
+    "type": "product",
+    "tags": [
+      "gardening",
+      "sustainability",
+      "food",
+      "urban-farming"
+    ],
+    "like_count": 634,
+    "save_count": 289,
+    "share_count": 145,
+    "view_count": 2789,
+    "created_at": "2024-05-01T11:20:00Z",
+    "updated_at": null,
+    "is_sponsored": false,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 199,
+      "max": 499,
+      "currency": "USD"
+    },
+    "creator_id": "usr_345",
+    "owner_id": "org_678",
+    "commission_rate": 18,
+    "monetization_enabled": true,
+    "metadata": {
+      "warranty": "1 year",
+      "seeds": "included"
+    },
+    "url": "/products/urban-farming-kit",
+    "location": {}
+  },
+  {
+    "id": "rcmd_014",
+    "title": "Digital Nomad Bootcamp",
+    "description": "4-week program to launch your remote work career.",
+    "featured_image": "https://picsum.photos/seed/nomad/800/600",
+    "type": "course",
+    "tags": [
+      "remote-work",
+      "career",
+      "digital-nomad",
+      "education"
+    ],
+    "like_count": 567,
+    "save_count": 345,
+    "share_count": 123,
+    "view_count": 2345,
+    "created_at": "2024-05-05T14:00:00Z",
+    "updated_at": null,
+    "is_sponsored": false,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 799,
+      "max": 999,
+      "currency": "USD"
+    },
+    "creator_id": "usr_901",
+    "owner_id": "org_234",
+    "commission_rate": 22,
+    "monetization_enabled": true,
+    "metadata": {
+      "duration": "4 weeks",
+      "format": "online"
+    },
+    "url": "/courses/digital-nomad-bootcamp",
+    "location": {}
+  },
+  {
+    "id": "rcmd_015",
+    "title": "Wellness Tech Wearable",
+    "description": "Advanced health monitoring and stress management device.",
+    "featured_image": "https://picsum.photos/seed/wellness/800/600",
+    "type": "product",
+    "tags": [
+      "health",
+      "technology",
+      "wellness",
+      "wearables"
+    ],
+    "like_count": 789,
+    "save_count": 456,
+    "share_count": 234,
+    "view_count": 3456,
+    "created_at": "2024-05-08T16:30:00Z",
+    "updated_at": null,
+    "is_sponsored": true,
+    "status": "active",
+    "visibility": "public",
+    "price_range": {
+      "min": 199,
+      "max": 299,
+      "currency": "USD"
+    },
+    "creator_id": "usr_678",
+    "owner_id": "org_890",
+    "commission_rate": 20,
+    "monetization_enabled": true,
+    "metadata": {
+      "warranty": "18 months",
+      "battery_life": "5 days"
+    },
+    "url": "/products/wellness-wearable",
+    "location": {}
   }
 ]

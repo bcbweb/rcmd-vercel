@@ -255,7 +255,7 @@ export type Database = {
           payment_enabled: boolean | null
           phone: string | null
           photo_gallery: string[] | null
-          primary_location: Json
+          primary_location: Json | null
           rating_avg: number | null
           rating_count: number | null
           rcmd_count: number | null
@@ -292,7 +292,7 @@ export type Database = {
           payment_enabled?: boolean | null
           phone?: string | null
           photo_gallery?: string[] | null
-          primary_location: Json
+          primary_location?: Json | null
           rating_avg?: number | null
           rating_count?: number | null
           rcmd_count?: number | null
@@ -329,7 +329,7 @@ export type Database = {
           payment_enabled?: boolean | null
           phone?: string | null
           photo_gallery?: string[] | null
-          primary_location?: Json
+          primary_location?: Json | null
           rating_avg?: number | null
           rating_count?: number | null
           rcmd_count?: number | null

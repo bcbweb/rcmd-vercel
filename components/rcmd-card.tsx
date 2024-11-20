@@ -1,3 +1,5 @@
+'use client';
+
 import Image from 'next/image';
 import { HeartIcon, BookmarkIcon, ShareIcon } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid, BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';

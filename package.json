@@ -22,6 +22,7 @@
 		"class-variance-authority": "^0.7.0",
 		"clsx": "^2.1.1",
 		"date-fns": "^4.1.0",
+		"embla-carousel-react": "^8.4.0",
 		"geist": "^1.2.1",
 		"lodash": "^4.17.21",
 		"lucide-react": "^0.456.0",
@@ -34,7 +35,6 @@
 		"react-dom": "18.3.1",
 		"react-hook-form": "^7.53.2",
 		"sonner": "^1.7.0",
-		"swiper": "^11.1.15",
 		"zod": "^3.23.8"
 	},
 	"devDependencies": {
