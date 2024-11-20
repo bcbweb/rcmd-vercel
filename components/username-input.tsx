@@ -35,7 +35,7 @@ export default function UsernameInput({
     setStatus('checking');
 
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('username')
         .eq('username', username);

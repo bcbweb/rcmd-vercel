@@ -44,7 +44,7 @@ export function URLHandleInput({
 
     setIsCheckingHandle(true);
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('handle')
         .ilike('handle', handle)
@@ -71,7 +71,7 @@ export function URLHandleInput({
     return () => {
       debouncedCheckHandle.cancel();
     };
-  }, [value]);
+  }, [value, debouncedCheckHandle]);
 
   useEffect(() => {
     if (onAvailabilityChange) {

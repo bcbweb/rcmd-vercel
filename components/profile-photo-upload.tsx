@@ -52,7 +52,7 @@ export default function ProfilePhotoUpload({
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
 
       // Upload to Supabase Storage
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('profile-photos')
         .upload(fileName, file, {
           cacheControl: '3600',

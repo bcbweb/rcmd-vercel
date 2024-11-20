@@ -16,14 +16,6 @@ interface OtherInfoFormData {
   tags: string[];
 }
 
-interface Profile {
-  handle: string | null;
-  location: string | null;
-  interests: string[];
-  tags: string[];
-  is_onboarded: boolean;
-}
-
 export default function OtherInfoPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);

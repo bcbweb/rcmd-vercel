@@ -1,4 +1,4 @@
-import ProfileBlocks from "@/components/profile/ProfileBlocks";
+import ProfileBlocks from "@/components/profile/profile-blocks";
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from 'next/image';
