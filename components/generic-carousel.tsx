@@ -1,6 +1,7 @@
 'use client';
 
 import useEmblaCarousel from 'embla-carousel-react';
+import type { EmblaOptionsType } from 'embla-carousel';
 import { useCallback, ReactNode, useEffect, useState } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
@@ -15,7 +16,7 @@ export default function GenericCarousel({
   title,
   cardsPerView = 3
 }: GenericCarouselProps) {
-  const options = {
+  const options: EmblaOptionsType = {
     loop: true,
     align: 'start',
     slidesToScroll: 1,
