@@ -16,7 +16,7 @@ export default function UsernameInput({
   currentUsername = '',
   className = '',
 }: UsernameInputProps) {
-  const [status, setStatus] = useState<'checking' | 'available' | 'taken' | null>(null);
+  const [status, setStatus] = useState<'checking' | 'available' | 'taken' | 'too-short' | null>(null);
   const supabase = createClient();
 
   const checkUsername = useCallback(async (username: string) => {
@@ -26,8 +26,14 @@ export default function UsernameInput({
       return;
     }
 
-    if (!username || username.length < 3) {
+    if (!username) {
       setStatus(null);
+      onChange(username, false);
+      return;
+    }
+
+    if (username.length < 3) {
+      setStatus('too-short');
       onChange(username, false);
       return;
     }
@@ -86,7 +92,7 @@ export default function UsernameInput({
             text-gray-900 dark:text-gray-100 
             ${status === 'checking' ? 'pr-10 border-gray-300 dark:border-gray-600' : ''}
             ${status === 'available' ? 'border-green-500 dark:border-green-400 focus:ring-green-500 dark:focus:ring-green-400' : ''}
-            ${status === 'taken' ? 'border-red-500 dark:border-red-400 focus:ring-red-500 dark:focus:ring-red-400' : ''}
+            ${(status === 'taken' || status === 'too-short') ? 'border-red-500 dark:border-red-400 focus:ring-red-500 dark:focus:ring-red-400' : ''}
             ${status === null ? 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 dark:focus:ring-blue-400' : ''}
             ${className}
           `}
@@ -103,7 +109,7 @@ export default function UsernameInput({
       </div>
 
       {/* Status Messages */}
-      <div className="min-h-[20px]"> {/* Fixed height container for status messages */}
+      <div className="min-h-[20px]">
         {value !== currentUsername && status === 'taken' && (
           <p className="text-sm text-red-600 dark:text-red-400">
             Username is already taken
@@ -112,6 +118,11 @@ export default function UsernameInput({
         {value !== currentUsername && status === 'available' && (
           <p className="text-sm text-green-600 dark:text-green-400">
             Username is available
+          </p>
+        )}
+        {status === 'too-short' && (
+          <p className="text-sm text-red-600 dark:text-red-400">
+            Username must be at least 3 characters
           </p>
         )}
       </div>
