@@ -1,8 +1,29 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['dmhigtssxgoupibxazoe.supabase.co', 'images.unsplash.com', 'picsum.photos', 'api.dicebear.com']
-  }
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'dmhigtssxgoupibxazoe.supabase.co',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
+        pathname: '/**',
+      },
+    ],
+  },
 };
 
 module.exports = nextConfig;
