@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { StepProgress } from "@/components/step-progress";
 import ProfilePhotoUpload from "@/components/profile-photo-upload";
@@ -101,8 +102,8 @@ export default function ProfilePhotoPage() {
         />
 
         <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => router.push("/protected/onboarding/personal-info")}
+          <Link
+            href="/protected/onboarding/personal-info"
             className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <svg
@@ -119,17 +120,16 @@ export default function ProfilePhotoPage() {
               />
             </svg>
             Back
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/protected/onboarding/other-info")}
+          </Link>
+          <Link
+            href="/protected/onboarding/other-info"
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 
               bg-white dark:bg-gray-800 
               border border-gray-300 dark:border-gray-600 
               rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Skip
-          </button>
+          </Link>
           <button
             type="submit"
             disabled={isSubmitting}

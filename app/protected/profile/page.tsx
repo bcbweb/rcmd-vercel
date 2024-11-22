@@ -8,9 +8,9 @@ import type { ProfileBlock } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { useRouter } from "next/navigation";
 
 function createDefaultBlock(id: string, type: string, userId: string | undefined, order: number): ProfileBlock {
-	// Updated array of allowed types
 	if (!['rcmd', 'business', 'custom', 'text', 'image'].includes(type)) {
 		throw new Error(`Invalid block type: ${type}`);
 	}
@@ -31,36 +31,59 @@ function createDefaultBlock(id: string, type: string, userId: string | undefined
 
 export default function EditProfilePage() {
 	const { supabase, session } = useSupabase();
+	const router = useRouter();
 	const [blocks, setBlocks] = useState<ProfileBlock[]>([]);
 	const [username] = useState<string>("");
-	const [isLoading, setIsLoading] = useState(false);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isBlockSaving, setIsBlockSaving] = useState(false);
 
-	// Fetch existing blocks on component mount
+	// Check onboarding status and fetch blocks on component mount
 	useEffect(() => {
-		const fetchBlocks = async () => {
-			if (!session?.user?.id) return;
+		const checkOnboardingAndFetchBlocks = async () => {
+			if (!session?.user?.id) {
+				router.push('/sign-in');
+				return;
+			}
 
 			try {
-				const { data, error } = await supabase
+				// First check onboarding status
+				const { data: profile, error: profileError } = await supabase
+					.from("profiles")
+					.select("is_onboarded")
+					.eq("auth_user_id", session.user.id)
+					.single();
+
+				if (profileError) throw profileError;
+
+				// Redirect if not onboarded
+				if (!profile || profile.is_onboarded !== true) {
+					router.push('/protected/onboarding');
+					return;
+				}
+
+				// If onboarded, fetch blocks
+				const { data: blocksData, error: blocksError } = await supabase
 					.from('profile_blocks')
 					.select('*')
 					.eq('profile_id', session.user.id)
 					.order('order', { ascending: true });
 
-				if (error) throw error;
+				if (blocksError) throw blocksError;
 
-				setBlocks(data || []);
+				setBlocks(blocksData || []);
 			} catch (error) {
-				console.error('Error fetching blocks:', error);
-				alert('Failed to load blocks');
+				console.error('Error:', error);
+				alert('Failed to load profile data');
+			} finally {
+				setIsLoading(false);
 			}
 		};
 
-		fetchBlocks();
-	}, [session?.user?.id, supabase]);
+		checkOnboardingAndFetchBlocks();
+	}, [session?.user?.id, supabase, router]);
 
 	const handleAddBlock = async (blockData: { id: string; type: string; }) => {
-		setIsLoading(true);
+		setIsBlockSaving(true);
 
 		try {
 			const tempBlock = createDefaultBlock(
@@ -97,13 +120,12 @@ export default function EditProfilePage() {
 			setBlocks(prev => prev.filter(block => block.id !== blockData.id));
 			alert('Failed to save block');
 		} finally {
-			setIsLoading(false);
+			setIsBlockSaving(false);
 		}
 	};
 
 	const moveBlock = useCallback(
 		async (dragIndex: number, hoverIndex: number) => {
-			// Update block order in UI
 			setBlocks((prevBlocks) => {
 				const newBlocks = [...prevBlocks];
 				const [removed] = newBlocks.splice(dragIndex, 1);
@@ -111,7 +133,6 @@ export default function EditProfilePage() {
 				return newBlocks;
 			});
 
-			// Update order in database
 			await supabase
 				.from("profile_blocks")
 				.update({ order: hoverIndex })
@@ -122,10 +143,8 @@ export default function EditProfilePage() {
 
 	const handleDeleteBlock = async (id: string) => {
 		try {
-			// Remove from UI immediately
 			setBlocks(prev => prev.filter(b => b.id !== id));
 
-			// Remove from database
 			const { error } = await supabase
 				.from("profile_blocks")
 				.delete()
@@ -135,10 +154,13 @@ export default function EditProfilePage() {
 
 		} catch (error) {
 			console.error('Error deleting block:', error);
-			// Optionally restore the block in UI if delete failed
 			alert('Failed to delete block');
 		}
 	};
+
+	if (isLoading) {
+		return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+	}
 
 	const shareUrl = username ? `${window.location.origin}/${username}` : "";
 
@@ -159,7 +181,7 @@ export default function EditProfilePage() {
 					onMove={moveBlock}
 					onDelete={handleDeleteBlock}
 				/>
-				{isLoading && (
+				{isBlockSaving && (
 					<div className="text-center py-4">Saving...</div>
 				)}
 			</div>

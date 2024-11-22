@@ -28,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function OnboardingLayout({ children }: { children: React.ReactNode; }) {
   return (
     <div className="min-h-screen">
-      <div className="mx-auto px-4 py-8 w-fit max-w-96">
+      <div className="mx-auto px-4 py-8 min-w-96 max-w-96 min-h-96">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
           {children}
         </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { StepProgress } from "@/components/step-progress";
 import { createClient } from '@/utils/supabase/client';
 import { toast } from "sonner";
@@ -15,6 +16,8 @@ interface OtherInfoFormData {
   interests: string[];
   tags: string[];
 }
+
+const STORAGE_KEY = 'onboarding_other_info';
 
 export default function OtherInfoPage() {
   const router = useRouter();
@@ -33,6 +36,13 @@ export default function OtherInfoPage() {
 
   const [initialHandle, setInitialHandle] = useState<string>('');
 
+  // Save form data to localStorage whenever it changes
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+    }
+  }, [formData, isLoading]);
+
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -40,6 +50,14 @@ export default function OtherInfoPage() {
         if (!user) {
           router.push('/auth/signin');
           return;
+        }
+
+        // Try to load from localStorage first
+        const savedData = localStorage.getItem(STORAGE_KEY);
+        let localData: OtherInfoFormData | null = null;
+
+        if (savedData) {
+          localData = JSON.parse(savedData);
         }
 
         const { data: profile, error } = await supabase
@@ -57,20 +75,24 @@ export default function OtherInfoPage() {
             return;
           }
 
+          // Merge localStorage data with profile data, preferring localStorage
           setFormData({
-            handle: profile.handle || '',
-            location: profile.location || '',
-            interests: profile.interests || [],
-            tags: profile.tags || []
+            handle: localData?.handle || profile.handle || '',
+            location: localData?.location || profile.location || '',
+            interests: localData?.interests || profile.interests || [],
+            tags: localData?.tags || profile.tags || []
           });
 
-          // Store initial handle to compare later
+          // Store initial handle from database to compare later
           setInitialHandle(profile.handle || '');
 
-          // If handle exists, set it as available
+          // If handle exists in database, set it as available
           if (profile.handle) {
             setIsHandleAvailable(true);
           }
+        } else if (localData) {
+          // If no profile but localStorage data exists, use it
+          setFormData(localData);
         }
       } catch (error) {
         console.error('Error loading profile:', error);
@@ -129,6 +151,9 @@ export default function OtherInfoPage() {
 
       if (error) throw error;
 
+      // Clear localStorage after successful submission
+      localStorage.removeItem(STORAGE_KEY);
+
       toast.success("Profile updated successfully!");
       router.push("/protected/profile");
     } catch (error) {
@@ -165,6 +190,7 @@ export default function OtherInfoPage() {
             <URLHandleInput
               value={formData.handle}
               onChange={(handle) => setFormData(prev => ({ ...prev, handle: sanitizeHandle(handle) }))}
+              currentHandle={initialHandle}
               onAvailabilityChange={(status) => {
                 setIsCheckingHandle(status.isChecking);
                 setIsHandleAvailable(status.isAvailable);
@@ -214,8 +240,8 @@ export default function OtherInfoPage() {
         </div>
 
         <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={() => router.push("/protected/onboarding/profile-photo")}
+          <Link
+            href="/protected/onboarding/profile-photo"
             className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <svg
@@ -232,7 +258,7 @@ export default function OtherInfoPage() {
               />
             </svg>
             Back
-          </button>
+          </Link>
           <button
             type="submit"
             disabled={!isFormValid || isSubmitting}
@@ -250,6 +276,3 @@ export default function OtherInfoPage() {
     </>
   );
 }
-
-
-
