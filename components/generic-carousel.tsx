@@ -3,7 +3,7 @@
 import useEmblaCarousel from 'embla-carousel-react';
 import type { EmblaOptionsType } from 'embla-carousel';
 import { useCallback, ReactNode, useEffect, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface GenericCarouselProps {
   items: ReactNode[];
@@ -102,7 +102,7 @@ export default function GenericCarousel({
                   : 'opacity-50 cursor-not-allowed'
                   }`}
               >
-                <ChevronLeftIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
               </button>
 
               <button
@@ -114,7 +114,7 @@ export default function GenericCarousel({
                   : 'opacity-50 cursor-not-allowed'
                   }`}
               >
-                <ChevronRightIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
               </button>
             </>
           )}

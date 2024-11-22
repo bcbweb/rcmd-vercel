@@ -1,4 +1,4 @@
-import { TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { Trash2, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 
@@ -72,13 +72,13 @@ export default function ImageBlock({
 						onClick={() => setIsEditMode(true)}
 						className="text-gray-500 hover:text-gray-700"
 					>
-						<PencilIcon className="w-5 h-5" />
+						<Pencil className="w-5 h-5" />
 					</button>
 					<button
 						onClick={onDelete}
 						className="text-red-500 hover:text-red-700"
 					>
-						<TrashIcon className="w-5 h-5" />
+						<Trash2 className="w-5 h-5" />
 					</button>
 				</div>
 			)}

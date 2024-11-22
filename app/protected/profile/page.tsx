@@ -3,57 +3,44 @@
 import AddBlockButton from "@/components/profile/add-block-button";
 import ProfileBlocks from "@/components/profile/profile-blocks";
 import ShareButton from "@/components/profile/share-button";
+import { PencilLine, Eye } from 'lucide-react';
 import { createClient } from "@/utils/supabase/client";
 import type { ProfileBlock } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useRouter } from "next/navigation";
-import { User } from "@supabase/supabase-js";
-
-function createDefaultBlock(id: string, type: string, userId: string | undefined, order: number): ProfileBlock {
-	if (!['rcmd', 'business', 'custom', 'text', 'image'].includes(type)) {
-		throw new Error(`Invalid block type: ${type}`);
-	}
-
-	return {
-		id,
-		type,
-		business_id: null,
-		content: null,
-		created_at: null,
-		updated_at: null,
-		order,
-		profile_id: userId || null,
-		rcmd_id: null,
-		text_block_id: null
-	};
-}
+import { User } from '@supabase/supabase-js';
 
 export default function EditProfilePage() {
 	const supabase = createClient();
 	const router = useRouter();
 	const [blocks, setBlocks] = useState<ProfileBlock[]>([]);
-	const [username] = useState<string>("");
+	const [username, setUsername] = useState<string>("");
 	const [isLoading, setIsLoading] = useState(true);
 	const [isBlockSaving, setIsBlockSaving] = useState(false);
 	const [user, setUser] = useState<User | null>(null);
+	const [profileId, setProfileId] = useState<string>("");
 
 	// Get and monitor auth state
 	useEffect(() => {
 		const getUser = async () => {
-			const { data: { user } } = await supabase.auth.getUser();
-			setUser(user);
-			if (!user) {
+			const { data: { user }, error } = await supabase.auth.getUser();
+			if (error || !user) {
+				console.error('Error fetching user:', error);
 				router.push('/sign-in');
+				return;
 			}
+			setUser(user);
 		};
 
 		getUser();
 
-		const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-			setUser(session?.user ?? null);
-			if (!session?.user) {
+		const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+			if (session) {
+				setUser(session.user);
+			} else {
+				setUser(null);
 				router.push('/sign-in');
 			}
 		});
@@ -61,95 +48,73 @@ export default function EditProfilePage() {
 		return () => subscription.unsubscribe();
 	}, [supabase, router]);
 
-	// Check onboarding status and fetch blocks on component mount
-	useEffect(() => {
-		const checkOnboardingAndFetchBlocks = async () => {
-			if (!user?.id) {
-				return;
-			}
-
-			try {
-				// First check onboarding status
-				const { data: profile, error: profileError } = await supabase
-					.from("profiles")
-					.select("is_onboarded")
-					.eq("auth_user_id", user.id)
-					.single();
-
-				if (profileError) throw profileError;
-
-				// Redirect if not onboarded
-				if (!profile || profile.is_onboarded !== true) {
-					router.push('/protected/onboarding');
-					return;
-				}
-
-				// If onboarded, fetch blocks
-				const { data: blocksData, error: blocksError } = await supabase
-					.from('profile_blocks')
-					.select('*')
-					.eq('profile_id', user.id)
-					.order('order', { ascending: true });
-
-				if (blocksError) throw blocksError;
-
-				setBlocks(blocksData || []);
-			} catch (error) {
-				console.error('Error:', error);
-				alert('Failed to load profile data');
-			} finally {
-				setIsLoading(false);
-			}
-		};
-
-		checkOnboardingAndFetchBlocks();
-	}, [user?.id, supabase, router]);
-
-	const handleAddBlock = async (blockData: { id: string; type: string; }) => {
-		if (!user?.id) return;
-		setIsBlockSaving(true);
-
+	const fetchProfileData = useCallback(async (userId: string) => {
 		try {
-			const tempBlock = createDefaultBlock(
-				blockData.id,
-				blockData.type,
-				user.id,
-				blocks.length
-			);
-
-			setBlocks(prev => [...prev, tempBlock]);
-
-			const { data, error } = await supabase
-				.from("profile_blocks")
-				.insert([{
-					type: blockData.type,
-					profile_id: user.id,
-					order: blocks.length,
-					content: null,
-					business_id: null,
-					rcmd_id: null,
-					text_block_id: null
-				}])
-				.select()
+			const { data: profile, error: profileError } = await supabase
+				.from("profiles")
+				.select("id, is_onboarded, username")
+				.eq("auth_user_id", userId)
 				.single();
 
-			if (error) throw error;
+			if (profileError) throw profileError;
 
-			setBlocks(prev => prev.map(block =>
-				block.id === blockData.id ? data : block
-			));
+			if (!profile || profile.is_onboarded !== true) {
+				router.push('/protected/onboarding');
+				return null;
+			}
 
+			setUsername(profile.username || "");
+			setProfileId(profile.id);
+			return profile.id;
 		} catch (error) {
-			console.error('Error adding block:', error);
-			setBlocks(prev => prev.filter(block => block.id !== blockData.id));
-			alert('Failed to save block');
+			console.error('Error fetching profile:', error);
+			alert('Failed to load profile data');
+			return null;
+		}
+	}, [supabase, router]);
+
+	const refreshBlocks = useCallback(async (profileId: string) => {
+		if (!profileId) return;
+
+		try {
+			setIsBlockSaving(true);
+			const { data: blocksData, error: blocksError } = await supabase
+				.from('profile_blocks')
+				.select('*')
+				.eq('profile_id', profileId)
+				.order('order', { ascending: true });
+
+			if (blocksError) throw blocksError;
+			setBlocks(blocksData || []);
+		} catch (error) {
+			console.error('Error refreshing blocks:', error);
+			alert('Failed to refresh blocks');
 		} finally {
 			setIsBlockSaving(false);
 		}
-	};
+	}, [supabase]);
 
-	const moveBlock = useCallback(
-		async (dragIndex: number, hoverIndex: number) => {
+	// Initialize profile and blocks
+	useEffect(() => {
+		const initializeProfile = async () => {
+			if (!user?.id) return;
+
+			const profileId = await fetchProfileData(user.id);
+			if (profileId) {
+				await refreshBlocks(profileId);
+			}
+			setIsLoading(false);
+		};
+
+		initializeProfile();
+	}, [user?.id, fetchProfileData, refreshBlocks]);
+
+
+	const moveBlock = useCallback(async (dragIndex: number, hoverIndex: number) => {
+		try {
+			setIsBlockSaving(true);
+
+			// Update local state first for immediate UI feedback
 			setBlocks((prevBlocks) => {
 				const newBlocks = [...prevBlocks];
 				const [removed] = newBlocks.splice(dragIndex, 1);
@@ -157,16 +122,65 @@ export default function EditProfilePage() {
 				return newBlocks;
 			});
 
-			await supabase
+			// Calculate the new order value
+			const newOrder = hoverIndex + 1; // Using 1-based indexing
+			const blockId = blocks[dragIndex].id;
+			const profileId = blocks[dragIndex].profile_id;
+
+			// Call the database function to handle reordering
+			const { error } = await supabase.rpc('reorder_profile_blocks', {
+				p_profile_id: profileId,
+				p_block_id: blockId,
+				p_new_order: newOrder
+			});
+
+			if (error) throw error;
+
+			// Optionally refresh the blocks from the server to ensure consistency
+			const { data: updatedBlocks, error: fetchError } = await supabase
 				.from("profile_blocks")
-				.update({ order: hoverIndex })
-				.eq("id", blocks[dragIndex].id);
-		},
-		[blocks, supabase],
-	);
+				.select('*')
+				.eq('profile_id', profileId)
+				.order('order', { ascending: true });
+
+			if (fetchError) throw fetchError;
+
+			if (updatedBlocks) {
+				setBlocks(updatedBlocks);
+			}
+
+		} catch (error) {
+			console.error('Error moving block:', error);
+			alert('Failed to update block order');
+
+			// Optionally revert the local state on error
+			const { data: originalBlocks } = await supabase
+				.from("profile_blocks")
+				.select('*')
+				.eq('profile_id', blocks[dragIndex].profile_id)
+				.order('order', { ascending: true });
+
+			if (originalBlocks) {
+				setBlocks(originalBlocks);
+			}
+		} finally {
+			setIsBlockSaving(false);
+		}
+	}, [blocks, supabase]);
+
+	const handleBlockAdded = useCallback(async () => {
+		if (!profileId) return;
+		setIsBlockSaving(true);
+		try {
+			await refreshBlocks(profileId);
+		} finally {
+			setIsBlockSaving(false);
+		}
+	}, [profileId, refreshBlocks]);
 
 	const handleDeleteBlock = async (id: string) => {
 		try {
+			setIsBlockSaving(true);
 			setBlocks(prev => prev.filter(b => b.id !== id));
 
 			const { error } = await supabase
@@ -175,10 +189,11 @@ export default function EditProfilePage() {
 				.eq("id", id);
 
 			if (error) throw error;
-
 		} catch (error) {
 			console.error('Error deleting block:', error);
 			alert('Failed to delete block');
+		} finally {
+			setIsBlockSaving(false);
 		}
 	};
 
@@ -190,13 +205,35 @@ export default function EditProfilePage() {
 
 	return (
 		<DndProvider backend={HTML5Backend}>
-			<div className="max-w-4xl mx-auto py-8 px-4">
-				<div className="flex justify-between items-center mb-8">
-					<h1 className="text-2xl font-bold">Edit Profile</h1>
-					<div className="flex gap-4">
-						<ShareButton url={shareUrl} />
-						<AddBlockButton onAdd={handleAddBlock} />
+			<div className="w-full max-w-7xl mx-auto py-8 px-4">
+				<div className="relative flex flex-wrap gap-y-4 items-center mb-8">
+					<div className="absolute right-0">
+						<div className="flex items-center gap-3">
+							<button
+								onClick={() => router.push('/protected/edit-info')}
+								className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+								title="Edit my info"
+							>
+								<PencilLine className="w-5 h-5" />
+							</button>
+							<button
+								onClick={() => window.open(`/${username}`, '_blank')}
+								className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+								title="Preview my public profile"
+							>
+								<Eye className="w-5 h-5" />
+							</button>
+							<ShareButton url={shareUrl} />
+						</div>
 					</div>
+					<h1 className="text-2xl font-bold w-full text-center">Edit Profile</h1>
+				</div>
+
+				<div className="flex gap-4 mb-4">
+					<AddBlockButton
+						profileId={profileId}
+						onBlockAdded={handleBlockAdded}
+					/>
 				</div>
 
 				<ProfileBlocks
@@ -205,8 +242,11 @@ export default function EditProfilePage() {
 					onMove={moveBlock}
 					onDelete={handleDeleteBlock}
 				/>
+
 				{isBlockSaving && (
-					<div className="text-center py-4">Saving...</div>
+					<div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg px-4 py-2">
+						Saving changes...
+					</div>
 				)}
 			</div>
 		</DndProvider>

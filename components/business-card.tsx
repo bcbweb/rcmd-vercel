@@ -1,7 +1,7 @@
 'use client';
 
 import { Json } from '@/types/supabase';
-import { StarIcon } from '@heroicons/react/20/solid';
+import { Star } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -58,7 +58,7 @@ export default function BusinessCard({ business }: BusinessCardProps) {
         <div className="mb-2 flex items-center gap-2">
           {business.rating_avg && (
             <div className="flex items-center">
-              <StarIcon className="h-5 w-5 text-yellow-400" />
+              <Star className="h-5 w-5 text-yellow-400" />
               <span className="ml-1 text-sm text-gray-600 dark:text-gray-300">
                 {business.rating_avg.toFixed(1)} ({business.rating_count})
               </span>

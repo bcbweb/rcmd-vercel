@@ -482,68 +482,35 @@ export type Database = {
       }
       profile_blocks: {
         Row: {
-          business_id: string | null
-          content: Json | null
           created_at: string | null
           id: string
           order: number
           profile_id: string | null
-          rcmd_id: string | null
-          text_block_id: string | null
           type: string
           updated_at: string | null
         }
         Insert: {
-          business_id?: string | null
-          content?: Json | null
           created_at?: string | null
           id?: string
           order: number
           profile_id?: string | null
-          rcmd_id?: string | null
-          text_block_id?: string | null
           type: string
           updated_at?: string | null
         }
         Update: {
-          business_id?: string | null
-          content?: Json | null
           created_at?: string | null
           id?: string
           order?: number
           profile_id?: string | null
-          rcmd_id?: string | null
-          text_block_id?: string | null
           type?: string
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "profile_blocks_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "profile_blocks_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profile_blocks_rcmd_id_fkey"
-            columns: ["rcmd_id"]
-            isOneToOne: false
-            referencedRelation: "rcmds"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profile_blocks_text_block_id_fkey"
-            columns: ["text_block_id"]
-            isOneToOne: false
-            referencedRelation: "text_blocks"
             referencedColumns: ["id"]
           },
         ]

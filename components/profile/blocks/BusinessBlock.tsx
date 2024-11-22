@@ -1,4 +1,4 @@
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { Trash2 } from 'lucide-react';
 
 import type { Business } from "@/types";
 
@@ -24,7 +24,7 @@ export default function BusinessBlock({
 						className="text-red-500 hover:text-red-700"
 					>
 						<span className="sr-only">Delete</span>
-						<TrashIcon className="w-5 h-5" />
+						<Trash2 className="w-5 h-5" />
 					</button>
 				</div>
 			)}

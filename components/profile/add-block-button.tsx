@@ -1,57 +1,80 @@
-import { PlusIcon } from "@heroicons/react/24/outline";
-import { useState } from "react";
-
-interface BlockData {
-	id: string;  // Add id to the interface
-	type: 'text' | 'image' | 'rcmd' | 'business';
-}
+import { useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
+import { PlusCircle } from 'lucide-react';
+import TextBlockModal from './modals/text-block-modal';
 
 interface Props {
-	onAdd: (blockData: BlockData) => void;
+	profileId: string;
+	onBlockAdded?: () => void;
 }
 
-export default function AddBlockButton({ onAdd }: Props) {
-	const [isOpen, setIsOpen] = useState(false);
+export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const supabase = createClient();
 
-	const blockTypes = [
-		{ id: "text", label: "Text Block" },
-		{ id: "image", label: "Image Block" },
-		{ id: "rcmd", label: "RCMD" },
-		{ id: "business", label: "Business" },
-	];
+	const handleSave = async (content: string, alignment: string) => {
+		try {
+			const { data: profileBlock, error: profileBlockError } = await supabase
+				.from('profile_blocks')
+				.insert({
+					profile_id: profileId,
+					type: 'text',
+					order: 0,  // Default order to 0
+				})
+				.select()
+				.single();
 
-	// Generate a temporary ID for new blocks
-	const generateTempId = () => `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+			if (profileBlockError) {
+				throw profileBlockError;
+			}
+
+			const { error: textBlockError } = await supabase
+				.from('text_blocks')
+				.insert({
+					text: content,
+					alignment: alignment,
+					profile_block_id: profileBlock.id,
+				});
+
+			if (textBlockError) {
+				await supabase
+					.from('profile_blocks')
+					.delete()
+					.eq('id', profileBlock.id);
+				throw textBlockError;
+			}
+
+			setIsModalOpen(false);
+			onBlockAdded?.();
+
+		} catch (error) {
+			console.error('Error saving blocks:', error);
+			alert('Failed to save block');
+		}
+	};
 
 	return (
-		<div className="relative">
+		<>
 			<button
-				onClick={() => setIsOpen(!isOpen)}
-				className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+				onClick={() => setIsModalOpen(true)}
+				className="w-full border-2 border-dashed border-gray-200 dark:border-gray-700 
+          rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-600 
+          transition-colors group"
 			>
-				<PlusIcon className="w-5 h-5" />
-				Add Block
+				<div className="flex items-center justify-center gap-2 text-gray-500 
+          dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+				>
+					<PlusCircle className="w-5 h-5" />
+					<span>Add Block</span>
+				</div>
 			</button>
 
-			{isOpen && (
-				<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-10">
-					{blockTypes.map((type) => (
-						<button
-							key={type.id}
-							onClick={() => {
-								onAdd({
-									id: generateTempId(),
-									type: type.id as BlockData['type']
-								});
-								setIsOpen(false);
-							}}
-							className="w-full px-4 py-2 text-left hover:bg-gray-100"
-						>
-							{type.label}
-						</button>
-					))}
-				</div>
+			{isModalOpen && (
+				<TextBlockModal
+					onClose={() => setIsModalOpen(false)}
+					onSave={handleSave}
+				/>
 			)}
-		</div>
+		</>
 	);
 }

@@ -3,8 +3,6 @@
 import { useSupabase } from "@/components/providers/supabase-provider";
 import { type ProfileBlock, type TextBlockType } from "@/types";
 import { useEffect, useState } from "react";
-// import BusinessBlock from "./blocks/BusinessBlock";
-// import RCMDBlock from "./blocks/RCMDBlock";
 import TextBlock from "./blocks/TextBlock";
 
 interface Props {
@@ -22,19 +20,65 @@ export default function BlockRenderer({
 }: Props) {
 	const { supabase } = useSupabase();
 	const [textBlock, setTextBlock] = useState<TextBlockType | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		if (block.type === "text" && block.text_block_id) {
-			supabase
+		const fetchBlockData = async () => {
+			if (block.type !== "text") {
+				setIsLoading(false);
+				return;
+			}
+
+			try {
+				const { data, error } = await supabase
+					.from("text_blocks")
+					.select("*")
+					.eq("profile_block_id", block.id)
+					.single();
+
+				if (error) {
+					throw error;
+				}
+
+				setTextBlock(data);
+			} catch (err) {
+				console.error("Error fetching text block:", err);
+				setError(err instanceof Error ? err.message : "Failed to load block data");
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		fetchBlockData();
+	}, [block.id, block.type, supabase]);
+
+	const handleTextBlockSave = async (updatedText: { text: string; }) => {
+		if (!textBlock) return;
+
+		try {
+			const { error } = await supabase
 				.from("text_blocks")
-				.select("*")
-				.eq("id", block.text_block_id)
-				.single()
-				.then(({ data }) => {
-					if (data) setTextBlock(data);
-				});
+				.update({ text: updatedText.text })
+				.eq("profile_block_id", block.id);
+
+			if (error) throw error;
+
+			setTextBlock({ ...textBlock, text: updatedText.text });
+			onSave?.(block);
+		} catch (err) {
+			console.error("Error saving text block:", err);
+			throw err;
 		}
-	}, [block.type, block.text_block_id, supabase]);
+	};
+
+	if (isLoading) {
+		return <div className="animate-pulse h-24 bg-gray-100 rounded-lg"></div>;
+	}
+
+	if (error) {
+		return <div className="text-red-500">Error loading block: {error}</div>;
+	}
 
 	switch (block.type) {
 		case "text":
@@ -44,19 +88,10 @@ export default function BlockRenderer({
 					textBlock={textBlock}
 					isEditing={isEditing}
 					onDelete={onDelete}
-					onSave={async (updatedText) => {
-						await supabase
-							.from("text_blocks")
-							.update({ text: updatedText.text })
-							.eq("id", textBlock.id);
-
-						onSave?.({
-							...block,
-						});
-					}}
+					onSave={handleTextBlockSave}
 				/>
 			);
-		// ... other cases
+		// Add other block type cases here as needed
 		default:
 			return null;
 	}

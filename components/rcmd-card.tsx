@@ -1,8 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { HeartIcon, BookmarkIcon, ShareIcon } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartIconSolid, BookmarkIcon as BookmarkIconSolid } from '@heroicons/react/24/solid';
+import { Heart, Bookmark, Share2 } from 'lucide-react';
+
 import { type RCMD } from '@/types';
 import type { Database } from '@/types/supabase';
 import { formatDistanceToNow } from 'date-fns';
@@ -100,21 +100,29 @@ export default function RCMDCard({ rcmd, onLike, onSave, onShare }: RCMDCardProp
               onClick={() => onLike?.(rcmd.id)}
               className="flex items-center gap-1 hover:text-red-500"
             >
-              {rcmd.like_count ? <HeartIconSolid className="w-5 h-5 text-red-500" /> : <HeartIcon className="w-5 h-5" />}
+              <Heart
+                className="w-5 h-5"
+                fill={rcmd.like_count ? "#000000" : "none"}
+                color={rcmd.like_count ? "#ef4444" : "currentColor"}
+              />
               {rcmd.like_count || 0}
             </button>
             <button
               onClick={() => onSave?.(rcmd.id)}
               className="flex items-center gap-1 hover:text-blue-500"
             >
-              {rcmd.save_count ? <BookmarkIconSolid className="w-5 h-5 text-blue-500" /> : <BookmarkIcon className="w-5 h-5" />}
+              <Bookmark
+                className="w-5 h-5"
+                fill={rcmd.save_count ? "#000000" : "none"}
+                color={rcmd.save_count ? "#3b82f6" : "currentColor"}
+              />
               {rcmd.save_count || 0}
             </button>
             <button
               onClick={() => onShare?.(rcmd.id)}
               className="flex items-center gap-1 hover:text-green-500"
             >
-              <ShareIcon className="w-5 h-5" />
+              <Share2 className="w-5 h-5" />
               {rcmd.share_count || 0}
             </button>
           </div>

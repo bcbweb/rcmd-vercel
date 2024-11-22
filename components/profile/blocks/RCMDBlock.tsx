@@ -1,6 +1,6 @@
 // components/profile/blocks/RCMDBlock.tsx
 import type { RCMD } from "@/types";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { Trash2 } from 'lucide-react';
 import { formatDistance } from "date-fns";
 
 import Image from 'next/image';
@@ -23,7 +23,7 @@ export default function RCMDBlock({ rcmd, isEditing, onDelete }: Props) {
 						className="text-red-500 hover:text-red-700"
 					>
 						<span className="sr-only">Delete</span>
-						<TrashIcon className="w-5 h-5" />
+						<Trash2 className="w-5 h-5" />
 					</button>
 				</div>
 			)}

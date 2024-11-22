@@ -16,7 +16,6 @@ export default function ProfileBlocks({
 	onMove,
 	onDelete,
 }: Props) {
-	console.log(blocks.map(block => block.id));
 	return (
 		<div className="space-y-4">
 			{blocks.map((block, index) => (
