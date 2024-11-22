@@ -10,6 +10,8 @@ import { personalInfoSchema, type PersonalInfoFormData } from "@/lib/schemas/onb
 import { createClient } from '@/utils/supabase/client';
 import { toast } from "sonner";
 
+const STORAGE_KEY = 'onboarding_personal_info';
+
 const inputClasses = {
   default: `mt-1 block w-full rounded-md shadow-sm px-3 py-2
     bg-white dark:bg-gray-700
@@ -48,7 +50,7 @@ export default function PersonalInfoPage() {
   useEffect(() => {
     const loadExistingData = async () => {
       // First try to load from localStorage
-      const savedData = localStorage.getItem('onboarding_personal_info');
+      const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
         const parsedData = JSON.parse(savedData);
         setOriginalUsername(parsedData.username || '');
@@ -121,7 +123,7 @@ export default function PersonalInfoPage() {
         last_name: data.last_name,
         bio: data.bio
       };
-      localStorage.setItem('onboarding_personal_info', JSON.stringify(formData));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
 
       router.push("/protected/onboarding/profile-photo");
     } catch (error) {

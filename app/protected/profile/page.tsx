@@ -3,12 +3,13 @@
 import AddBlockButton from "@/components/profile/add-block-button";
 import ProfileBlocks from "@/components/profile/profile-blocks";
 import ShareButton from "@/components/profile/share-button";
-import { useSupabase } from "@/components/providers/supabase-provider";
+import { createClient } from "@/utils/supabase/client";
 import type { ProfileBlock } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useRouter } from "next/navigation";
+import { User } from "@supabase/supabase-js";
 
 function createDefaultBlock(id: string, type: string, userId: string | undefined, order: number): ProfileBlock {
 	if (!['rcmd', 'business', 'custom', 'text', 'image'].includes(type)) {
@@ -30,18 +31,40 @@ function createDefaultBlock(id: string, type: string, userId: string | undefined
 }
 
 export default function EditProfilePage() {
-	const { supabase, session } = useSupabase();
+	const supabase = createClient();
 	const router = useRouter();
 	const [blocks, setBlocks] = useState<ProfileBlock[]>([]);
 	const [username] = useState<string>("");
 	const [isLoading, setIsLoading] = useState(true);
 	const [isBlockSaving, setIsBlockSaving] = useState(false);
+	const [user, setUser] = useState<User | null>(null);
+
+	// Get and monitor auth state
+	useEffect(() => {
+		const getUser = async () => {
+			const { data: { user } } = await supabase.auth.getUser();
+			setUser(user);
+			if (!user) {
+				router.push('/sign-in');
+			}
+		};
+
+		getUser();
+
+		const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+			setUser(session?.user ?? null);
+			if (!session?.user) {
+				router.push('/sign-in');
+			}
+		});
+
+		return () => subscription.unsubscribe();
+	}, [supabase, router]);
 
 	// Check onboarding status and fetch blocks on component mount
 	useEffect(() => {
 		const checkOnboardingAndFetchBlocks = async () => {
-			if (!session?.user?.id) {
-				router.push('/sign-in');
+			if (!user?.id) {
 				return;
 			}
 
@@ -50,7 +73,7 @@ export default function EditProfilePage() {
 				const { data: profile, error: profileError } = await supabase
 					.from("profiles")
 					.select("is_onboarded")
-					.eq("auth_user_id", session.user.id)
+					.eq("auth_user_id", user.id)
 					.single();
 
 				if (profileError) throw profileError;
@@ -65,7 +88,7 @@ export default function EditProfilePage() {
 				const { data: blocksData, error: blocksError } = await supabase
 					.from('profile_blocks')
 					.select('*')
-					.eq('profile_id', session.user.id)
+					.eq('profile_id', user.id)
 					.order('order', { ascending: true });
 
 				if (blocksError) throw blocksError;
@@ -80,16 +103,17 @@ export default function EditProfilePage() {
 		};
 
 		checkOnboardingAndFetchBlocks();
-	}, [session?.user?.id, supabase, router]);
+	}, [user?.id, supabase, router]);
 
 	const handleAddBlock = async (blockData: { id: string; type: string; }) => {
+		if (!user?.id) return;
 		setIsBlockSaving(true);
 
 		try {
 			const tempBlock = createDefaultBlock(
 				blockData.id,
 				blockData.type,
-				session?.user?.id,
+				user.id,
 				blocks.length
 			);
 
@@ -99,7 +123,7 @@ export default function EditProfilePage() {
 				.from("profile_blocks")
 				.insert([{
 					type: blockData.type,
-					profile_id: session?.user?.id,
+					profile_id: user.id,
 					order: blocks.length,
 					content: null,
 					business_id: null,
@@ -158,7 +182,7 @@ export default function EditProfilePage() {
 		}
 	};
 
-	if (isLoading) {
+	if (isLoading || !user) {
 		return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
 	}
 

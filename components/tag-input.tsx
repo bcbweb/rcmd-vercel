@@ -28,7 +28,7 @@ export function TagInput({ tags, onChange, placeholder }: TagInputProps) {
 
   return (
     <div className="mt-1">
-      <div className="flex flex-wrap gap-2 p-2 border rounded-md border-gray-300 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
+      <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
         {tags.map(tag => (
           <span
             key={tag}

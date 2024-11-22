@@ -199,22 +199,47 @@ export default function OtherInfoPage() {
           </div>
         </div>
 
-        <div>
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
             Location
           </label>
-          <select
-            value={formData.location}
-            onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          >
-            <option value="">Select a country</option>
-            {countries.map(country => (
-              <option key={country.code} value={country.code}>
-                {country.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative mt-1">
+            <select
+              value={formData.location}
+              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+              className="mt-1 block w-full px-4 py-2 
+      bg-white dark:bg-gray-700
+      text-gray-900 dark:text-white 
+      rounded-md 
+      border border-gray-300 dark:border-gray-600
+      focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+      dark:focus:ring-blue-500 dark:focus:border-blue-500 
+      focus:outline-none appearance-none 
+      cursor-pointer text-base pr-10"
+            >
+              <option value="" className="bg-white dark:bg-gray-800">Select a country</option>
+              {countries.map(country => (
+                <option key={country.code} value={country.code} className="bg-white dark:bg-gray-800">
+                  {country.name}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+              <svg
+                className="h-5 w-5 text-gray-400"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div>

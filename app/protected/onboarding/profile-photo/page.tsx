@@ -65,8 +65,6 @@ export default function ProfilePhotoPage() {
         .eq('auth_user_id', user.id);
 
       if (error) throw error;
-
-      localStorage.removeItem('onboarding_personal_info');
       router.push("/protected/onboarding/other-info");
     } catch (error) {
       console.error(error);
