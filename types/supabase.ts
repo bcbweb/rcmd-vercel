@@ -844,6 +844,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      reorder_profile_blocks: {
+        Args: {
+          p_profile_id: string
+          p_block_id: string
+          p_new_order: number
+        }
+        Returns: boolean
+      }
       toggle_rcmd_like: {
         Args: {
           rcmd_id: string

@@ -53,18 +53,25 @@ export default function BlockRenderer({
 		fetchBlockData();
 	}, [block.id, block.type, supabase]);
 
-	const handleTextBlockSave = async (updatedText: { text: string; }) => {
+	const handleTextBlockSave = async (updatedBlock: Partial<TextBlockType>) => {
 		if (!textBlock) return;
 
 		try {
 			const { error } = await supabase
 				.from("text_blocks")
-				.update({ text: updatedText.text })
+				.update({
+					text: updatedBlock.text,
+					alignment: updatedBlock.alignment
+				})
 				.eq("profile_block_id", block.id);
 
 			if (error) throw error;
 
-			setTextBlock({ ...textBlock, text: updatedText.text });
+			setTextBlock({
+				...textBlock,
+				text: updatedBlock.text ?? textBlock.text,
+				alignment: updatedBlock.alignment ?? textBlock.alignment
+			});
 			onSave?.(block);
 		} catch (err) {
 			console.error("Error saving text block:", err);

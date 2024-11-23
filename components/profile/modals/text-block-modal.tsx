@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import TextAlign from '@tiptap/extension-text-align';
 import {
   Bold,
   Italic,
@@ -13,8 +14,6 @@ import {
 
 interface Props {
   onClose: () => void;
-  profileId: string;
-  order: number;
   onSave: (content: string, alignment: string) => Promise<void>;
 }
 
@@ -86,7 +85,14 @@ export default function TextBlockModal({ onClose, onSave }: Props) {
   const [isSaving, setIsSaving] = useState(false);
 
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right'],
+        defaultAlignment: 'left',
+      }),
+    ],
     content: '',
     editorProps: {
       attributes: {
