@@ -1,16 +1,14 @@
 "use client";
 
-import { RCMD } from "@/types";
-import { useDrag, useDrop } from "react-dnd";
-import { useRef } from "react";
 import { Pencil, Trash2, Globe, Lock, Users } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import type { RCMD } from '@/types/index';
 
 interface RcmdBlockProps {
   rcmd: RCMD;
   index: number;
   isEditing?: boolean;
-  onMove?: (dragIndex: number, hoverIndex: number) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
 }
 
@@ -18,68 +16,27 @@ export default function RcmdBlock({
   rcmd,
   index,
   isEditing = false,
-  onMove,
   onDelete,
 }: RcmdBlockProps) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  const [{ handlerId }, drop] = useDrop({
-    accept: 'rcmd',
-    collect(monitor) {
-      return {
-        handlerId: monitor.getHandlerId(),
-      };
-    },
-    hover(item: any, monitor) {
-      if (!ref.current || !onMove) return;
-
-      const dragIndex = item.index;
-      const hoverIndex = index;
-
-      if (dragIndex === hoverIndex) return;
-
-      const hoverBoundingRect = ref.current?.getBoundingClientRect();
-      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      const clientOffset = monitor.getClientOffset();
-      const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
-
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
-
-      onMove(dragIndex, hoverIndex);
-      item.index = hoverIndex;
-    },
-  });
-
-  const [{ isDragging }, drag] = useDrag({
-    type: 'rcmd',
-    item: () => ({ id: rcmd.id, index }),
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
-
-  drag(drop(ref));
-
   const visibilityIcon = {
     public: <Globe className="w-4 h-4" />,
     private: <Lock className="w-4 h-4" />,
     followers: <Users className="w-4 h-4" />,
-  }[rcmd.visibility];
+  }[rcmd.visibility || 'public'];
 
   return (
-    <div
-      ref={ref}
-      data-handler-id={handlerId}
-      className={`relative group rounded-lg border p-4 ${isDragging ? 'opacity-50' : 'opacity-100'
-        } ${isEditing ? 'cursor-move' : ''}`}
-    >
+    <div className="relative group rounded-lg border p-4">
       {rcmd.featured_image && (
-        <img
-          src={rcmd.featured_image}
-          alt={rcmd.title}
-          className="w-full h-48 object-cover rounded-md mb-4"
-        />
+        <div className="relative w-full h-48 mb-4">
+          <Image
+            src={rcmd.featured_image}
+            alt={rcmd.title}
+            fill
+            className="object-cover rounded-md"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={index < 2}
+          />
+        </div>
       )}
 
       <div className="flex items-start justify-between gap-2">
@@ -89,11 +46,13 @@ export default function RcmdBlock({
           {isEditing && (
             <>
               <Link href={`/protected/rcmds/${rcmd.id}/edit`}>
-                <button className="p-1 hover:text-primary">
+                <button type="button" title="Edit" className="p-1 hover:text-primary">
                   <Pencil className="w-4 h-4" />
                 </button>
               </Link>
               <button
+                type="button"
+                title="Delete"
                 onClick={() => onDelete?.(rcmd.id)}
                 className="p-1 hover:text-destructive"
               >

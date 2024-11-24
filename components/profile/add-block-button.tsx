@@ -1,15 +1,19 @@
+"use client";
+
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { PlusCircle } from 'lucide-react';
 import TextBlockModal from './modals/text-block-modal';
 import ImageBlockModal from './modals/image-block-modal';
+import LinkBlockModal from './modals/link-block-modal';
+import RcmdBlockModal from './modals/rcmd-block-modal';
 
 interface Props {
 	profileId: string;
 	onBlockAdded?: () => void;
 }
 
-type BlockType = 'text' | 'image';
+type BlockType = 'text' | 'image' | 'link' | 'rcmd';
 
 export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 	const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,16 +43,12 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 				});
 
 			if (textBlockError) {
-				await supabase
-					.from('profile_blocks')
-					.delete()
-					.eq('id', profileBlock.id);
+				await supabase.from('profile_blocks').delete().eq('id', profileBlock.id);
 				throw textBlockError;
 			}
 
 			closeModal();
 			onBlockAdded?.();
-
 		} catch (error) {
 			console.error('Error saving text block:', error);
 			alert('Failed to save text block');
@@ -78,19 +78,83 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 				});
 
 			if (imageBlockError) {
-				await supabase
-					.from('profile_blocks')
-					.delete()
-					.eq('id', profileBlock.id);
+				await supabase.from('profile_blocks').delete().eq('id', profileBlock.id);
 				throw imageBlockError;
 			}
 
 			closeModal();
 			onBlockAdded?.();
-
 		} catch (error) {
 			console.error('Error saving image block:', error);
 			alert('Failed to save image block');
+		}
+	};
+
+	const handleLinkBlockSave = async (linkId: string) => {
+		try {
+			const { data: profileBlock, error: profileBlockError } = await supabase
+				.from('profile_blocks')
+				.insert({
+					profile_id: profileId,
+					type: 'link',
+					order: 0,
+				})
+				.select()
+				.single();
+
+			if (profileBlockError) throw profileBlockError;
+
+			const { error: linkBlockError } = await supabase
+				.from('link_blocks')
+				.insert({
+					link_id: linkId,
+					profile_block_id: profileBlock.id,
+				});
+
+			if (linkBlockError) {
+				await supabase.from('profile_blocks').delete().eq('id', profileBlock.id);
+				throw linkBlockError;
+			}
+
+			closeModal();
+			onBlockAdded?.();
+		} catch (error) {
+			console.error('Error saving link block:', error);
+			alert('Failed to save link block');
+		}
+	};
+
+	const handleRcmdBlockSave = async (rcmdId: string) => {
+		try {
+			const { data: profileBlock, error: profileBlockError } = await supabase
+				.from('profile_blocks')
+				.insert({
+					profile_id: profileId,
+					type: 'rcmd',
+					order: 0,
+				})
+				.select()
+				.single();
+
+			if (profileBlockError) throw profileBlockError;
+
+			const { error: rcmdBlockError } = await supabase
+				.from('rcmd_blocks')
+				.insert({
+					rcmd_id: rcmdId,
+					profile_block_id: profileBlock.id,
+				});
+
+			if (rcmdBlockError) {
+				await supabase.from('profile_blocks').delete().eq('id', profileBlock.id);
+				throw rcmdBlockError;
+			}
+
+			closeModal();
+			onBlockAdded?.();
+		} catch (error) {
+			console.error('Error saving recommendation block:', error);
+			alert('Failed to save recommendation block');
 		}
 	};
 
@@ -123,7 +187,7 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 					<div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
 						<h2 className="text-lg font-semibold mb-4">Select Block Type</h2>
-						<div className="flex gap-4">
+						<div className="grid grid-cols-2 gap-4">
 							<button
 								onClick={() => setSelectedBlockType('text')}
 								className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -135,6 +199,18 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 								className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
 							>
 								Image Block
+							</button>
+							<button
+								onClick={() => setSelectedBlockType('link')}
+								className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+							>
+								Link Block
+							</button>
+							<button
+								onClick={() => setSelectedBlockType('rcmd')}
+								className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+							>
+								Recommendation Block
 							</button>
 						</div>
 						<button
@@ -158,6 +234,20 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 				<ImageBlockModal
 					onClose={closeModal}
 					onSave={handleImageBlockSave}
+				/>
+			)}
+
+			{isModalOpen && selectedBlockType === 'link' && (
+				<LinkBlockModal
+					onClose={closeModal}
+					onSave={handleLinkBlockSave}
+				/>
+			)}
+
+			{isModalOpen && selectedBlockType === 'rcmd' && (
+				<RcmdBlockModal
+					onClose={closeModal}
+					onSave={handleRcmdBlockSave}
 				/>
 			)}
 		</>

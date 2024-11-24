@@ -7,7 +7,8 @@ export type Profile = Tables["profiles"]["Row"];
 export type Creator = Tables["creators"]["Row"];
 export type Business = Tables["businesses"]["Row"];
 export type RCMD = Tables["rcmds"]["Row"];
-export type ProfileBlock = Tables["profile_blocks"]["Row"];
+export type Link = Tables["links"]["Row"];
+export type ProfileBlockType = Tables["profile_blocks"]["Row"];
 export type TextBlockType = Tables["text_blocks"]["Row"];
 
 export enum TextAlignment {

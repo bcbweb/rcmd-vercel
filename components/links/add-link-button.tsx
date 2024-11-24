@@ -1,34 +1,41 @@
+"use client";
+
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { PlusCircle } from 'lucide-react';
-import RcmdModal from './modals/rcmd-modal';
+import LinkModal from './modals/link-modal';
 
 interface Props {
-  onRcmdAdded?: () => void;
+  onLinkAdded?: () => void;
 }
 
-export default function AddRcmdButton({ onRcmdAdded }: Props) {
+export default function AddLinkButton({ onLinkAdded }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const supabase = createClient();
 
-  const handleRcmdSave = async (title: string, description: string, type: string) => {
+  const handleLinkSave = async (
+    title: string,
+    url: string,
+    description: string,
+    type: string,
+    visibility: string
+  ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
       const { error } = await supabase
-        .from('rcmds')
+        .from('links')
         .insert({
           owner_id: user.id,
           title,
+          url,
           description,
           type,
+          visibility,
           status: 'draft',
-          visibility: 'private',
-          is_sponsored: false,
-          monetization_enabled: false,
           view_count: 0,
-          like_count: 0,
+          click_count: 0,
           share_count: 0,
           save_count: 0
         });
@@ -36,11 +43,11 @@ export default function AddRcmdButton({ onRcmdAdded }: Props) {
       if (error) throw error;
 
       closeModal();
-      onRcmdAdded?.();
+      onLinkAdded?.();
 
     } catch (error) {
-      console.error('Error saving recommendation:', error);
-      alert('Failed to save recommendation');
+      console.error('Error saving link:', error);
+      alert('Failed to save link');
     }
   };
 
@@ -60,14 +67,14 @@ export default function AddRcmdButton({ onRcmdAdded }: Props) {
           dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
         >
           <PlusCircle className="w-5 h-5" />
-          <span>Add Recommendation</span>
+          <span>Add Link</span>
         </div>
       </button>
 
       {isModalOpen && (
-        <RcmdModal
+        <LinkModal
           onClose={closeModal}
-          onSave={handleRcmdSave}
+          onSave={handleLinkSave}
         />
       )}
     </>

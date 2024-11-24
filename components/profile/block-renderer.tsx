@@ -1,15 +1,15 @@
 "use client";
 
 import { useSupabase } from "@/components/providers/supabase-provider";
-import { type ProfileBlock, type TextBlockType } from "@/types";
+import { type ProfileBlockType, type TextBlockType } from "@/types";
 import { useEffect, useState } from "react";
 import TextBlock from "./blocks/TextBlock";
 
 interface Props {
-	block: ProfileBlock;
+	block: ProfileBlockType;
 	isEditing: boolean;
 	onDelete?: () => void;
-	onSave?: (updatedBlock: ProfileBlock) => void;
+	onSave?: (updatedBlock: ProfileBlockType) => void;
 }
 
 export default function BlockRenderer({

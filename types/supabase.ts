@@ -480,6 +480,77 @@ export type Database = {
           },
         ]
       }
+      links: {
+        Row: {
+          click_count: number
+          created_at: string
+          creator_id: string | null
+          description: string | null
+          id: string
+          is_sponsored: boolean
+          like_count: number
+          monetization_enabled: boolean
+          owner_id: string
+          save_count: number
+          share_count: number
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          url: string
+          view_count: number
+          visibility: string
+        }
+        Insert: {
+          click_count?: number
+          created_at?: string
+          creator_id?: string | null
+          description?: string | null
+          id?: string
+          is_sponsored?: boolean
+          like_count?: number
+          monetization_enabled?: boolean
+          owner_id: string
+          save_count?: number
+          share_count?: number
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string
+          url: string
+          view_count?: number
+          visibility?: string
+        }
+        Update: {
+          click_count?: number
+          created_at?: string
+          creator_id?: string | null
+          description?: string | null
+          id?: string
+          is_sponsored?: boolean
+          like_count?: number
+          monetization_enabled?: boolean
+          owner_id?: string
+          save_count?: number
+          share_count?: number
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          url?: string
+          view_count?: number
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "links_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_blocks: {
         Row: {
           created_at: string | null

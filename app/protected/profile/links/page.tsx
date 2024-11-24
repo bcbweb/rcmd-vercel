@@ -1,171 +1,98 @@
 "use client";
 
-import AddBlockButton from "@/components/profile/add-block-button";
-import ProfileBlocks from "@/components/profile/profile-blocks";
+import AddLinkButton from "@/components/links/add-link-button";
+import LinkBlocks from "@/components/links/link-blocks"; // Update import path
 import { createClient } from "@/utils/supabase/client";
-import type { ProfileBlock } from "@/types";
+import type { Link } from "@/types";
 import { useCallback, useEffect, useState } from "react";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 
-export default function EditProfilePage() {
+export default function LinksPage() {
 	const supabase = createClient();
-	const [blocks, setBlocks] = useState<ProfileBlock[]>([]);
-	const [isBlockSaving, setIsBlockSaving] = useState(false);
-	const [profileId, setProfileId] = useState<string>("");
+	const [links, setLinks] = useState<Link[]>([]);
+	const [isLinkSaving, setIsLinkSaving] = useState(false);
+	const [userId, setUserId] = useState<string>("");
 
-	// Get profile ID
+	// Get user ID
 	useEffect(() => {
-		const getProfileId = async () => {
+		const getUserId = async () => {
 			const { data: { user } } = await supabase.auth.getUser();
 			if (!user) return;
 
-			const { data: profile } = await supabase
-				.from("profiles")
-				.select("id")
-				.eq("auth_user_id", user.id)
-				.single();
-
-			if (profile) {
-				setProfileId(profile.id);
-				refreshBlocks(profile.id);
-			}
+			setUserId(user.id);
+			refreshLinks(user.id);
 		};
 
-		getProfileId();
+		getUserId();
 	}, [supabase]);
 
-	const refreshBlocks = useCallback(async (profileId: string) => {
-		if (!profileId) return;
+	const refreshLinks = useCallback(async (ownerId: string) => {
+		if (!ownerId) return;
 
 		try {
-			setIsBlockSaving(true);
-			const { data: blocksData, error: blocksError } = await supabase
-				.from('profile_blocks')
+			setIsLinkSaving(true);
+			const { data: linksData, error: linksError } = await supabase
+				.from('links')
 				.select('*')
-				.eq('profile_id', profileId)
-				.order('order', { ascending: true });
+				.eq('owner_id', ownerId)
+				.order('created_at', { ascending: false });
 
-			if (blocksError) throw blocksError;
-			setBlocks(blocksData || []);
+			if (linksError) throw linksError;
+			setLinks(linksData || []);
 		} catch (error) {
-			console.error('Error refreshing blocks:', error);
-			alert('Failed to refresh blocks');
+			console.error('Error refreshing links:', error);
+			alert('Failed to refresh links');
 		} finally {
-			setIsBlockSaving(false);
+			setIsLinkSaving(false);
 		}
 	}, [supabase]);
 
-	const moveBlock = useCallback(async (dragIndex: number, hoverIndex: number) => {
+	const handleLinkAdded = useCallback(async () => {
+		if (!userId) return;
+		setIsLinkSaving(true);
 		try {
-			setIsBlockSaving(true);
-
-			// Update local state first for immediate UI feedback
-			setBlocks((prevBlocks) => {
-				const newBlocks = [...prevBlocks];
-				const [removed] = newBlocks.splice(dragIndex, 1);
-				newBlocks.splice(hoverIndex, 0, removed);
-				return newBlocks;
-			});
-
-			// Calculate the new order value
-			const newOrder = hoverIndex + 1; // Using 1-based indexing
-			const blockId = blocks[dragIndex].id;
-			const profileId = blocks[dragIndex].profile_id;
-
-			// Call the database function to handle reordering
-			const { error } = await supabase.rpc('reorder_profile_blocks', {
-				p_profile_id: profileId,
-				p_block_id: blockId,
-				p_new_order: newOrder
-			});
-
-			if (error) throw error;
-
-			// Optionally refresh the blocks from the server to ensure consistency
-			const { data: updatedBlocks, error: fetchError } = await supabase
-				.from("profile_blocks")
-				.select('*')
-				.eq('profile_id', profileId)
-				.order('order', { ascending: true });
-
-			if (fetchError) throw fetchError;
-
-			if (updatedBlocks) {
-				setBlocks(updatedBlocks);
-			}
-
-		} catch (error) {
-			console.error('Error moving block:', error);
-			alert('Failed to update block order');
-
-			// Optionally revert the local state on error
-			const { data: originalBlocks } = await supabase
-				.from("profile_blocks")
-				.select('*')
-				.eq('profile_id', blocks[dragIndex].profile_id)
-				.order('order', { ascending: true });
-
-			if (originalBlocks) {
-				setBlocks(originalBlocks);
-			}
+			await refreshLinks(userId);
 		} finally {
-			setIsBlockSaving(false);
+			setIsLinkSaving(false);
 		}
-	}, [blocks, supabase]);
+	}, [userId, refreshLinks]);
 
-	const handleBlockAdded = useCallback(async () => {
-		if (!profileId) return;
-		setIsBlockSaving(true);
+	const handleDeleteLink = async (id: string) => {
 		try {
-			await refreshBlocks(profileId);
-		} finally {
-			setIsBlockSaving(false);
-		}
-	}, [profileId, refreshBlocks]);
-
-	const handleDeleteBlock = async (id: string) => {
-		try {
-			setIsBlockSaving(true);
-			setBlocks(prev => prev.filter(b => b.id !== id));
+			setIsLinkSaving(true);
+			setLinks(prev => prev.filter(l => l.id !== id));
 
 			const { error } = await supabase
-				.from("profile_blocks")
+				.from("links")
 				.delete()
 				.eq("id", id);
 
 			if (error) throw error;
 		} catch (error) {
-			console.error('Error deleting block:', error);
-			alert('Failed to delete block');
+			console.error('Error deleting link:', error);
+			alert('Failed to delete link');
 		} finally {
-			setIsBlockSaving(false);
+			setIsLinkSaving(false);
 		}
 	};
 
 	return (
-		<DndProvider backend={HTML5Backend}>
-			<div>
-				<div className="flex gap-4 mb-4">
-					<AddBlockButton
-						profileId={profileId}
-						onBlockAdded={handleBlockAdded}
-					/>
-				</div>
-
-				<ProfileBlocks
-					blocks={blocks}
-					isEditing={true}
-					onMove={moveBlock}
-					onDelete={handleDeleteBlock}
+		<div>
+			<div className="flex gap-4 mb-4">
+				<AddLinkButton
+					onLinkAdded={handleLinkAdded}
 				/>
-
-				{isBlockSaving && (
-					<div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg px-4 py-2">
-						Saving changes...
-					</div>
-				)}
 			</div>
-		</DndProvider>
+
+			<LinkBlocks
+				initialLinks={links}
+				onDelete={handleDeleteLink}
+			/>
+
+			{isLinkSaving && (
+				<div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg px-4 py-2">
+					Saving changes...
+				</div>
+			)}
+		</div>
 	);
 }

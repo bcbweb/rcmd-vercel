@@ -3,14 +3,14 @@
 import AddBlockButton from "@/components/profile/add-block-button";
 import ProfileBlocks from "@/components/profile/profile-blocks";
 import { createClient } from "@/utils/supabase/client";
-import type { ProfileBlock } from "@/types";
+import type { ProfileBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
 export default function EditProfilePage() {
 	const supabase = createClient();
-	const [blocks, setBlocks] = useState<ProfileBlock[]>([]);
+	const [blocks, setBlocks] = useState<ProfileBlockType[]>([]);
 	const [isBlockSaving, setIsBlockSaving] = useState(false);
 	const [profileId, setProfileId] = useState<string>("");
 

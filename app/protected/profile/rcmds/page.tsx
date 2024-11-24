@@ -5,8 +5,6 @@ import RcmdBlocks from "@/components/rcmds/rcmd-blocks";
 import { createClient } from "@/utils/supabase/client";
 import type { RCMD } from "@/types";
 import { useCallback, useEffect, useState } from "react";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 
 export default function RcmdsPage() {
 	const supabase = createClient();
@@ -48,29 +46,6 @@ export default function RcmdsPage() {
 		}
 	}, [supabase]);
 
-	const moveRcmd = useCallback(async (dragIndex: number, hoverIndex: number) => {
-		try {
-			setIsRcmdSaving(true);
-
-			// Update local state first for immediate UI feedback
-			setRcmds((prevRcmds) => {
-				const newRcmds = [...prevRcmds];
-				const [removed] = newRcmds.splice(dragIndex, 1);
-				newRcmds.splice(hoverIndex, 0, removed);
-				return newRcmds;
-			});
-
-		} catch (error) {
-			console.error('Error moving recommendation:', error);
-			alert('Failed to update recommendation order');
-
-			// Revert the local state on error
-			refreshRcmds(userId);
-		} finally {
-			setIsRcmdSaving(false);
-		}
-	}, [rcmds, supabase, userId, refreshRcmds]);
-
 	const handleRcmdAdded = useCallback(async () => {
 		if (!userId) return;
 		setIsRcmdSaving(true);
@@ -101,28 +76,22 @@ export default function RcmdsPage() {
 	};
 
 	return (
-		<DndProvider backend={HTML5Backend}>
-			<div>
-				<div className="flex gap-4 mb-4">
-					<AddRcmdButton
-						ownerId={userId}
-						onRcmdAdded={handleRcmdAdded}
-					/>
-				</div>
-
-				<RcmdBlocks
-					rcmds={rcmds}
-					isEditing={true}
-					onMove={moveRcmd}
-					onDelete={handleDeleteRcmd}
-				/>
-
-				{isRcmdSaving && (
-					<div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg px-4 py-2">
-						Saving changes...
-					</div>
-				)}
+		<div>
+			<div className="flex gap-4 mb-4">
+				<AddRcmdButton onRcmdAdded={handleRcmdAdded} />
 			</div>
-		</DndProvider>
+
+			<RcmdBlocks
+				rcmds={rcmds}
+				isEditing={true}
+				onDelete={handleDeleteRcmd}
+			/>
+
+			{isRcmdSaving && (
+				<div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg px-4 py-2">
+					Saving changes...
+				</div>
+			)}
+		</div>
 	);
 }
