@@ -1,7 +1,8 @@
 import Link from "next/link";
-import AuthButtons from "@/components/header-auth";
 import { MainNav } from "./main-nav";
 import { mainNavItems } from "@/config/navigation";
+import UserMenu from "../user-menu";
+import AddMenu from "../add-menu";
 
 export default function Header() {
   return (
@@ -13,7 +14,10 @@ export default function Header() {
           </Link>
           <MainNav items={mainNavItems} />
         </div>
-        <AuthButtons />
+        <div className="flex items-center gap-5">
+          <AddMenu />
+          <UserMenu />
+        </div>
       </div>
     </header>
   );

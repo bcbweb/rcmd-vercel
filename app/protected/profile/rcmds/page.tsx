@@ -3,12 +3,12 @@
 import AddRcmdButton from "@/components/rcmds/add-rcmd-button";
 import RcmdBlocks from "@/components/rcmds/rcmd-blocks";
 import { createClient } from "@/utils/supabase/client";
-import type { RCMD } from "@/types";
+import type { RCMDBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 
 export default function RcmdsPage() {
 	const supabase = createClient();
-	const [rcmds, setRcmds] = useState<RCMD[]>([]);
+	const [rcmdBlocks, setRcmdBlocks] = useState<RCMDBlockType[]>([]);
 	const [isRcmdSaving, setIsRcmdSaving] = useState(false);
 	const [userId, setUserId] = useState<string>("");
 
@@ -37,9 +37,19 @@ export default function RcmdsPage() {
 				.order('created_at', { ascending: false });
 
 			if (rcmdsError) throw rcmdsError;
-			setRcmds(rcmdsData || []);
+
+			// Transform rcmds data into rcmd blocks format
+			const transformedBlocks: RCMDBlockType[] = (rcmdsData || []).map(rcmd => ({
+				id: rcmd.id,
+				rcmd_id: rcmd.id,
+				profile_block_id: `profile-block-${rcmd.id}`, // Generate a unique profile block ID
+				created_at: rcmd.created_at,
+				updated_at: rcmd.updated_at
+			}));
+
+			setRcmdBlocks(transformedBlocks);
 		} catch (error) {
-			console.error('Error refreshing rcmds:', error);
+			console.error('Error refreshing recommendations:', error);
 			alert('Failed to refresh recommendations');
 		} finally {
 			setIsRcmdSaving(false);
@@ -56,10 +66,10 @@ export default function RcmdsPage() {
 		}
 	}, [userId, refreshRcmds]);
 
-	const handleDeleteRcmd = async (id: string) => {
+	const handleDeleteRcmd = useCallback(async (id: string) => {
 		try {
 			setIsRcmdSaving(true);
-			setRcmds(prev => prev.filter(r => r.id !== id));
+			setRcmdBlocks(prev => prev.filter(r => r.id !== id));
 
 			const { error } = await supabase
 				.from("rcmds")
@@ -73,6 +83,28 @@ export default function RcmdsPage() {
 		} finally {
 			setIsRcmdSaving(false);
 		}
+	}, [supabase]);
+
+	const handleSaveRcmd = async (block: Partial<RCMDBlockType>) => {
+		try {
+			setIsRcmdSaving(true);
+
+			const { error } = await supabase
+				.from("rcmds")
+				.update({
+					updated_at: new Date().toISOString()
+				})
+				.eq("id", block.id);
+
+			if (error) throw error;
+
+			await refreshRcmds(userId);
+		} catch (error) {
+			console.error('Error saving recommendation:', error);
+			alert('Failed to save recommendation');
+		} finally {
+			setIsRcmdSaving(false);
+		}
 	};
 
 	return (
@@ -82,13 +114,14 @@ export default function RcmdsPage() {
 			</div>
 
 			<RcmdBlocks
-				rcmds={rcmds}
+				rcmds={rcmdBlocks}
 				isEditing={true}
 				onDelete={handleDeleteRcmd}
+				onSave={handleSaveRcmd}
 			/>
 
 			{isRcmdSaving && (
-				<div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg px-4 py-2">
+				<div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 shadow-lg rounded-lg px-4 py-2">
 					Saving changes...
 				</div>
 			)}

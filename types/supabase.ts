@@ -480,6 +480,104 @@ export type Database = {
           },
         ]
       }
+      image_blocks: {
+        Row: {
+          auth_user_id: string
+          caption: string | null
+          created_at: string
+          height: number | null
+          id: string
+          image_url: string
+          mime_type: string
+          original_filename: string
+          profile_block_id: string
+          size_bytes: number
+          status: string | null
+          updated_at: string
+          uploaded_at: string | null
+          width: number | null
+        }
+        Insert: {
+          auth_user_id: string
+          caption?: string | null
+          created_at?: string
+          height?: number | null
+          id?: string
+          image_url: string
+          mime_type: string
+          original_filename: string
+          profile_block_id: string
+          size_bytes: number
+          status?: string | null
+          updated_at?: string
+          uploaded_at?: string | null
+          width?: number | null
+        }
+        Update: {
+          auth_user_id?: string
+          caption?: string | null
+          created_at?: string
+          height?: number | null
+          id?: string
+          image_url?: string
+          mime_type?: string
+          original_filename?: string
+          profile_block_id?: string
+          size_bytes?: number
+          status?: string | null
+          updated_at?: string
+          uploaded_at?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "image_blocks_profile_block_id_fkey"
+            columns: ["profile_block_id"]
+            isOneToOne: false
+            referencedRelation: "profile_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      link_blocks: {
+        Row: {
+          created_at: string
+          id: string
+          link_id: string
+          profile_block_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link_id: string
+          profile_block_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link_id?: string
+          profile_block_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_blocks_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "link_blocks_profile_block_id_fkey"
+            columns: ["profile_block_id"]
+            isOneToOne: false
+            referencedRelation: "profile_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       links: {
         Row: {
           click_count: number
@@ -553,25 +651,28 @@ export type Database = {
       }
       profile_blocks: {
         Row: {
+          auth_user_id: string
           created_at: string | null
+          display_order: number
           id: string
-          order: number
           profile_id: string | null
           type: string
           updated_at: string | null
         }
         Insert: {
+          auth_user_id: string
           created_at?: string | null
+          display_order: number
           id?: string
-          order: number
           profile_id?: string | null
           type: string
           updated_at?: string | null
         }
         Update: {
+          auth_user_id?: string
           created_at?: string | null
+          display_order?: number
           id?: string
-          order?: number
           profile_id?: string | null
           type?: string
           updated_at?: string | null
@@ -639,6 +740,45 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      rcmd_blocks: {
+        Row: {
+          created_at: string
+          id: string
+          profile_block_id: string
+          rcmd_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_block_id: string
+          rcmd_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_block_id?: string
+          rcmd_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rcmd_blocks_profile_block_id_fkey"
+            columns: ["profile_block_id"]
+            isOneToOne: false
+            referencedRelation: "profile_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rcmd_blocks_rcmd_id_fkey"
+            columns: ["rcmd_id"]
+            isOneToOne: false
+            referencedRelation: "rcmds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rcmd_comments: {
         Row: {
@@ -877,7 +1017,6 @@ export type Database = {
       }
       text_blocks: {
         Row: {
-          alignment: Database["public"]["Enums"]["text_alignment"] | null
           created_at: string | null
           id: string
           profile_block_id: string | null
@@ -885,7 +1024,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          alignment?: Database["public"]["Enums"]["text_alignment"] | null
           created_at?: string | null
           id?: string
           profile_block_id?: string | null
@@ -893,7 +1031,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          alignment?: Database["public"]["Enums"]["text_alignment"] | null
           created_at?: string | null
           id?: string
           profile_block_id?: string | null
@@ -915,6 +1052,87 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      insert_block_with_order: {
+        Args: {
+          p_profile_id: string
+          p_content: Json
+          p_type: string
+        }
+        Returns: {
+          auth_user_id: string
+          created_at: string | null
+          display_order: number
+          id: string
+          profile_id: string | null
+          type: string
+          updated_at: string | null
+        }
+      }
+      insert_image_block:
+        | {
+            Args: {
+              p_profile_id: string
+              p_image_url: string
+              p_caption: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_profile_id: string
+              p_image_url: string
+              p_caption: string
+              p_original_filename: string
+              p_size_bytes: number
+              p_mime_type: string
+              p_width: number
+              p_height: number
+            }
+            Returns: undefined
+          }
+      insert_link_block: {
+        Args: {
+          p_profile_id: string
+          p_link_id: string
+        }
+        Returns: undefined
+      }
+      insert_rcmd_block: {
+        Args: {
+          p_profile_id: string
+          p_rcmd_id: string
+        }
+        Returns: {
+          auth_user_id: string
+          created_at: string | null
+          display_order: number
+          id: string
+          profile_id: string | null
+          type: string
+          updated_at: string | null
+        }
+      }
+      insert_text_block: {
+        Args: {
+          p_profile_id: string
+          p_text: string
+        }
+        Returns: {
+          auth_user_id: string
+          created_at: string | null
+          display_order: number
+          id: string
+          profile_id: string | null
+          type: string
+          updated_at: string | null
+        }
+      }
+      next_block_order: {
+        Args: {
+          p_profile_id: string
+        }
+        Returns: number
+      }
       reorder_profile_blocks: {
         Args: {
           p_profile_id: string

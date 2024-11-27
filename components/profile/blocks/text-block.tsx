@@ -1,14 +1,11 @@
 "use client";
 
-import { TextAlignment, type TextBlockType } from "@/types";
 import {
 	Pencil,
 	Trash2,
-	AlignLeft,
-	AlignRight,
-	AlignJustify,
 } from "lucide-react";
 import { useState } from "react";
+import type { TextBlockType } from "@/types";
 import DOMPurify from "dompurify";
 
 interface Props {
@@ -26,21 +23,12 @@ export default function TextBlock({
 }: Props) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [text, setText] = useState(textBlock.text);
-	const [alignment, setAlignment] = useState(
-		textBlock.alignment ?? TextAlignment.Left
-	);
 
 	const handleSave = () => {
 		if (onSave) {
-			onSave({ text, alignment });
+			onSave({ text });
 		}
 		setIsEditing(false);
-	};
-
-	const alignmentClasses = {
-		[TextAlignment.Left]: "text-left",
-		[TextAlignment.Center]: "text-center",
-		[TextAlignment.Right]: "text-right",
 	};
 
 	const sanitizeConfig = {
@@ -78,12 +66,14 @@ export default function TextBlock({
 			{isEditMode && (
 				<div className="flex justify-end mb-2 gap-2">
 					<button
+						title="Edit"
 						onClick={() => setIsEditing(!isEditing)}
 						className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
 					>
 						<Pencil className="w-5 h-5" />
 					</button>
 					<button
+						title="Delete"
 						onClick={onDelete}
 						className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
 					>
@@ -95,43 +85,12 @@ export default function TextBlock({
 			{isEditing ? (
 				<div>
 					<textarea
+						title="Content"
 						value={text}
 						onChange={(e) => setText(e.target.value)}
 						className="w-full p-2 border rounded bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
 						rows={4}
 					/>
-					<div className="flex gap-2 mt-2">
-						<button
-							onClick={() => setAlignment(TextAlignment.Left)}
-							className={`p-2 rounded ${alignment === TextAlignment.Left
-									? "bg-gray-200 dark:bg-gray-600"
-									: ""
-								}`}
-							title="Align left"
-						>
-							<AlignLeft className="w-5 h-5" />
-						</button>
-						<button
-							onClick={() => setAlignment(TextAlignment.Center)}
-							className={`p-2 rounded ${alignment === TextAlignment.Center
-									? "bg-gray-200 dark:bg-gray-600"
-									: ""
-								}`}
-							title="Align center"
-						>
-							<AlignJustify className="w-5 h-5" />
-						</button>
-						<button
-							onClick={() => setAlignment(TextAlignment.Right)}
-							className={`p-2 rounded ${alignment === TextAlignment.Right
-									? "bg-gray-200 dark:bg-gray-600"
-									: ""
-								}`}
-							title="Align right"
-						>
-							<AlignRight className="w-5 h-5" />
-						</button>
-					</div>
 					<div className="mt-2 flex justify-end gap-2">
 						<button
 							onClick={() => setIsEditing(false)}
@@ -149,7 +108,7 @@ export default function TextBlock({
 				</div>
 			) : (
 				<div
-					className={`prose dark:prose-invert max-w-none ${alignmentClasses[alignment]}`}
+					className='prose dark:prose-invert max-w-none'
 					dangerouslySetInnerHTML={{
 						__html: DOMPurify.sanitize(text, sanitizeConfig),
 					}}

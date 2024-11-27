@@ -10,12 +10,9 @@ export type RCMD = Tables["rcmds"]["Row"];
 export type Link = Tables["links"]["Row"];
 export type ProfileBlockType = Tables["profile_blocks"]["Row"];
 export type TextBlockType = Tables["text_blocks"]["Row"];
-
-export enum TextAlignment {
-	Left = "left",
-	Center = "center",
-	Right = "right",
-}
+export type ImageBlockType = Tables["image_blocks"]["Row"];
+export type LinkBlockType = Tables["link_blocks"]["Row"];
+export type RCMDBlockType = Tables["rcmd_blocks"]["Row"];
 
 // You can also create custom composite types
 export type BusinessWithOwner = Business & {

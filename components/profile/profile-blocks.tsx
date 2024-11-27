@@ -25,7 +25,7 @@ export default function ProfileBlocks({
 					index={index}
 					isEditing={isEditing}
 					onMove={onMove}
-					onDelete={onDelete}
+					onDelete={() => onDelete?.(block.id)}
 				/>
 			))}
 		</div>

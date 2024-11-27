@@ -1,19 +1,21 @@
 "use client";
 
-import RcmdBlock from "./rcmd-block";
+import RcmdBlock from "../profile/blocks/rcmd-block";
 import { useMemo } from "react";
-import type { RCMD } from '@/types/index';
+import type { RCMDBlockType } from '@/types/index';
 
 interface RcmdBlocksProps {
-  rcmds: RCMD[];
+  rcmds: RCMDBlockType[];
   isEditing?: boolean;
-  onDelete?: (id: string) => Promise<void>;
+  onDelete?: (id: string) => void;
+  onSave?: (block: Partial<RCMDBlockType>) => void;
 }
 
 export default function RcmdBlocks({
   rcmds,
   isEditing = false,
   onDelete,
+  onSave
 }: RcmdBlocksProps) {
   const sortedRcmds = useMemo(() => {
     return [...rcmds].sort((a, b) => {
@@ -25,13 +27,13 @@ export default function RcmdBlocks({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {sortedRcmds.map((rcmd, index) => (
+      {sortedRcmds.map((rcmd) => (
         <RcmdBlock
           key={rcmd.id}
-          rcmd={rcmd}
-          index={index}
+          rcmdBlock={rcmd}
           isEditing={isEditing}
-          onDelete={onDelete}
+          onDelete={() => onDelete?.(rcmd.id)}
+          onSave={onSave}
         />
       ))}
     </div>

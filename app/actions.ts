@@ -59,6 +59,8 @@ export const signInAction = async (formData: FormData) => {
 		.select('is_onboarded')
 		.single();
 
+	console.log('profile after sign in', profile);
+
 	if (!profile?.is_onboarded) {
 		return redirect("/protected/onboarding");
 	}

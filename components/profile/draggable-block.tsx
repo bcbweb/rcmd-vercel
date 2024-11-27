@@ -1,14 +1,12 @@
 "use client";
 
-import type { Database } from "@/types/supabase";
 import { useRef } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import BlockRenderer from "./block-renderer";
-
-type ProfileBlock = Database["public"]["Tables"]["profile_blocks"]["Row"];
+import type { ProfileBlockType } from '@/types';
 
 interface Props {
-	block: ProfileBlock;
+	block: ProfileBlockType;
 	index: number;
 	isEditing: boolean;
 	onMove?: (dragIndex: number, hoverIndex: number) => void;

@@ -44,7 +44,7 @@ export default function EditProfilePage() {
 				.from('profile_blocks')
 				.select('*')
 				.eq('profile_id', profileId)
-				.order('order', { ascending: true });
+				.order('display_order', { ascending: true });
 
 			if (blocksError) throw blocksError;
 			setBlocks(blocksData || []);
@@ -87,7 +87,7 @@ export default function EditProfilePage() {
 				.from("profile_blocks")
 				.select('*')
 				.eq('profile_id', profileId)
-				.order('order', { ascending: true });
+				.order('display_order', { ascending: true });
 
 			if (fetchError) throw fetchError;
 
@@ -104,7 +104,7 @@ export default function EditProfilePage() {
 				.from("profile_blocks")
 				.select('*')
 				.eq('profile_id', blocks[dragIndex].profile_id)
-				.order('order', { ascending: true });
+				.order('display_order', { ascending: true });
 
 			if (originalBlocks) {
 				setBlocks(originalBlocks);
@@ -124,7 +124,7 @@ export default function EditProfilePage() {
 		}
 	}, [profileId, refreshBlocks]);
 
-	const handleDeleteBlock = async (id: string) => {
+	const handleDeleteBlock = useCallback(async (id: string) => {
 		try {
 			setIsBlockSaving(true);
 			setBlocks(prev => prev.filter(b => b.id !== id));
@@ -141,7 +141,7 @@ export default function EditProfilePage() {
 		} finally {
 			setIsBlockSaving(false);
 		}
-	};
+	}, [supabase]);
 
 	return (
 		<DndProvider backend={HTML5Backend}>

@@ -6,155 +6,107 @@ import { PlusCircle } from 'lucide-react';
 import TextBlockModal from './modals/text-block-modal';
 import ImageBlockModal from './modals/image-block-modal';
 import LinkBlockModal from './modals/link-block-modal';
-import RcmdBlockModal from './modals/rcmd-block-modal';
+import RCMDBlockModal from './modals/rcmd-block-modal';
 
 interface Props {
 	profileId: string;
 	onBlockAdded?: () => void;
 }
 
-type BlockType = 'text' | 'image' | 'link' | 'rcmd';
+type BlockType = 'text' | 'image' | 'rcmd' | 'business' | 'custom' | 'link';
 
 export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [selectedBlockType, setSelectedBlockType] = useState<BlockType | null>(null);
 	const supabase = createClient();
 
-	const handleTextBlockSave = async (content: string, alignment: string) => {
+	const handleTextBlockSave = async (content: string) => {
 		try {
-			const { data: profileBlock, error: profileBlockError } = await supabase
-				.from('profile_blocks')
-				.insert({
-					profile_id: profileId,
-					type: 'text',
-					order: 0,
-				})
-				.select()
-				.single();
-
-			if (profileBlockError) throw profileBlockError;
-
-			const { error: textBlockError } = await supabase
-				.from('text_blocks')
-				.insert({
-					text: content,
-					alignment: alignment,
-					profile_block_id: profileBlock.id,
+			const { error } = await supabase
+				.rpc('insert_text_block', {
+					p_profile_id: profileId,
+					p_text: content
 				});
 
-			if (textBlockError) {
-				await supabase.from('profile_blocks').delete().eq('id', profileBlock.id);
-				throw textBlockError;
-			}
+			if (error) throw error;
 
 			closeModal();
 			onBlockAdded?.();
+
 		} catch (error) {
 			console.error('Error saving text block:', error);
 			alert('Failed to save text block');
 		}
 	};
 
-	const handleImageBlockSave = async (imageUrl: string, caption: string) => {
+	const handleImageBlockSave = async (
+		imageUrl: string,
+		caption: string,
+		originalFilename: string,
+		sizeBytes: number,
+		mimeType: string,
+		width: number,
+		height: number
+	) => {
 		try {
-			const { data: profileBlock, error: profileBlockError } = await supabase
-				.from('profile_blocks')
-				.insert({
-					profile_id: profileId,
-					type: 'image',
-					order: 0,
-				})
-				.select()
-				.single();
-
-			if (profileBlockError) throw profileBlockError;
-
-			const { error: imageBlockError } = await supabase
-				.from('image_blocks')
-				.insert({
-					url: imageUrl,
-					caption: caption,
-					profile_block_id: profileBlock.id,
+			const { error } = await supabase
+				.rpc('insert_image_block', {
+					p_profile_id: profileId,
+					p_image_url: imageUrl,
+					p_caption: caption,
+					p_original_filename: originalFilename,
+					p_size_bytes: sizeBytes,
+					p_mime_type: mimeType,
+					p_width: width,
+					p_height: height
 				});
 
-			if (imageBlockError) {
-				await supabase.from('profile_blocks').delete().eq('id', profileBlock.id);
-				throw imageBlockError;
-			}
+			if (error) throw error;
 
 			closeModal();
 			onBlockAdded?.();
+
 		} catch (error) {
 			console.error('Error saving image block:', error);
 			alert('Failed to save image block');
 		}
 	};
 
-	const handleLinkBlockSave = async (linkId: string) => {
-		try {
-			const { data: profileBlock, error: profileBlockError } = await supabase
-				.from('profile_blocks')
-				.insert({
-					profile_id: profileId,
-					type: 'link',
-					order: 0,
-				})
-				.select()
-				.single();
-
-			if (profileBlockError) throw profileBlockError;
-
-			const { error: linkBlockError } = await supabase
-				.from('link_blocks')
-				.insert({
-					link_id: linkId,
-					profile_block_id: profileBlock.id,
-				});
-
-			if (linkBlockError) {
-				await supabase.from('profile_blocks').delete().eq('id', profileBlock.id);
-				throw linkBlockError;
-			}
-
-			closeModal();
-			onBlockAdded?.();
-		} catch (error) {
-			console.error('Error saving link block:', error);
-			alert('Failed to save link block');
-		}
-	};
-
 	const handleRcmdBlockSave = async (rcmdId: string) => {
 		try {
-			const { data: profileBlock, error: profileBlockError } = await supabase
-				.from('profile_blocks')
-				.insert({
-					profile_id: profileId,
-					type: 'rcmd',
-					order: 0,
-				})
-				.select()
-				.single();
-
-			if (profileBlockError) throw profileBlockError;
-
-			const { error: rcmdBlockError } = await supabase
-				.from('rcmd_blocks')
-				.insert({
-					rcmd_id: rcmdId,
-					profile_block_id: profileBlock.id,
+			const { error } = await supabase
+				.rpc('insert_rcmd_block', {
+					p_profile_id: profileId,
+					p_rcmd_id: rcmdId
 				});
 
-			if (rcmdBlockError) {
-				await supabase.from('profile_blocks').delete().eq('id', profileBlock.id);
-				throw rcmdBlockError;
-			}
+			if (error) throw error;
 
 			closeModal();
 			onBlockAdded?.();
+
 		} catch (error) {
 			console.error('Error saving recommendation block:', error);
 			alert('Failed to save recommendation block');
+		}
+	};
+
+	const handleLinkBlockSave = async (linkId: string) => {
+		try {
+			const { error } = await supabase
+				.rpc('insert_link_block', {
+					p_profile_id: profileId,
+					p_link_id: linkId
+				});
+
+			if (error) throw error;
+
+			closeModal();
+			onBlockAdded?.();
+
+		} catch (error) {
+			console.error('Error saving link block:', error);
+			alert('Failed to save link block');
 		}
 	};
 
@@ -245,7 +197,7 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 			)}
 
 			{isModalOpen && selectedBlockType === 'rcmd' && (
-				<RcmdBlockModal
+				<RCMDBlockModal
 					onClose={closeModal}
 					onSave={handleRcmdBlockSave}
 				/>

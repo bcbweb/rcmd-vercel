@@ -1,29 +1,30 @@
 import { Trash2, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
+import { type ImageBlockType } from '@/types';
 
 interface Props {
-	data: {
-		url: string;
-		caption?: string;
-	};
+	imageBlock: ImageBlockType;
 	isEditing?: boolean;
 	onDelete?: () => void;
-	onEdit?: (data: { url: string; caption?: string; }) => void;
+	onSave?: (updatedBlock: Partial<ImageBlockType>) => void;
 }
 
 export default function ImageBlock({
-	data,
+	imageBlock,
 	isEditing,
 	onDelete,
-	onEdit,
+	onSave,
 }: Props) {
-	const [isEditMode, setIsEditMode] = useState(false); // renamed from isEditing
-	const [url, setUrl] = useState(data.url);
-	const [caption, setCaption] = useState(data.caption || '');
+	const [isEditMode, setIsEditMode] = useState(false);
+	const [imageUrl, setImageUrl] = useState(imageBlock.image_url);
+	const [caption, setCaption] = useState(imageBlock.caption || '');
 
 	const handleSave = () => {
-		onEdit?.({ url, caption });
+		onSave?.({
+			image_url: imageUrl,
+			caption: caption || null
+		});
 		setIsEditMode(false);
 	};
 
@@ -33,8 +34,8 @@ export default function ImageBlock({
 				<div className="space-y-4">
 					<input
 						type="text"
-						value={url}
-						onChange={(e) => setUrl(e.target.value)}
+						value={imageUrl}
+						onChange={(e) => setImageUrl(e.target.value)}
 						className="w-full p-2 border rounded"
 						placeholder="Image URL"
 					/>
@@ -69,12 +70,14 @@ export default function ImageBlock({
 			{isEditing && (
 				<div className="flex justify-end mb-2 gap-2">
 					<button
+						title="Edit"
 						onClick={() => setIsEditMode(true)}
 						className="text-gray-500 hover:text-gray-700"
 					>
 						<Pencil className="w-5 h-5" />
 					</button>
 					<button
+						title="Delete"
 						onClick={onDelete}
 						className="text-red-500 hover:text-red-700"
 					>
@@ -85,13 +88,15 @@ export default function ImageBlock({
 
 			<figure>
 				<Image
-					src={data.url}
-					alt={data.caption || ""}
+					src={imageBlock.image_url}
+					alt={imageBlock.caption || ""}
 					className="w-full h-auto rounded"
+					width="200"
+					height="200"
 				/>
-				{data.caption && (
+				{imageBlock.caption && (
 					<figcaption className="mt-2 text-center text-gray-600">
-						{data.caption}
+						{imageBlock.caption}
 					</figcaption>
 				)}
 			</figure>

@@ -13,6 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const { data: profile } = await supabase
     .from("profiles")
     .select("is_onboarded")
+    .eq("auth_user_id", user.id)
     .single();
 
   if (profile?.is_onboarded) {

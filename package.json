@@ -28,6 +28,7 @@
 		"dompurify": "^3.2.1",
 		"embla-carousel-react": "^8.4.0",
 		"geist": "^1.2.1",
+		"html-react-parser": "^5.1.18",
 		"lodash": "^4.17.21",
 		"lucide-react": "^0.456.0",
 		"next": "latest",

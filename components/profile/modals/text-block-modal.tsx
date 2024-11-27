@@ -14,7 +14,7 @@ import {
 
 interface Props {
   onClose: () => void;
-  onSave: (content: string, alignment: string) => Promise<void>;
+  onSave: (content: string) => Promise<void>;
 }
 
 const MenuBar = ({ editor }: { editor: Editor | null; }) => {
@@ -107,14 +107,7 @@ export default function TextBlockModal({ onClose, onSave }: Props) {
     try {
       setIsSaving(true);
       const content = editor.getHTML();
-      // Get alignment from editor state
-      const alignment = editor.isActive({ textAlign: 'center' })
-        ? 'center'
-        : editor.isActive({ textAlign: 'right' })
-          ? 'right'
-          : 'left';
-
-      await onSave(content, alignment);
+      await onSave(content);
     } catch (error) {
       console.error('Error saving text block:', error);
       alert('Failed to save text block');

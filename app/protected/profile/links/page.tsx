@@ -1,15 +1,15 @@
 "use client";
 
 import AddLinkButton from "@/components/links/add-link-button";
-import LinkBlocks from "@/components/links/link-blocks"; // Update import path
+import LinkBlocks from "@/components/links/link-blocks";
 import { createClient } from "@/utils/supabase/client";
-import type { Link } from "@/types";
+import type { LinkBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 
 export default function LinksPage() {
 	const supabase = createClient();
-	const [links, setLinks] = useState<Link[]>([]);
-	const [isLinkSaving, setIsLinkSaving] = useState(false);
+	const [linkBlocks, setLinkBlocks] = useState<LinkBlockType[]>([]);
+	const [isBlockSaving, setIsBlockSaving] = useState(false);
 	const [userId, setUserId] = useState<string>("");
 
 	// Get user ID
@@ -29,7 +29,7 @@ export default function LinksPage() {
 		if (!ownerId) return;
 
 		try {
-			setIsLinkSaving(true);
+			setIsBlockSaving(true);
 			const { data: linksData, error: linksError } = await supabase
 				.from('links')
 				.select('*')
@@ -37,29 +37,39 @@ export default function LinksPage() {
 				.order('created_at', { ascending: false });
 
 			if (linksError) throw linksError;
-			setLinks(linksData || []);
+
+			// Transform links data into link blocks format
+			const transformedBlocks: LinkBlockType[] = (linksData || []).map(link => ({
+				id: link.id,
+				link_id: link.id,
+				profile_block_id: `profile-block-${link.id}`, // Generate a unique profile block ID
+				created_at: link.created_at,
+				updated_at: link.updated_at
+			}));
+
+			setLinkBlocks(transformedBlocks);
 		} catch (error) {
 			console.error('Error refreshing links:', error);
 			alert('Failed to refresh links');
 		} finally {
-			setIsLinkSaving(false);
+			setIsBlockSaving(false);
 		}
 	}, [supabase]);
 
-	const handleLinkAdded = useCallback(async () => {
+	const handleBlockAdded = useCallback(async () => {
 		if (!userId) return;
-		setIsLinkSaving(true);
+		setIsBlockSaving(true);
 		try {
 			await refreshLinks(userId);
 		} finally {
-			setIsLinkSaving(false);
+			setIsBlockSaving(false);
 		}
 	}, [userId, refreshLinks]);
 
-	const handleDeleteLink = async (id: string) => {
+	const handleDeleteBlock = useCallback(async (id: string) => {
 		try {
-			setIsLinkSaving(true);
-			setLinks(prev => prev.filter(l => l.id !== id));
+			setIsBlockSaving(true);
+			setLinkBlocks(prev => prev.filter(b => b.id !== id));
 
 			const { error } = await supabase
 				.from("links")
@@ -71,7 +81,29 @@ export default function LinksPage() {
 			console.error('Error deleting link:', error);
 			alert('Failed to delete link');
 		} finally {
-			setIsLinkSaving(false);
+			setIsBlockSaving(false);
+		}
+	}, [supabase]);
+
+	const handleSaveBlock = async (block: Partial<LinkBlockType>) => {
+		try {
+			setIsBlockSaving(true);
+
+			const { error } = await supabase
+				.from("links")
+				.update({
+					updated_at: new Date().toISOString()
+				})
+				.eq("id", block.id);
+
+			if (error) throw error;
+
+			await refreshLinks(userId);
+		} catch (error) {
+			console.error('Error saving link:', error);
+			alert('Failed to save link');
+		} finally {
+			setIsBlockSaving(false);
 		}
 	};
 
@@ -79,17 +111,18 @@ export default function LinksPage() {
 		<div>
 			<div className="flex gap-4 mb-4">
 				<AddLinkButton
-					onLinkAdded={handleLinkAdded}
+					onLinkAdded={handleBlockAdded}
 				/>
 			</div>
 
 			<LinkBlocks
-				initialLinks={links}
-				onDelete={handleDeleteLink}
+				initialLinkBlocks={linkBlocks}
+				onDelete={handleDeleteBlock}
+				onSave={handleSaveBlock}
 			/>
 
-			{isLinkSaving && (
-				<div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg px-4 py-2">
+			{isBlockSaving && (
+				<div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 shadow-lg rounded-lg px-4 py-2">
 					Saving changes...
 				</div>
 			)}
