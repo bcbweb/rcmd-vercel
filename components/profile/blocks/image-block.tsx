@@ -30,32 +30,38 @@ export default function ImageBlock({
 
 	if (isEditMode) {
 		return (
-			<div className="bg-white rounded-lg shadow p-4">
+			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
 				<div className="space-y-4">
 					<input
 						type="text"
 						value={imageUrl}
 						onChange={(e) => setImageUrl(e.target.value)}
-						className="w-full p-2 border rounded"
+						className="w-full p-2 border rounded bg-white dark:bg-gray-700 
+                                 text-gray-900 dark:text-gray-100 
+                                 border-gray-300 dark:border-gray-600"
 						placeholder="Image URL"
 					/>
 					<input
 						type="text"
 						value={caption}
 						onChange={(e) => setCaption(e.target.value)}
-						className="w-full p-2 border rounded"
+						className="w-full p-2 border rounded bg-white dark:bg-gray-700 
+                                 text-gray-900 dark:text-gray-100 
+                                 border-gray-300 dark:border-gray-600"
 						placeholder="Caption (optional)"
 					/>
 					<div className="flex justify-end gap-2">
 						<button
 							onClick={() => setIsEditMode(false)}
-							className="px-3 py-1 text-gray-600 hover:text-gray-800"
+							className="px-3 py-1 text-gray-600 dark:text-gray-300 
+                                     hover:text-gray-800 dark:hover:text-gray-100"
 						>
 							Cancel
 						</button>
 						<button
 							onClick={handleSave}
-							className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+							className="px-3 py-1 bg-blue-500 text-white rounded 
+                                     hover:bg-blue-600 dark:hover:bg-blue-400"
 						>
 							Save
 						</button>
@@ -66,20 +72,22 @@ export default function ImageBlock({
 	}
 
 	return (
-		<div className="bg-white rounded-lg shadow p-4">
+		<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
 			{isEditing && (
 				<div className="flex justify-end mb-2 gap-2">
 					<button
 						title="Edit"
 						onClick={() => setIsEditMode(true)}
-						className="text-gray-500 hover:text-gray-700"
+						className="text-gray-500 dark:text-gray-400 
+                                 hover:text-gray-700 dark:hover:text-gray-200"
 					>
 						<Pencil className="w-5 h-5" />
 					</button>
 					<button
 						title="Delete"
 						onClick={onDelete}
-						className="text-red-500 hover:text-red-700"
+						className="text-red-500 hover:text-red-700 
+                                 dark:text-red-400 dark:hover:text-red-300"
 					>
 						<Trash2 className="w-5 h-5" />
 					</button>
@@ -95,7 +103,7 @@ export default function ImageBlock({
 					height="200"
 				/>
 				{imageBlock.caption && (
-					<figcaption className="mt-2 text-center text-gray-600">
+					<figcaption className="mt-2 text-center text-gray-600 dark:text-gray-300">
 						{imageBlock.caption}
 					</figcaption>
 				)}
