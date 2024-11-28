@@ -48,7 +48,7 @@ export default function OtherInfoPage() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          router.push('/auth/signin');
+          router.push('/sign-in');
           return;
         }
 

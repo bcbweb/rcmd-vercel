@@ -23,13 +23,13 @@ export default function Hero() {
 							{/* CTA Buttons */}
 							<div className="mt-6 flex flex-col space-y-3 sm:flex-row sm:space-x-4 sm:space-y-0">
 								<Link
-									href="/auth/signup"
+									href="/sign-up"
 									className="inline-flex w-full items-center justify-center rounded-md bg-blue-600 px-6 py-3 text-sm font-medium text-white shadow transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 sm:w-auto md:text-base"
 								>
 									Get started
 								</Link>
 								<Link
-									href="/auth/signin"
+									href="/sign-in"
 									className="inline-flex w-full items-center justify-center rounded-md bg-blue-100 px-6 py-3 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-200 dark:bg-gray-800 dark:text-blue-400 dark:hover:bg-gray-700 sm:w-auto md:text-base"
 								>
 									Sign in
