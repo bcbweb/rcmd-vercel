@@ -59,7 +59,6 @@ export default function ProfileHeader({
     firstName: firstName || '',
     lastName: lastName || '',
     bio: bio || '',
-    location: location || '',
     interests: interests || [],
     tags: tags || []
   });
@@ -82,7 +81,6 @@ export default function ProfileHeader({
         first_name: formData.firstName,
         last_name: formData.lastName,
         bio: formData.bio,
-        location: formData.location,
         interests: formData.interests,
         tags: formData.tags,
         profile_picture_url: newProfilePictureUrl,
@@ -112,7 +110,6 @@ export default function ProfileHeader({
       firstName: firstName || '',
       lastName: lastName || '',
       bio: bio || '',
-      location: location || '',
       interests: interests || [],
       tags: tags || []
     });
@@ -226,18 +223,7 @@ export default function ProfileHeader({
               </h1>
               <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-2">
                 <span>@{handle}</span>
-                {isEditing ? (
-                  <div className="flex items-center gap-2">
-                    <span>·</span>
-                    <input
-                      type="text"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="p-1 rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-800"
-                      placeholder="Add location"
-                    />
-                  </div>
-                ) : location && (
+                {location && (
                   <>
                     <span>·</span>
                     <span>📍 {location}</span>

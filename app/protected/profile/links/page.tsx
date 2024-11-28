@@ -66,9 +66,9 @@ export default function LinksPage() {
 	}, [userId, fetchLinks]);
 
 	const handleDeleteLink = useCallback(async (id: string) => {
+		const previousLinkBlocks = [...linkBlocks];
 		try {
 			setIsLinkSaving(true);
-			const previousLinkBlocks = [...linkBlocks];
 
 			// Optimistic update
 			setLinkBlocks(prev => prev.filter(l => l.link_id !== id));

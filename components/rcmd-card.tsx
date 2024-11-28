@@ -4,7 +4,10 @@ import Image from 'next/image';
 import { Heart, Bookmark, Share2 } from 'lucide-react';
 
 import { type RCMD } from '@/types';
+import type { Database } from '@/types/supabase';
 import { formatDistanceToNow } from 'date-fns';
+
+type RCMDType = Database['public']['Enums']['rcmd_type'];
 
 interface RCMDCardProps {
   rcmd: RCMD;
@@ -14,7 +17,7 @@ interface RCMDCardProps {
 }
 
 export default function RCMDCard({ rcmd, onLike, onSave, onShare }: RCMDCardProps) {
-  const getTypeIcon = (type: RCMD) => {
+  const getTypeIcon = (type: RCMDType) => {
     // const typeClasses = "w-5 h-5";
     switch (type) {
       case 'other':

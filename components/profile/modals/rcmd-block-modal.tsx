@@ -112,8 +112,8 @@ export default function RcmdBlockModal({ onClose, onSave }: RcmdBlockModalProps)
                 <div
                   key={rcmd.id}
                   className={`p-4 border rounded-lg mb-2 cursor-pointer ${selectedRcmdId === rcmd.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                     }`}
                   onClick={() => setSelectedRcmdId(rcmd.id)}
                 >

@@ -1158,7 +1158,7 @@ export type Database = {
         | "accommodation"
         | "other"
       rcmd_status: "draft" | "active" | "archived" | "flagged" | "deleted"
-      rcmd_type: "product" | "service" | "place" | "experience" | "content"
+      rcmd_type: "product" | "service" | "place" | "experience" | "other"
       rcmd_visibility: "public" | "private" | "followers"
       text_alignment: "left" | "center" | "right"
       verification_status: "unverified" | "pending" | "verified" | "rejected"

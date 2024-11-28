@@ -32,24 +32,24 @@ export default async function ProfilePage({
 	const { data: profile, error } = await supabase
 		.from("profiles")
 		.select(`
+    id,
+    first_name,
+    last_name,
+    bio,
+    profile_picture_url,
+    cover_image,
+    handle,
+    location,
+    interests,
+    tags,
+    profile_blocks!profile_id(
       id,
-      first_name,
-      last_name,
-      bio,
-      profile_picture_url,
-      cover_image,
-      handle,
-      location,
-      interests,
-      tags,
-      profile_blocks(
-        id,
-        type,
-        display_order,
-        created_at,
-        updated_at
-      )
-    `)
+      type,
+      display_order,
+      created_at,
+      updated_at
+    )
+  `)
 		.eq("handle", handle)
 		.single() as { data: Profile | null; error: unknown; };
 
