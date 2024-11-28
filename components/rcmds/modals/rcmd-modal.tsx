@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 interface Props {
   onClose: () => void;
-  onSave: (title: string, description: string, type: string) => Promise<void>;
+  onSave: (title: string, description: string, type: string, visibility: boolean) => Promise<void>;
 }
 
 export default function RcmdModal({ onClose, onSave }: Props) {

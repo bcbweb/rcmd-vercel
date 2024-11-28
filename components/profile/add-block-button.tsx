@@ -144,25 +144,25 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 								onClick={() => setSelectedBlockType('text')}
 								className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
 							>
-								Text Block
+								Text
 							</button>
 							<button
 								onClick={() => setSelectedBlockType('image')}
 								className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
 							>
-								Image Block
+								Image
 							</button>
 							<button
 								onClick={() => setSelectedBlockType('link')}
 								className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
 							>
-								Link Block
+								Link
 							</button>
 							<button
 								onClick={() => setSelectedBlockType('rcmd')}
 								className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
 							>
-								Recommendation Block
+								Recommendation
 							</button>
 						</div>
 						<button

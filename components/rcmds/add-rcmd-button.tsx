@@ -11,7 +11,7 @@ export default function AddRcmdButton({ onRcmdAdded }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const supabase = createClient();
 
-  const handleRcmdSave = async (title: string, description: string, type: string) => {
+  const handleRcmdSave = async (title: string, description: string, type: string, visibility: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
@@ -24,7 +24,7 @@ export default function AddRcmdButton({ onRcmdAdded }: Props) {
           description,
           type,
           status: 'draft',
-          visibility: 'private',
+          visibility,
           is_sponsored: false,
           monetization_enabled: false,
           view_count: 0,

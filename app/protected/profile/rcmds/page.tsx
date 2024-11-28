@@ -67,23 +67,39 @@ export default function RcmdsPage() {
 	}, [userId, refreshRcmds]);
 
 	const handleDeleteRcmd = useCallback(async (id: string) => {
+		// Store current state for rollback if needed
+		const previousRcmdBlocks = [...rcmdBlocks];
 		try {
 			setIsRcmdSaving(true);
+
+			// Optimistic update
 			setRcmdBlocks(prev => prev.filter(r => r.id !== id));
 
 			const { error } = await supabase
-				.from("rcmds")
+				.from('rcmds')
 				.delete()
-				.eq("id", id);
+				.eq('id', id);
 
-			if (error) throw error;
+			if (error) {
+				throw error;
+			}
+
 		} catch (error) {
 			console.error('Error deleting recommendation:', error);
-			alert('Failed to delete recommendation');
+
+			// Show user-friendly error message
+			alert(
+				error instanceof Error
+					? error.message
+					: 'Failed to delete recommendation'
+			);
+
+			// Revert the optimistic update
+			setRcmdBlocks(previousRcmdBlocks);
 		} finally {
 			setIsRcmdSaving(false);
 		}
-	}, [supabase]);
+	}, [rcmdBlocks, supabase]);
 
 	const handleSaveRcmd = async (block: Partial<RCMDBlockType>) => {
 		try {
