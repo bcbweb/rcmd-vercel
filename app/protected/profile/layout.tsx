@@ -23,13 +23,17 @@ export default function ProfileLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [profileId, setProfileId] = useState<string>("");
-  const [username, setUsername] = useState<string>("");
+  const [handle, setHandle] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [firstName, setFirstName] = useState<string>("");
   const [lastName, setLastName] = useState<string>("");
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
   const [coverImageUrl, setCoverImageUrl] = useState<string>("");
+  const [interests, setInterests] = useState<string[] | null>(null);
+  const [tags, setTags] = useState<string[] | null>(null);
+  const [bio, setBio] = useState<string>("");
+  const [location, setLocation] = useState<string>("");
 
   const pageTitle = pathname && (PAGE_TITLES[pathname as PathType] || 'Profile');
 
@@ -66,11 +70,15 @@ export default function ProfileLayout({
         .select(`
           id, 
           is_onboarded, 
-          username, 
           first_name, 
           last_name, 
+          handle, 
           profile_picture_url,
-          cover_image
+          cover_image,
+          interests,
+          tags,
+          bio,
+          location
         `)
         .eq("auth_user_id", userId)
         .single();
@@ -83,11 +91,15 @@ export default function ProfileLayout({
       }
 
       setProfileId(profile.id || "");
-      setUsername(profile.username || "");
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
+      setHandle(profile.handle || "");
       setProfilePictureUrl(profile.profile_picture_url || "");
       setCoverImageUrl(profile.cover_image || "");
+      setInterests(profile.interests);
+      setTags(profile.tags);
+      setBio(profile.bio || "");
+      setLocation(profile.location || "");
     } catch (error) {
       console.error('Error fetching profile:', error);
       alert('Failed to load profile data');
@@ -112,12 +124,16 @@ export default function ProfileLayout({
     <div className="w-full max-w-7xl mx-auto py-8 px-4">
       <ProfileHeader
         profileId={profileId}
+        handle={handle}
         title={pageTitle}
-        username={username}
         firstName={firstName}
         lastName={lastName}
         profilePictureUrl={profilePictureUrl}
         coverImageUrl={coverImageUrl}
+        interests={interests}
+        tags={tags}
+        bio={bio}
+        location={location}
       />
       <div className="w-full p-[1px] bg-gradient-to-r from-transparent via-foreground/10 to-transparent my-8" />
       {children}

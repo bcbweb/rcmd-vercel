@@ -184,6 +184,7 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 
 			{isModalOpen && selectedBlockType === 'image' && (
 				<ImageBlockModal
+					profileId={profileId}
 					onClose={closeModal}
 					onSave={handleImageBlockSave}
 				/>

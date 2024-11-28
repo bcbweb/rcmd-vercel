@@ -25,7 +25,7 @@ import AddMenu from "./add-menu";
 
 interface Profile {
   profile_picture_url: string | null;
-  username: string | null;
+  handle: string | null;
 }
 
 export default function UserMenu() {
@@ -41,7 +41,7 @@ export default function UserMenu() {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('profile_picture_url, username')
+          .select('profile_picture_url, handle')
           .eq('auth_user_id', user.id)
           .single();
         setProfile(profile);
@@ -93,17 +93,17 @@ export default function UserMenu() {
             <Avatar className="h-8 w-8">
               <AvatarImage
                 src={profile?.profile_picture_url ?? undefined}
-                alt={profile?.username ?? user.email ?? "User avatar"}
+                alt={profile?.handle ?? user.email ?? "User avatar"}
               />
               <AvatarFallback>
-                {profile?.username ? getInitials(profile.username) : user.email ? getInitials(user.email) : "U"}
+                {profile?.handle ? getInitials(profile.handle) : user.email ? getInitials(user.email) : "U"}
               </AvatarFallback>
             </Avatar>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end">
           <div className="px-2 py-1.5 text-sm font-medium">
-            {profile?.username ? `@${profile.username}` : user.email}
+            {profile?.handle ? `@${profile.handle}` : user.email}
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>

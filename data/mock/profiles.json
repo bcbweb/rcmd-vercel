@@ -16,7 +16,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "johndoe",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   },
@@ -37,7 +36,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "sarahcodes",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   },
@@ -58,7 +56,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "mikej",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   },
@@ -79,7 +76,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "amychen",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   },
@@ -100,7 +96,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "rajap",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   },
@@ -121,7 +116,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "elenarodz",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   },
@@ -142,7 +136,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "tomw",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   },
@@ -163,7 +156,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "lisakim",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   },
@@ -184,7 +176,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "davidt",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   },
@@ -205,7 +196,6 @@
     "interests": null,
     "location": null,
     "is_onboarded": true,
-    "username": "ninap",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": null
   }

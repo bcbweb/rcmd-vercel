@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import { useState } from 'react';
+import { uploadContentImage } from '@/utils/storage';
 import Image from 'next/image';
 
 interface Props {
@@ -14,25 +13,15 @@ interface Props {
     width: number,
     height: number
   ) => void;
+  profileId: string; // Add this prop
 }
 
-export default function ImageBlockModal({ onClose, onSave }: Props) {
+export default function ImageBlockModal({ onClose, onSave, profileId }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number; } | null>(null);
-
-  const supabase = createClient();
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
-  }, []);
 
   const getImageDimensions = (file: File): Promise<{ width: number; height: number; }> => {
     return new Promise((resolve, reject) => {
@@ -73,7 +62,7 @@ export default function ImageBlockModal({ onClose, onSave }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !user || !imageDimensions) {
+    if (!file || !imageDimensions) {
       setError('Please select an image');
       return;
     }
@@ -82,31 +71,7 @@ export default function ImageBlockModal({ onClose, onSave }: Props) {
       setUploading(true);
       setError(null);
 
-      const timestamp = new Date().toISOString();
-      const fileExt = file.name.split('.').pop();
-      const sanitizedFileName = file.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .substring(0, 32);
-
-      const filePath = `users/${user.id}/images/${timestamp}-${sanitizedFileName}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('profile-content')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: file.type
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-content')
-        .getPublicUrl(filePath);
+      const publicUrl = await uploadContentImage(file, profileId);
 
       // Pass all metadata
       onSave(

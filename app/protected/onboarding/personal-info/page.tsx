@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { StepProgress } from "@/components/step-progress";
-import UsernameInput from "@/components/username-input";
 import { personalInfoSchema, type PersonalInfoFormData } from "@/lib/schemas/onboarding";
 import { createClient } from '@/utils/supabase/client';
 import { toast } from "sonner";
@@ -32,9 +31,6 @@ const inputClasses = {
 export default function PersonalInfoPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [originalUsername, setOriginalUsername] = useState('');
-  const [username, setUsername] = useState('');
-  const [isUsernameValid, setIsUsernameValid] = useState(false);
   const supabase = createClient();
 
   const {
@@ -53,9 +49,6 @@ export default function PersonalInfoPage() {
       const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
         const parsedData = JSON.parse(savedData);
-        setOriginalUsername(parsedData.username || '');
-        setUsername(parsedData.username || '');
-        setValue('username', parsedData.username);
         setValue('first_name', parsedData.first_name);
         setValue('last_name', parsedData.last_name);
         setValue('bio', parsedData.bio);
@@ -68,14 +61,11 @@ export default function PersonalInfoPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('username, first_name, last_name, bio')
+        .select('first_name, last_name, bio')
         .eq('auth_user_id', user.id)
         .single();
 
       if (profile) {
-        setOriginalUsername(profile.username || '');
-        setUsername(profile.username || '');
-        setValue('username', profile.username);
         setValue('first_name', profile.first_name);
         setValue('last_name', profile.last_name);
         setValue('bio', profile.bio);
@@ -87,11 +77,6 @@ export default function PersonalInfoPage() {
 
   const onSubmit = async (data: PersonalInfoFormData) => {
     try {
-      if (!isUsernameValid) {
-        toast.error("Please choose a valid username");
-        return;
-      }
-
       setIsSubmitting(true);
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -105,7 +90,6 @@ export default function PersonalInfoPage() {
         .upsert({
           auth_user_id: user.id,
           email: user.email,
-          username: username,
           first_name: data.first_name,
           last_name: data.last_name,
           bio: data.bio,
@@ -118,7 +102,6 @@ export default function PersonalInfoPage() {
 
       // Store complete form data in localStorage
       const formData = {
-        username,
         first_name: data.first_name,
         last_name: data.last_name,
         bio: data.bio
@@ -144,16 +127,6 @@ export default function PersonalInfoPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-        <UsernameInput
-          value={username}
-          onChange={(value, isValid) => {
-            setUsername(value);
-            setIsUsernameValid(isValid);
-            setValue('username', value); // Update form value
-          }}
-          currentUsername={originalUsername}
-          className={inputClasses.default}
-        />
         <div>
           <label
             htmlFor="first_name"
@@ -245,7 +218,7 @@ export default function PersonalInfoPage() {
         <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
             type="submit"
-            disabled={isSubmitting || !isUsernameValid}
+            disabled={isSubmitting}
             className="px-4 py-2 text-sm font-medium text-white 
               bg-blue-600 dark:bg-blue-500 
               rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 

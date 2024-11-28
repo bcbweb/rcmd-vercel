@@ -70,12 +70,6 @@ export default function UsernameInput({
 
   return (
     <div className="space-y-1">
-      <label
-        htmlFor="username"
-        className="block text-sm font-medium text-gray-700 dark:text-gray-200"
-      >
-        Username
-      </label>
       <div className="relative">
         <input
           id="username"
