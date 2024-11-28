@@ -1,10 +1,13 @@
 "use client";
 
-import { Pencil, Trash2, Globe, Lock, Users, Check, X } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { createClient } from '@/utils/supabase/client';
-import { type RCMDBlockType, type RCMD } from "@/types";
+import type { RCMDBlockType, RCMD, RCMDVisibility } from "@/types";
+import BlockActions from "@/components/shared/block-actions";
+import BlockStats from "@/components/shared/block-stats";
+import BlockSkeleton from "@/components/shared/block-skeleton";
+import { blockStyles } from "@/components/shared/styles";
 
 interface RcmdBlockProps {
   rcmdBlock: RCMDBlockType;
@@ -66,43 +69,21 @@ export default function RcmdBlock({
     }
   };
 
-  const handleCancel = () => {
-    setEditedRcmd(rcmd);
-    setIsEditMode(false);
-  };
-
   if (isLoading) {
-    return (
-      <div className="relative rounded-lg border p-4 animate-pulse">
-        <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-md mb-4"></div>
-        <div className="flex items-start justify-between gap-2">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-8"></div>
-        </div>
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mt-2"></div>
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mt-4"></div>
-      </div>
-    );
+    return <BlockSkeleton hasImage={true} lines={3} />;
   }
 
   if (!rcmd || !editedRcmd) return null;
 
-  const visibilityIcon = {
-    public: <Globe className="w-4 h-4" />,
-    private: <Lock className="w-4 h-4" />,
-    followers: <Users className="w-4 h-4" />,
-  }[rcmd.visibility || 'public'];
-
   return (
-    <div className="relative group rounded-lg border p-4">
+    <div className={blockStyles.container}>
       {rcmd.featured_image && (
-        <div className="relative w-full h-48 mb-4">
+        <div className="relative w-full h-48 mb-4 rounded-md overflow-hidden">
           <Image
             src={rcmd.featured_image}
-            alt={rcmd.title}
+            alt={rcmd.title || 'Featured image'}
             fill
-            className="object-cover rounded-md"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover"
           />
         </div>
       )}
@@ -114,88 +95,74 @@ export default function RcmdBlock({
             type="text"
             value={editedRcmd.title}
             onChange={(e) => setEditedRcmd({ ...editedRcmd, title: e.target.value })}
-            className="flex-1 font-medium border rounded px-2 py-1"
+            className={blockStyles.inputField}
           />
         ) : (
-          <h3 className="font-medium">{rcmd.title}</h3>
+          <h3 className={blockStyles.title}>{rcmd.title}</h3>
         )}
-        <div className="flex items-center gap-2">
-          {visibilityIcon}
-          {isEditing && !isEditMode && (
-            <>
-              <button
-                type="button"
-                title="Edit"
-                onClick={() => setIsEditMode(true)}
-                className="p-1 hover:text-primary"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                title="Delete"
-                onClick={onDelete}
-                className="p-1 hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </>
-          )}
-          {isEditMode && (
-            <>
-              <button
-                type="button"
-                title="Save"
-                onClick={handleSave}
-                className="p-1 hover:text-primary"
-              >
-                <Check className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                title="Cancel"
-                onClick={handleCancel}
-                className="p-1 hover:text-destructive"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </>
-          )}
-        </div>
+
+        <BlockActions
+          isEditing={isEditing}
+          isEditMode={isEditMode}
+          onEdit={() => setIsEditMode(true)}
+          onDelete={onDelete}
+          onSave={handleSave}
+          onCancel={() => setIsEditMode(false)}
+        />
       </div>
 
       {isEditMode ? (
-        <textarea
-          title="Edit description"
-          value={editedRcmd.description || ''}
-          onChange={(e) => setEditedRcmd({ ...editedRcmd, description: e.target.value })}
-          className="w-full text-sm text-muted-foreground mt-2 border rounded px-2 py-1"
-          rows={2}
-        />
+        <>
+          <textarea
+            title="Edit description"
+            value={editedRcmd.description || ''}
+            onChange={(e) => setEditedRcmd({ ...editedRcmd, description: e.target.value })}
+            className={`${blockStyles.inputField} mt-2`}
+            rows={3}
+          />
+          <input
+            title="Edit image URL"
+            type="url"
+            value={editedRcmd.featured_image || ''}
+            onChange={(e) => setEditedRcmd({ ...editedRcmd, featured_image: e.target.value })}
+            className={`${blockStyles.inputField} mt-2`}
+            placeholder="Featured image URL"
+          />
+        </>
       ) : (
-        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-          {rcmd.description}
-        </p>
+        rcmd.description && (
+          <p className={blockStyles.description}>{rcmd.description}</p>
+        )
       )}
 
-      {rcmd.tags && rcmd.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-3">
-          {rcmd.tags.map((tag) => (
-            <span
-              key={tag}
-              className="text-xs px-2 py-1 bg-muted rounded-full"
-            >
-              {tag}
+      <div className="flex items-center gap-2 mt-2">
+        {isEditMode ? (
+          <select
+            value={editedRcmd.visibility as RCMDVisibility}
+            onChange={(e) => setEditedRcmd({ ...editedRcmd, visibility: e.target.value as RCMDVisibility })}
+            className={blockStyles.inputField}
+          >
+            <option value="public">Public</option>
+            <option value="private">Private</option>
+            <option value="followers">Followers</option>
+          </select>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className={blockStyles.tag}>{rcmd.visibility}</span>
+            <span className={blockStyles.metaText}>
+              {new Date(rcmdBlock.created_at).toLocaleDateString()}
             </span>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
-        <span>{rcmd.view_count} views</span>
-        <span>{rcmd.like_count} likes</span>
-        <span>{rcmd.save_count} saves</span>
+          </div>
+        )}
       </div>
+
+      <BlockStats
+        stats={[
+          { value: rcmd.view_count, label: 'views' },
+          { value: rcmd.like_count, label: 'likes' },
+          { value: rcmd.share_count, label: 'shares' },
+        ]}
+      />
     </div>
   );
 }

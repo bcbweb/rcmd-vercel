@@ -1,7 +1,8 @@
-import { Trash2, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { type ImageBlockType } from '@/types';
+import BlockActions from '@/components/shared/block-actions';
+import { blockStyles } from '@/components/shared/styles';
 
 interface Props {
 	imageBlock: ImageBlockType;
@@ -30,7 +31,7 @@ export default function ImageBlock({
 
 	if (isEditMode) {
 		return (
-			<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+			<div className={blockStyles.container}>
 				<div className="space-y-4">
 					<input
 						type="text"
@@ -72,27 +73,17 @@ export default function ImageBlock({
 	}
 
 	return (
-		<div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-			{isEditing && (
-				<div className="flex justify-end mb-2 gap-2">
-					<button
-						title="Edit"
-						onClick={() => setIsEditMode(true)}
-						className="text-gray-500 dark:text-gray-400 
-                                 hover:text-gray-700 dark:hover:text-gray-200"
-					>
-						<Pencil className="w-5 h-5" />
-					</button>
-					<button
-						title="Delete"
-						onClick={onDelete}
-						className="text-red-500 hover:text-red-700 
-                                 dark:text-red-400 dark:hover:text-red-300"
-					>
-						<Trash2 className="w-5 h-5" />
-					</button>
-				</div>
-			)}
+		<div className={blockStyles.container}>
+			<div className="flex justify-end mb-2 gap-2">
+				<BlockActions
+					isEditing={isEditing}
+					isEditMode={isEditMode}
+					onEdit={() => setIsEditMode(true)}
+					onDelete={onDelete}
+					onSave={handleSave}
+					onCancel={() => setIsEditMode(false)}
+				/>
+			</div>
 
 			<figure>
 				<Image

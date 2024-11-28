@@ -1,12 +1,9 @@
 "use client";
 
-import {
-	Pencil,
-	Trash2,
-} from "lucide-react";
 import { useState } from "react";
 import type { TextBlockType } from "@/types";
 import DOMPurify from "dompurify";
+import BlockActions from "@/components/shared/block-actions";
 
 interface Props {
 	textBlock: TextBlockType;
@@ -65,20 +62,14 @@ export default function TextBlock({
 		<div className="bg-gray-100 dark:bg-gray-800 rounded-lg shadow p-4">
 			{isEditMode && (
 				<div className="flex justify-end mb-2 gap-2">
-					<button
-						title="Edit"
-						onClick={() => setIsEditing(!isEditing)}
-						className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-					>
-						<Pencil className="w-5 h-5" />
-					</button>
-					<button
-						title="Delete"
-						onClick={onDelete}
-						className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-					>
-						<Trash2 className="w-5 h-5" />
-					</button>
+					<BlockActions
+						isEditing={isEditing}
+						isEditMode={isEditMode}
+						onEdit={() => setIsEditing(true)}
+						onDelete={onDelete}
+						onSave={handleSave}
+						onCancel={() => setIsEditing(false)}
+					/>
 				</div>
 			)}
 

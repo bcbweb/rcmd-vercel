@@ -928,6 +928,7 @@ export type Database = {
       }
       rcmds: {
         Row: {
+          click_count: number
           commission_rate: number | null
           created_at: string | null
           creator_id: string | null
@@ -935,14 +936,14 @@ export type Database = {
           featured_image: string | null
           id: string
           is_sponsored: boolean | null
-          like_count: number | null
+          like_count: number
           location: Json | null
           metadata: Json | null
           monetization_enabled: boolean | null
           owner_id: string | null
           price_range: Json | null
           save_count: number | null
-          share_count: number | null
+          share_count: number
           sponsor_details: Json | null
           status: Database["public"]["Enums"]["rcmd_status"] | null
           tags: string[] | null
@@ -950,10 +951,11 @@ export type Database = {
           type: Database["public"]["Enums"]["rcmd_type"]
           updated_at: string | null
           url: string | null
-          view_count: number | null
+          view_count: number
           visibility: Database["public"]["Enums"]["rcmd_visibility"] | null
         }
         Insert: {
+          click_count?: number
           commission_rate?: number | null
           created_at?: string | null
           creator_id?: string | null
@@ -961,14 +963,14 @@ export type Database = {
           featured_image?: string | null
           id?: string
           is_sponsored?: boolean | null
-          like_count?: number | null
+          like_count?: number
           location?: Json | null
           metadata?: Json | null
           monetization_enabled?: boolean | null
           owner_id?: string | null
           price_range?: Json | null
           save_count?: number | null
-          share_count?: number | null
+          share_count?: number
           sponsor_details?: Json | null
           status?: Database["public"]["Enums"]["rcmd_status"] | null
           tags?: string[] | null
@@ -976,10 +978,11 @@ export type Database = {
           type: Database["public"]["Enums"]["rcmd_type"]
           updated_at?: string | null
           url?: string | null
-          view_count?: number | null
+          view_count?: number
           visibility?: Database["public"]["Enums"]["rcmd_visibility"] | null
         }
         Update: {
+          click_count?: number
           commission_rate?: number | null
           created_at?: string | null
           creator_id?: string | null
@@ -987,14 +990,14 @@ export type Database = {
           featured_image?: string | null
           id?: string
           is_sponsored?: boolean | null
-          like_count?: number | null
+          like_count?: number
           location?: Json | null
           metadata?: Json | null
           monetization_enabled?: boolean | null
           owner_id?: string | null
           price_range?: Json | null
           save_count?: number | null
-          share_count?: number | null
+          share_count?: number
           sponsor_details?: Json | null
           status?: Database["public"]["Enums"]["rcmd_status"] | null
           tags?: string[] | null
@@ -1002,7 +1005,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["rcmd_type"]
           updated_at?: string | null
           url?: string | null
-          view_count?: number | null
+          view_count?: number
           visibility?: Database["public"]["Enums"]["rcmd_visibility"] | null
         }
         Relationships: [

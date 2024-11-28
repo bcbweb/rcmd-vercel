@@ -60,7 +60,7 @@ export default function AddRcmdButton({ onRcmdAdded }: Props) {
           dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
         >
           <PlusCircle className="w-5 h-5" />
-          <span>Add Recommendation</span>
+          <span>Add RCMD</span>
         </div>
       </button>
 

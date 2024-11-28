@@ -9,7 +9,7 @@ import ProfileHeader from "@/components/profile/profile-header";
 const PAGE_TITLES = {
   '/protected/profile': 'Edit Profile',
   '/protected/profile/links': 'Manage Links',
-  '/protected/profile/rcmds': 'Recommendations'
+  '/protected/profile/rcmds': 'Manage RCMDs'
 } as const;
 
 type PathType = keyof typeof PAGE_TITLES;

@@ -38,7 +38,8 @@
       "city": "Bar Harbor",
       "state": "Maine",
       "country": "USA"
-    }
+    },
+    "click_count": 0
   },
   {
     "id": "rcmd_007",
@@ -76,7 +77,8 @@
     "sponsor_details": {
       "brand": "QuantumTech",
       "campaign": "Future Computing"
-    }
+    },
+    "click_count": 0
   },
   {
     "id": "rcmd_008",
@@ -117,7 +119,12 @@
       "city": "Boulder",
       "state": "Colorado",
       "country": "USA"
-    }
+    },
+    "sponsor_details": {
+      "brand": "QuantumTech",
+      "campaign": "Future Computing"
+    },
+    "click_count": 0
   },
   {
     "id": "rcmd_009",
@@ -154,7 +161,12 @@
       "installation": "included"
     },
     "url": "/products/smart-home-security",
-    "location": {}
+    "location": {},
+    "sponsor_details": {
+      "brand": "QuantumTech",
+      "campaign": "Future Computing"
+    },
+    "click_count": 0
   },
   {
     "id": "rcmd_010",
@@ -191,7 +203,12 @@
       "equipment": "included"
     },
     "url": "/services/vr-fitness",
-    "location": {}
+    "location": {},
+    "sponsor_details": {
+      "brand": "QuantumTech",
+      "campaign": "Future Computing"
+    },
+    "click_count": 0
   },
   {
     "id": "rcmd_011",
@@ -232,7 +249,12 @@
       "city": "Portland",
       "state": "Oregon",
       "country": "USA"
-    }
+    },
+    "sponsor_details": {
+      "brand": "QuantumTech",
+      "campaign": "Future Computing"
+    },
+    "click_count": 0
   },
   {
     "id": "rcmd_012",
@@ -269,7 +291,12 @@
       "updates": "1 year"
     },
     "url": "/products/ai-art-generator",
-    "location": {}
+    "location": {},
+    "sponsor_details": {
+      "brand": "QuantumTech",
+      "campaign": "Future Computing"
+    },
+    "click_count": 0
   },
   {
     "id": "rcmd_013",
@@ -306,7 +333,12 @@
       "seeds": "included"
     },
     "url": "/products/urban-farming-kit",
-    "location": {}
+    "location": {},
+    "sponsor_details": {
+      "brand": "QuantumTech",
+      "campaign": "Future Computing"
+    },
+    "click_count": 0
   },
   {
     "id": "rcmd_014",
@@ -343,7 +375,12 @@
       "format": "online"
     },
     "url": "/courses/digital-nomad-bootcamp",
-    "location": {}
+    "location": {},
+    "sponsor_details": {
+      "brand": "QuantumTech",
+      "campaign": "Future Computing"
+    },
+    "click_count": 0
   },
   {
     "id": "rcmd_015",
@@ -380,6 +417,11 @@
       "battery_life": "5 days"
     },
     "url": "/products/wellness-wearable",
-    "location": {}
+    "location": {},
+    "sponsor_details": {
+      "brand": "QuantumTech",
+      "campaign": "Future Computing"
+    },
+    "click_count": 0
   }
 ]

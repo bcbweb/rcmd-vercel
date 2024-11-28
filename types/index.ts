@@ -36,3 +36,6 @@ export enum BusinessStatus {
 	Suspended = "suspended",
 	Closed = "closed",
 }
+
+export type RCMDType = Database['public']['Enums']['rcmd_type'];
+export type RCMDVisibility = Database['public']['Enums']['rcmd_visibility'];
