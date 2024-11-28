@@ -59,7 +59,7 @@ export default function ProfileHeader({
     lastName: lastName || ''
   });
   const [newCoverImageUrl, setNewCoverImageUrl] = useState(coverImageUrl);
-  const [newProfilePictureUrl, setNewProfilePictureUrl] = useState(coverImageUrl);
+  const [newProfilePictureUrl, setNewProfilePictureUrl] = useState(profilePictureUrl);
 
   const tabs = [
     { name: 'Profile', href: `/protected/profile` },
@@ -107,18 +107,18 @@ export default function ProfileHeader({
 
   return (
     <div className="relative mb-8">
-      {/* Cover Image - Made taller and adjusted margins */}
+      {/* Cover Image */}
       {isEditing ? (
         <CoverImageUpload
-          currentImageUrl={coverImageUrl}
+          currentImageUrl={newCoverImageUrl} // Changed from coverImageUrl
           profileId={profileId}
           onUploadComplete={setNewCoverImageUrl}
         />
       ) : (
         <div className="relative w-full h-[350px] mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-          {coverImageUrl ? (
+          {newCoverImageUrl ? (
             <Image
-              src={coverImageUrl}
+              src={newCoverImageUrl}
               alt="Cover image"
               fill
               className="object-cover"
@@ -145,9 +145,9 @@ export default function ProfileHeader({
               </div>
             ) : (
               <div className="relative w-40 h-40 rounded-full overflow-hidden border-4 border-white dark:border-gray-800 shadow-lg">
-                {profilePictureUrl ? (
+                {newProfilePictureUrl ? (
                   <Image
-                    src={profilePictureUrl}
+                    src={newProfilePictureUrl}
                     alt="Profile picture"
                     fill
                     className="object-cover"

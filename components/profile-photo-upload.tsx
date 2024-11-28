@@ -60,7 +60,7 @@ export default function ProfilePhotoUpload({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-center w-full">
-        <label className="relative flex flex-col items-center justify-center w-48 h-48 border-2 border-dashed rounded-full cursor-pointer hover:border-gray-400 dark:hover:border-gray-500">
+        <label className="relative flex flex-col items-center justify-center w-40 h-40 border-2 border-dashed rounded-full cursor-pointer hover:border-gray-400 dark:hover:border-gray-500">
           {preview ? (
             <Image
               src={preview}
