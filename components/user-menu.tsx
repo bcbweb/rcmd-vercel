@@ -68,13 +68,13 @@ export default function UserMenu() {
     return (
       <div className="flex items-center gap-4">
         <Link
-          href="/login"
+          href="/auth/login"
           className="text-sm font-medium text-muted-foreground hover:text-primary"
         >
           Sign in
         </Link>
         <Link
-          href="/signup"
+          href="/auth/signup"
           className="text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md"
         >
           Sign up
