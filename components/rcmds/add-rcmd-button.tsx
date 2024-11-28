@@ -1,20 +1,30 @@
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { PlusCircle } from 'lucide-react';
-import RcmdModal from './modals/rcmd-modal';
+import RCMDModal from './modals/rcmd-modal';
 
 interface Props {
-  onRcmdAdded?: () => void;
+  onRCMDAdded?: () => void;
 }
 
-export default function AddRcmdButton({ onRcmdAdded }: Props) {
+export default function AddRCMDButton({ onRCMDAdded }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userId, setUserId] = useState("");
   const supabase = createClient();
 
-  const handleRcmdSave = async (title: string, description: string, type: string, visibility: string) => {
+  const handleRCMDSave = async (
+    title: string,
+    description: string,
+    type: string,
+    visibility: string,
+    imageUrl?: string
+  ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
+      if (user?.id) {
+        setUserId(user.id);
+      }
 
       const { error } = await supabase
         .from('rcmds')
@@ -25,6 +35,7 @@ export default function AddRcmdButton({ onRcmdAdded }: Props) {
           type,
           status: 'draft',
           visibility,
+          featured_image: imageUrl,
           is_sponsored: false,
           monetization_enabled: false,
           view_count: 0,
@@ -36,7 +47,7 @@ export default function AddRcmdButton({ onRcmdAdded }: Props) {
       if (error) throw error;
 
       closeModal();
-      onRcmdAdded?.();
+      onRCMDAdded?.();
 
     } catch (error) {
       console.error('Error saving recommendation:', error);
@@ -65,9 +76,10 @@ export default function AddRcmdButton({ onRcmdAdded }: Props) {
       </button>
 
       {isModalOpen && (
-        <RcmdModal
+        <RCMDModal
           onClose={closeModal}
-          onSave={handleRcmdSave}
+          onSave={handleRCMDSave}
+          userId={userId}
         />
       )}
     </>

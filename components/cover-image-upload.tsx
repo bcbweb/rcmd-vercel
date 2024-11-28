@@ -6,13 +6,13 @@ import { toast } from 'sonner';
 
 interface CoverImageUploadProps {
   currentImageUrl?: string;
-  profileId: string;
+  userId: string;
   onUploadComplete: (url: string) => void;
 }
 
 export default function CoverImageUpload({
   currentImageUrl,
-  profileId,
+  userId,
   onUploadComplete
 }: CoverImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
@@ -26,7 +26,7 @@ export default function CoverImageUpload({
     setPreviewUrl(URL.createObjectURL(file));
 
     try {
-      const url = await uploadCoverImage(file, profileId);
+      const url = await uploadCoverImage(file, userId);
       onUploadComplete(url);
       toast.success('Cover image updated');
     } catch (error) {

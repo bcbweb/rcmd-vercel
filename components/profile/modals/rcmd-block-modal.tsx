@@ -1,21 +1,22 @@
 import { RCMD } from "@/types";
 import { createClient } from '@/utils/supabase/client';
 import { useEffect, useState } from "react";
-import RcmdModal from "../../rcmds/modals/rcmd-modal";
+import RCMDModal from "../../rcmds/modals/rcmd-modal";
 
-interface RcmdBlockModalProps {
+interface RCMDBlockModalProps {
   onClose: () => void;
   onSave: (rcmdId: string) => Promise<void>;
+  userId: string;
 }
 
-export default function RcmdBlockModal({ onClose, onSave }: RcmdBlockModalProps) {
-  const [selectedRcmdId, setSelectedRcmdId] = useState('');
-  const [rcmds, setRcmds] = useState<RCMD[]>([]);
+export default function RCMDBlockModal({ onClose, onSave, userId }: RCMDBlockModalProps) {
+  const [selectedRCMDId, setSelectedRCMDId] = useState('');
+  const [rcmds, setRCMDs] = useState<RCMD[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showAddRcmdModal, setShowAddRcmdModal] = useState(false);
+  const [showAddRCMDModal, setShowAddRCMDModal] = useState(false);
   const supabase = createClient();
 
-  const fetchRcmds = async () => {
+  const fetchRCMDs = async () => {
     try {
       setIsLoading(true);
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -33,7 +34,7 @@ export default function RcmdBlockModal({ onClose, onSave }: RcmdBlockModalProps)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRcmds(data || []);
+      setRCMDs(data || []);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
     } finally {
@@ -42,22 +43,23 @@ export default function RcmdBlockModal({ onClose, onSave }: RcmdBlockModalProps)
   };
 
   useEffect(() => {
-    fetchRcmds();
+    fetchRCMDs();
   }, []);
 
   const handleSave = async () => {
-    if (!selectedRcmdId) {
+    if (!selectedRCMDId) {
       alert('Please select a recommendation');
       return;
     }
-    await onSave(selectedRcmdId);
+    await onSave(selectedRCMDId);
   };
 
-  const handleAddNewRcmd = async (
+  const handleAddNewRCMD = async (
     title: string,
     description: string,
     type: string,
-    visibility: string
+    visibility: string,
+    imageUrl?: string
   ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -70,16 +72,17 @@ export default function RcmdBlockModal({ onClose, onSave }: RcmdBlockModalProps)
           description,
           type,
           visibility,
-          owner_id: user.id
+          owner_id: user.id,
+          featured_image: imageUrl
         }])
         .select()
         .single();
 
       if (error) throw error;
 
-      setShowAddRcmdModal(false);
-      await fetchRcmds();
-      setSelectedRcmdId(data.id);
+      setShowAddRCMDModal(false);
+      await fetchRCMDs();
+      setSelectedRCMDId(data.id);
     } catch (error) {
       console.error('Error adding new recommendation:', error);
       alert('Failed to add new recommendation');
@@ -93,7 +96,7 @@ export default function RcmdBlockModal({ onClose, onSave }: RcmdBlockModalProps)
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Select RCMD</h2>
             <button
-              onClick={() => setShowAddRcmdModal(true)}
+              onClick={() => setShowAddRCMDModal(true)}
               className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
             >
               Add New RCMD
@@ -111,11 +114,11 @@ export default function RcmdBlockModal({ onClose, onSave }: RcmdBlockModalProps)
               rcmds.map((rcmd) => (
                 <div
                   key={rcmd.id}
-                  className={`p-4 border rounded-lg mb-2 cursor-pointer ${selectedRcmdId === rcmd.id
+                  className={`p-4 border rounded-lg mb-2 cursor-pointer ${selectedRCMDId === rcmd.id
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                     }`}
-                  onClick={() => setSelectedRcmdId(rcmd.id)}
+                  onClick={() => setSelectedRCMDId(rcmd.id)}
                 >
                   <h3 className="font-medium">{rcmd.title}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -135,7 +138,7 @@ export default function RcmdBlockModal({ onClose, onSave }: RcmdBlockModalProps)
             </button>
             <button
               onClick={handleSave}
-              disabled={!selectedRcmdId || isLoading}
+              disabled={!selectedRCMDId || isLoading}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
                 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -145,10 +148,11 @@ export default function RcmdBlockModal({ onClose, onSave }: RcmdBlockModalProps)
         </div>
       </div>
 
-      {showAddRcmdModal && (
-        <RcmdModal
-          onClose={() => setShowAddRcmdModal(false)}
-          onSave={handleAddNewRcmd}
+      {showAddRCMDModal && (
+        <RCMDModal
+          onClose={() => setShowAddRCMDModal(false)}
+          onSave={handleAddNewRCMD}
+          userId={userId}
         />
       )}
     </>

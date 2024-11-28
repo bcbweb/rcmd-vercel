@@ -22,7 +22,7 @@ export default function ProfileLayout({
   const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
-  const [profileId, setProfileId] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
   const [handle, setHandle] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -90,7 +90,7 @@ export default function ProfileLayout({
         return;
       }
 
-      setProfileId(profile.id || "");
+      setUserId(userId || "");
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
       setHandle(profile.handle || "");
@@ -123,7 +123,7 @@ export default function ProfileLayout({
   return (
     <div className="w-full max-w-7xl mx-auto py-8 px-4">
       <ProfileHeader
-        profileId={profileId}
+        userId={userId}
         handle={handle}
         title={pageTitle}
         firstName={firstName}

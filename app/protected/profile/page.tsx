@@ -13,6 +13,7 @@ export default function EditProfilePage() {
 	const [blocks, setBlocks] = useState<ProfileBlockType[]>([]);
 	const [isBlockSaving, setIsBlockSaving] = useState(false);
 	const [profileId, setProfileId] = useState<string>("");
+	const [userId, setUserId] = useState<string>("");
 
 	// Get profile ID
 	useEffect(() => {
@@ -25,6 +26,10 @@ export default function EditProfilePage() {
 				.select("id")
 				.eq("auth_user_id", user.id)
 				.single();
+
+			if (user?.id) {
+				setUserId(user.id);
+			}
 
 			if (profile) {
 				setProfileId(profile.id);
@@ -148,6 +153,7 @@ export default function EditProfilePage() {
 			<div>
 				<div className="flex gap-4 mb-4">
 					<AddBlockButton
+						userId={userId}
 						profileId={profileId}
 						onBlockAdded={handleBlockAdded}
 					/>

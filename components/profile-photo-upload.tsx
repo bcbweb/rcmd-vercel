@@ -7,13 +7,13 @@ import Image from 'next/image';
 interface ProfilePhotoUploadProps {
   onUploadComplete: (url: string) => void;
   currentPhotoUrl?: string;
-  profileId: string;
+  userId: string;
 }
 
 export default function ProfilePhotoUpload({
   onUploadComplete,
   currentPhotoUrl,
-  profileId
+  userId
 }: ProfilePhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string>(currentPhotoUrl || '');
@@ -45,7 +45,7 @@ export default function ProfilePhotoUpload({
       setUploading(true);
 
       // Upload using our utility function
-      const publicUrl = await uploadProfileImage(file, profileId);
+      const publicUrl = await uploadProfileImage(file, userId);
 
       // Call the callback with the public URL
       onUploadComplete(publicUrl);
@@ -55,7 +55,7 @@ export default function ProfilePhotoUpload({
     } finally {
       setUploading(false);
     }
-  }, [profileId, onUploadComplete]);
+  }, [userId, onUploadComplete]);
 
   return (
     <div className="space-y-4">

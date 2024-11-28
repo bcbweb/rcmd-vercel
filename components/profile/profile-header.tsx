@@ -15,7 +15,7 @@ import { createClient } from "@/utils/supabase/client";
 import type { Profile } from '@/types';
 
 interface ProfileHeaderProps {
-  profileId: string,
+  userId: string,
   title: string;
   handle: string;
   firstName?: string;
@@ -33,7 +33,7 @@ interface ProfileHeaderProps {
 }
 
 export default function ProfileHeader({
-  profileId,
+  userId,
   title,
   handle,
   firstName,
@@ -162,7 +162,7 @@ export default function ProfileHeader({
         {isEditing ? (
           <CoverImageUpload
             currentImageUrl={newCoverImageUrl}
-            profileId={profileId}
+            userId={userId}
             onUploadComplete={setNewCoverImageUrl}
           />
         ) : (
@@ -190,7 +190,7 @@ export default function ProfileHeader({
                 <ProfilePhotoUpload
                   onUploadComplete={setNewProfilePictureUrl}
                   currentPhotoUrl={newProfilePictureUrl}
-                  profileId={profileId}
+                  userId={userId}
                 />
               </div>
             ) : (

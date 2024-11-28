@@ -9,27 +9,27 @@ import BlockStats from "@/components/shared/block-stats";
 import BlockSkeleton from "@/components/shared/block-skeleton";
 import { blockStyles } from "@/components/shared/styles";
 
-interface RcmdBlockProps {
+interface RCMDBlockProps {
   rcmdBlock: RCMDBlockType;
   isEditing?: boolean;
   onDelete?: () => void;
   onSave?: (block: Partial<RCMDBlockType>) => void;
 }
 
-export default function RcmdBlock({
+export default function RCMDBlock({
   rcmdBlock,
   isEditing = false,
   onDelete,
   onSave,
-}: RcmdBlockProps) {
+}: RCMDBlockProps) {
   const supabase = createClient();
-  const [rcmd, setRcmd] = useState<RCMD | null>(null);
+  const [rcmd, setRCMD] = useState<RCMD | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editedRcmd, setEditedRcmd] = useState<RCMD | null>(null);
+  const [editedRCMD, setEditedRCMD] = useState<RCMD | null>(null);
 
   useEffect(() => {
-    const fetchRcmd = async () => {
+    const fetchRCMD = async () => {
       try {
         const { data, error } = await supabase
           .from('rcmds')
@@ -38,8 +38,8 @@ export default function RcmdBlock({
           .single();
 
         if (error) throw error;
-        setRcmd(data);
-        setEditedRcmd(data);
+        setRCMD(data);
+        setEditedRCMD(data);
       } catch (err) {
         console.error('Error fetching rcmd:', err);
       } finally {
@@ -47,21 +47,21 @@ export default function RcmdBlock({
       }
     };
 
-    fetchRcmd();
+    fetchRCMD();
   }, [rcmdBlock.rcmd_id, supabase]);
 
   const handleSave = async () => {
-    if (!editedRcmd) return;
+    if (!editedRCMD) return;
 
     try {
       const { error } = await supabase
         .from('rcmds')
-        .update(editedRcmd)
+        .update(editedRCMD)
         .eq('id', rcmdBlock.rcmd_id);
 
       if (error) throw error;
 
-      setRcmd(editedRcmd);
+      setRCMD(editedRCMD);
       setIsEditMode(false);
       onSave?.(rcmdBlock);
     } catch (err) {
@@ -73,10 +73,10 @@ export default function RcmdBlock({
     return <BlockSkeleton hasImage={true} lines={3} />;
   }
 
-  if (!rcmd || !editedRcmd) return null;
+  if (!rcmd || !editedRCMD) return null;
 
   return (
-    <div className={blockStyles.container}>
+    <div className={`${blockStyles.container} ${blockStyles.card}`}>
       {rcmd.featured_image && (
         <div className="relative w-full h-48 mb-4 rounded-md overflow-hidden">
           <Image
@@ -93,8 +93,8 @@ export default function RcmdBlock({
           <input
             title="Edit title"
             type="text"
-            value={editedRcmd.title}
-            onChange={(e) => setEditedRcmd({ ...editedRcmd, title: e.target.value })}
+            value={editedRCMD.title}
+            onChange={(e) => setEditedRCMD({ ...editedRCMD, title: e.target.value })}
             className={blockStyles.inputField}
           />
         ) : (
@@ -115,16 +115,16 @@ export default function RcmdBlock({
         <>
           <textarea
             title="Edit description"
-            value={editedRcmd.description || ''}
-            onChange={(e) => setEditedRcmd({ ...editedRcmd, description: e.target.value })}
+            value={editedRCMD.description || ''}
+            onChange={(e) => setEditedRCMD({ ...editedRCMD, description: e.target.value })}
             className={`${blockStyles.inputField} mt-2`}
             rows={3}
           />
           <input
             title="Edit image URL"
             type="url"
-            value={editedRcmd.featured_image || ''}
-            onChange={(e) => setEditedRcmd({ ...editedRcmd, featured_image: e.target.value })}
+            value={editedRCMD.featured_image || ''}
+            onChange={(e) => setEditedRCMD({ ...editedRCMD, featured_image: e.target.value })}
             className={`${blockStyles.inputField} mt-2`}
             placeholder="Featured image URL"
           />
@@ -138,8 +138,8 @@ export default function RcmdBlock({
       <div className="flex items-center gap-2 mt-2">
         {isEditMode ? (
           <select
-            value={editedRcmd.visibility as RCMDVisibility}
-            onChange={(e) => setEditedRcmd({ ...editedRcmd, visibility: e.target.value as RCMDVisibility })}
+            value={editedRCMD.visibility as RCMDVisibility}
+            onChange={(e) => setEditedRCMD({ ...editedRCMD, visibility: e.target.value as RCMDVisibility })}
             className={blockStyles.inputField}
           >
             <option value="public">Public</option>

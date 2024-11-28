@@ -13,10 +13,10 @@ interface Props {
     width: number,
     height: number
   ) => void;
-  profileId: string; // Add this prop
+  userId: string;
 }
 
-export default function ImageBlockModal({ onClose, onSave, profileId }: Props) {
+export default function ImageBlockModal({ onClose, onSave, userId }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -71,7 +71,7 @@ export default function ImageBlockModal({ onClose, onSave, profileId }: Props) {
       setUploading(true);
       setError(null);
 
-      const publicUrl = await uploadContentImage(file, profileId);
+      const publicUrl = await uploadContentImage(file, userId);
 
       // Pass all metadata
       onSave(

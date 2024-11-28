@@ -1,16 +1,67 @@
 import { useState } from 'react';
+import { uploadContentImage } from '@/utils/storage';
+import Image from 'next/image';
 
 interface Props {
   onClose: () => void;
-  onSave: (title: string, description: string, type: string, visibility: string) => Promise<void>;
+  onSave: (
+    title: string,
+    description: string,
+    type: string,
+    visibility: string,
+    imageUrl?: string
+  ) => Promise<void>;
+  userId: string;
 }
 
-export default function RcmdModal({ onClose, onSave }: Props) {
+export default function RCMDModal({ onClose, onSave, userId }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState('other');
   const [visibility, setVisibility] = useState('private');
   const [isSaving, setIsSaving] = useState(false);
+
+  // New image states
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number; } | null>(null);
+
+  const getImageDimensions = (file: File): Promise<{ width: number; height: number; }> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        resolve({ width: img.width, height: img.height });
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => {
+        reject(new Error('Failed to load image dimensions'));
+        URL.revokeObjectURL(img.src);
+      };
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      if (!selectedFile.type.startsWith('image/')) {
+        setUploadError('Please select an image file');
+        return;
+      }
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        setUploadError('Image must be less than 5MB');
+        return;
+      }
+      try {
+        const dimensions = await getImageDimensions(selectedFile);
+        setImageDimensions(dimensions);
+        setFile(selectedFile);
+        setUploadError(null);
+      } catch {
+        setUploadError('Failed to load image dimensions');
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +69,17 @@ export default function RcmdModal({ onClose, onSave }: Props) {
 
     try {
       setIsSaving(true);
-      await onSave(title, description, type, visibility);
+
+      let imageUrl: string | undefined;
+
+      if (file) {
+        // Upload to 'rcmds' subfolder in content bucket
+        imageUrl = await uploadContentImage(file, `${userId}/rcmds`);
+      }
+
+      await onSave(title, description, type, visibility, imageUrl);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Error saving RCMD');
     } finally {
       setIsSaving(false);
     }
@@ -87,24 +148,64 @@ export default function RcmdModal({ onClose, onSave }: Props) {
                 <option value="public">Public</option>
               </select>
             </div>
-          </div>
 
-          <div className="flex justify-end gap-3 mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-500 hover:text-gray-700"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
-                disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
+            {/* New image upload field */}
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Featured Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100
+                    dark:file:bg-gray-700 dark:file:text-gray-200"
+                />
+              </label>
+              {file && (
+                <div className="mt-2">
+                  <Image
+                    src={URL.createObjectURL(file)}
+                    alt="Preview"
+                    width={200}
+                    height={200}
+                    className="max-h-40 object-contain"
+                  />
+                  <div className="text-sm text-gray-500 mt-1">
+                    <div>Size: {(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    {imageDimensions && (
+                      <div>Dimensions: {imageDimensions.width}x{imageDimensions.height}px</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {uploadError && (
+                <div className="text-red-500 text-sm mt-1">{uploadError}</div>
+              )}
+            </div>
+
+            {/* Existing buttons */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -1,40 +1,45 @@
 import Image from 'next/image';
 import { createClient } from '@/utils/supabase/server';
+import { PostgrestError } from '@supabase/supabase-js';
+import { blockStyles } from "@/components/shared/styles";
 import type { ImageBlockType } from '@/types';
 
-export default async function ImageBlock({ blockId }: { blockId: string; }) {
+interface ImageBlockProps {
+  blockId: string;
+}
+
+export default async function ImageBlock({ blockId }: ImageBlockProps) {
   const supabase = await createClient();
 
   const { data: imageBlock, error } = await supabase
     .from('image_blocks')
     .select('*')
     .eq('profile_block_id', blockId)
-    .single<ImageBlockType>();
+    .single() as { data: ImageBlockType | null, error: PostgrestError | null; };
 
-  if (error || !imageBlock) {
-    return null;
-  }
+  if (error || !imageBlock) return null;
 
   const width = imageBlock.width ?? 800;
   const height = imageBlock.height ?? 600;
   const aspectRatio = width / height;
-  const maxWidth = 800;
+  const maxWidth = 480;
   const displayHeight = maxWidth / aspectRatio;
 
   return (
-    <div className="w-full">
-      <div className="relative w-full max-w-[800px]">
+    <div className={`${blockStyles.container} ${blockStyles.card}`}>
+      <div className="relative w-full overflow-hidden rounded-lg">
         <Image
           src={imageBlock.image_url}
           alt={imageBlock.caption || 'Profile image'}
           width={maxWidth}
           height={displayHeight}
-          className="rounded-lg w-full h-auto"
+          className="w-full h-auto"
           priority={false}
         />
       </div>
+
       {imageBlock.caption && (
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p className={`${blockStyles.metaText} mt-3`}>
           {imageBlock.caption}
         </p>
       )}

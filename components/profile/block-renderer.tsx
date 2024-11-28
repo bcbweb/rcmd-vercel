@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import TextBlock from "./blocks/text-block";
 import ImageBlock from "./blocks/image-block";
 import LinkBlock from "./blocks/link-block";
-import RcmdBlock from "./blocks/rcmd-block";
+import RCMDBlock from "./blocks/rcmd-block";
 
 interface Props {
 	block: ProfileBlockType;
@@ -31,7 +31,7 @@ export default function BlockRenderer({
 	const [textBlock, setTextBlock] = useState<TextBlockType | null>(null);
 	const [imageBlock, setImageBlock] = useState<ImageBlockType | null>(null);
 	const [linkBlock, setLinkBlock] = useState<LinkBlockType | null>(null);
-	const [rcmdBlock, setRcmdBlock] = useState<RCMDBlockType | null>(null);
+	const [rcmdBlock, setRCMDBlock] = useState<RCMDBlockType | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -87,7 +87,7 @@ export default function BlockRenderer({
 						setLinkBlock(data);
 						break;
 					case "rcmd":
-						setRcmdBlock(data);
+						setRCMDBlock(data);
 						break;
 				}
 			} catch (err) {
@@ -175,7 +175,7 @@ export default function BlockRenderer({
 		}
 	};
 
-	const handleRcmdBlockSave = async (updatedBlock: Partial<RCMDBlockType>) => {
+	const handleRCMDBlockSave = async (updatedBlock: Partial<RCMDBlockType>) => {
 		if (!rcmdBlock) return;
 
 		try {
@@ -188,7 +188,7 @@ export default function BlockRenderer({
 
 			if (error) throw error;
 
-			setRcmdBlock({
+			setRCMDBlock({
 				...rcmdBlock,
 				rcmd_id: updatedBlock.rcmd_id ?? rcmdBlock.rcmd_id
 			});
@@ -242,11 +242,11 @@ export default function BlockRenderer({
 		case "rcmd":
 			if (!rcmdBlock) return null;
 			return (
-				<RcmdBlock
+				<RCMDBlock
 					rcmdBlock={rcmdBlock}
 					isEditing={isEditing}
 					onDelete={onDelete}
-					onSave={handleRcmdBlockSave}
+					onSave={handleRCMDBlockSave}
 				/>
 			);
 		default:

@@ -9,13 +9,14 @@ import LinkBlockModal from './modals/link-block-modal';
 import RCMDBlockModal from './modals/rcmd-block-modal';
 
 interface Props {
+	userId: string;
 	profileId: string;
 	onBlockAdded?: () => void;
 }
 
 type BlockType = 'text' | 'image' | 'rcmd' | 'business' | 'custom' | 'link';
 
-export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
+export default function AddBlockButton({ userId, profileId, onBlockAdded }: Props) {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [selectedBlockType, setSelectedBlockType] = useState<BlockType | null>(null);
 	const supabase = createClient();
@@ -72,7 +73,7 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 		}
 	};
 
-	const handleRcmdBlockSave = async (rcmdId: string) => {
+	const handleRCMDBlockSave = async (rcmdId: string) => {
 		try {
 			const { error } = await supabase
 				.rpc('insert_rcmd_block', {
@@ -184,7 +185,7 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 
 			{isModalOpen && selectedBlockType === 'image' && (
 				<ImageBlockModal
-					profileId={profileId}
+					userId={userId}
 					onClose={closeModal}
 					onSave={handleImageBlockSave}
 				/>
@@ -199,8 +200,9 @@ export default function AddBlockButton({ profileId, onBlockAdded }: Props) {
 
 			{isModalOpen && selectedBlockType === 'rcmd' && (
 				<RCMDBlockModal
+					userId={userId}
 					onClose={closeModal}
-					onSave={handleRcmdBlockSave}
+					onSave={handleRCMDBlockSave}
 				/>
 			)}
 		</>

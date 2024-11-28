@@ -1,6 +1,8 @@
 import { createClient } from "@/utils/supabase/server";
 import { Link, LinkBlockType } from "@/types";
 import { PostgrestError } from '@supabase/supabase-js';
+import { blockStyles } from "@/components/shared/styles";
+import BlockStats from "@/components/shared/block-stats";
 
 interface LinkBlockProps {
   blockId: string;
@@ -11,51 +13,37 @@ export default async function LinkBlock({ blockId }: LinkBlockProps) {
 
   const { data: linkBlock, error } = await supabase
     .from('link_blocks')
-    .select(`
-      *,
-      links (*)
-    `)
+    .select(`*, links (*)`)
     .eq('profile_block_id', blockId)
     .single() as { data: LinkBlockType & { links: Link; } | null, error: PostgrestError; };
 
-  if (error) {
-    console.error('Error fetching link block:', error);
-    return null;
-  }
-
-  if (!linkBlock || !linkBlock.links) {
-    return null;
-  }
-
+  if (error || !linkBlock || !linkBlock.links) return null;
   const link = linkBlock.links;
+
+  const stats = [
+    { value: link.view_count || 0, label: "views" },
+    { value: link.like_count || 0, label: "likes" },
+    { value: link.save_count || 0, label: "saves" }
+  ];
 
   return (
     <a
       href={link.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="block hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors rounded-lg overflow-hidden"
+      className={`block ${blockStyles.container}`}
     >
-      <div className="p-4">
-        <h3 className="font-medium text-lg text-blue-600 dark:text-blue-400 mb-2">
-          {link.title}
-        </h3>
+      <h3 className="font-medium text-lg text-blue-600 dark:text-blue-400 mb-2">
+        {link.title}
+      </h3>
 
-        {link.description && (
-          <p className="text-gray-700 dark:text-gray-300 text-sm mb-3">
-            {link.description}
-          </p>
-        )}
+      {link.description && (
+        <p className={blockStyles.description}>{link.description}</p>
+      )}
 
-        <div className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-4">
-          <p className="truncate">{link.url}</p>
-
-          <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
-            <span title="Views">👁️ {link.view_count}</span>
-            <span title="Likes">❤️ {link.like_count}</span>
-            <span title="Saves">🔖 {link.save_count}</span>
-          </div>
-        </div>
+      <div className="mt-auto pt-4 flex items-center justify-between">
+        <span className={`${blockStyles.metaText} mt-4 truncate`}>{link.url}</span>
+        <BlockStats stats={stats} />
       </div>
     </a>
   );

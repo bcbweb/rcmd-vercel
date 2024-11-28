@@ -1,6 +1,6 @@
 import TextBlock from './text-block';
 import LinkBlock from './link-block';
-import RcmdBlock from './rcmd-block';
+import RCMDBlock from './rcmd-block';
 import ImageBlock from './image-block';
 import type { ProfileBlockType } from '@/types';
 
@@ -15,7 +15,7 @@ export default async function PublicProfileBlocks({ blocks }: PublicProfileBlock
         <div key={block.id}>
           {block.type === 'text' && <TextBlock blockId={block.id} />}
           {block.type === 'link' && <LinkBlock blockId={block.id} />}
-          {block.type === 'rcmd' && <RcmdBlock blockId={block.id} />}
+          {block.type === 'rcmd' && <RCMDBlock blockId={block.id} />}
           {block.type === 'image' && <ImageBlock blockId={block.id} />}
         </div>
       ))}
