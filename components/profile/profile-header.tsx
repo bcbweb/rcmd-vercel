@@ -4,15 +4,8 @@ import {
   Eye,
   X,
   Check,
-  MoreVertical,
   Share2
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import CoverImageUpload from "@/components/cover-image-upload";
 import ProfilePhotoUpload from "@/components/profile-photo-upload";
 import Image from "next/image";
@@ -168,15 +161,15 @@ export default function ProfileHeader({
   return (
     <div className="relative mb-8">
       {/* Cover Image */}
-      {isEditing ? (
-        <CoverImageUpload
-          currentImageUrl={newCoverImageUrl} // Changed from coverImageUrl
-          profileId={profileId}
-          onUploadComplete={setNewCoverImageUrl}
-        />
-      ) : (
-        <div className="relative w-full h-[350px] mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-          {newCoverImageUrl ? (
+      <div className="relative w-full h-[250px] md:h-[350px] mb-4 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+        {isEditing ? (
+          <CoverImageUpload
+            currentImageUrl={newCoverImageUrl}
+            profileId={profileId}
+            onUploadComplete={setNewCoverImageUrl}
+          />
+        ) : (
+          newCoverImageUrl ? (
             <Image
               src={newCoverImageUrl}
               alt="Cover image"
@@ -186,15 +179,15 @@ export default function ProfileHeader({
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700" />
-          )}
-        </div>
-      )}
+          )
+        )}
+      </div>
 
       {/* Profile Info Container */}
       <div className="max-w-6xl mx-auto px-4">
-        <div className="relative flex items-end pb-4 border-b border-gray-200 dark:border-gray-700">
-          {/* Profile Picture - Larger size and repositioned */}
-          <div className="absolute -top-32 left-4">
+        <div className="relative flex flex-col md:flex-row md:items-end pb-4 border-b border-gray-200 dark:border-gray-700">
+          {/* Profile Picture */}
+          <div className="flex justify-center md:justify-start md:absolute md:-top-32 md:left-4 mb-4 md:mb-0">
             {isEditing ? (
               <div className="w-40 h-40">
                 <ProfilePhotoUpload
@@ -225,9 +218,9 @@ export default function ProfileHeader({
           </div>
 
           {/* User Info and Actions */}
-          <div className="ml-44 flex-grow flex items-end justify-between pb-4">
+          <div className="w-full md:ml-44 flex-grow flex flex-col md:flex-row md:items-end justify-between pb-4">
             {/* Profile info */}
-            <div>
+            <div className="text-center md:text-left">
               <h1 className="text-3xl font-bold dark:text-white mb-1">
                 {fullName || handle}
               </h1>
@@ -337,55 +330,8 @@ export default function ProfileHeader({
             </div>
 
             {/* Action Buttons */}
-            <div className="relative">
-              {/* Mobile Dropdown */}
-              <div className="md:hidden">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
-                      <MoreVertical className="w-5 h-5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {isEditing ? (
-                      <>
-                        <DropdownMenuItem onClick={handleCancel}>
-                          <X className="w-4 h-4 mr-2" />
-                          Cancel
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleSave} disabled={isLoading}>
-                          <Check className="w-4 h-4 mr-2" />
-                          Save
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <>
-                        {showEditButton && (
-                          <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                            <PencilLine className="w-4 h-4 mr-2" />
-                            Edit Profile
-                          </DropdownMenuItem>
-                        )}
-                        {showPreviewButton && (
-                          <DropdownMenuItem onClick={() => window.open(`/${handle}`, '_blank')}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            Preview
-                          </DropdownMenuItem>
-                        )}
-                        {showShareButton && (
-                          <DropdownMenuItem>
-                            <Share2 className="w-4 h-4 mr-2" />
-                            Share
-                          </DropdownMenuItem>
-                        )}
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              {/* Desktop Buttons */}
-              <div className="hidden md:flex items-center gap-3">
+            <div className="mt-4 md:mt-0 flex justify-center md:justify-end">
+              <div className="flex items-center gap-3">
                 {isEditing ? (
                   <>
                     <button
@@ -438,8 +384,8 @@ export default function ProfileHeader({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="mt-4">
-          <nav className="flex space-x-8">
+        <div className="mt-4 overflow-x-auto">
+          <nav className="flex space-x-8 min-w-max">
             {tabs.map((tab) => {
               const isActive = pathname === tab.href;
               return (
@@ -448,19 +394,20 @@ export default function ProfileHeader({
                   key={tab.name}
                   href={tab.href}
                   className={`
-                    whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                    ${isActive
+                      whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                      ${isActive
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300'}
-                  `}
+                    `}
                 >
                   {tab.name}
                 </Link>
               );
             })}
+
           </nav>
         </div>
-      </div >
-    </div >
+      </div>
+    </div>
   );
 }

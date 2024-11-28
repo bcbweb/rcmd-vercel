@@ -704,7 +704,6 @@ export type Database = {
           profile_picture_url: string | null
           tags: string[] | null
           updated_at: string | null
-          username: string | null
         }
         Insert: {
           auth_user_id: string
@@ -722,7 +721,6 @@ export type Database = {
           profile_picture_url?: string | null
           tags?: string[] | null
           updated_at?: string | null
-          username?: string | null
         }
         Update: {
           auth_user_id?: string
@@ -740,7 +738,6 @@ export type Database = {
           profile_picture_url?: string | null
           tags?: string[] | null
           updated_at?: string | null
-          username?: string | null
         }
         Relationships: []
       }
