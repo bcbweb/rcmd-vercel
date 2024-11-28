@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useCallback } from 'react';
-import { createClient } from '@/utils/supabase/client';
+import { uploadProfileImage } from '@/utils/storage';
 import Image from 'next/image';
 
 interface ProfilePhotoUploadProps {
   onUploadComplete: (url: string) => void;
   currentPhotoUrl?: string;
+  profileId: string;
 }
 
 export default function ProfilePhotoUpload({
   onUploadComplete,
-  currentPhotoUrl
+  currentPhotoUrl,
+  profileId
 }: ProfilePhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string>(currentPhotoUrl || '');
   const [error, setError] = useState<string>('');
-  const supabase = createClient();
 
   const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -30,7 +31,7 @@ export default function ProfilePhotoUpload({
         return;
       }
 
-      // Validate file size (e.g., 5MB limit)
+      // Validate file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
         setError('Image must be less than 5MB');
         return;
@@ -43,28 +44,8 @@ export default function ProfilePhotoUpload({
       // Start upload
       setUploading(true);
 
-      // Get authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
-
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('profile-photos')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-photos')
-        .getPublicUrl(fileName);
+      // Upload using our utility function
+      const publicUrl = await uploadProfileImage(file, profileId);
 
       // Call the callback with the public URL
       onUploadComplete(publicUrl);
@@ -74,7 +55,7 @@ export default function ProfilePhotoUpload({
     } finally {
       setUploading(false);
     }
-  }, [supabase, onUploadComplete]);
+  }, [profileId, onUploadComplete]);
 
   return (
     <div className="space-y-4">

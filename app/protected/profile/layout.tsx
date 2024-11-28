@@ -22,12 +22,14 @@ export default function ProfileLayout({
   const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
+  const [profileId, setProfileId] = useState<string>("");
   const [username, setUsername] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [firstName, setFirstName] = useState<string>("");
   const [lastName, setLastName] = useState<string>("");
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
+  const [coverImageUrl, setCoverImageUrl] = useState<string>("");
 
   const pageTitle = pathname && (PAGE_TITLES[pathname as PathType] || 'Profile');
 
@@ -61,7 +63,15 @@ export default function ProfileLayout({
     try {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, is_onboarded, username, first_name, last_name, profile_picture_url")
+        .select(`
+          id, 
+          is_onboarded, 
+          username, 
+          first_name, 
+          last_name, 
+          profile_picture_url,
+          cover_image
+        `)
         .eq("auth_user_id", userId)
         .single();
 
@@ -72,10 +82,12 @@ export default function ProfileLayout({
         return;
       }
 
+      setProfileId(profile.id || "");
       setUsername(profile.username || "");
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
       setProfilePictureUrl(profile.profile_picture_url || "");
+      setCoverImageUrl(profile.cover_image || "");
     } catch (error) {
       console.error('Error fetching profile:', error);
       alert('Failed to load profile data');
@@ -99,11 +111,13 @@ export default function ProfileLayout({
   return (
     <div className="w-full max-w-7xl mx-auto py-8 px-4">
       <ProfileHeader
+        profileId={profileId}
         title={pageTitle}
         username={username}
         firstName={firstName}
         lastName={lastName}
         profilePictureUrl={profilePictureUrl}
+        coverImageUrl={coverImageUrl}
       />
       <div className="w-full p-[1px] bg-gradient-to-r from-transparent via-foreground/10 to-transparent my-8" />
       {children}

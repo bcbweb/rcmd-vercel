@@ -691,6 +691,7 @@ export type Database = {
         Row: {
           auth_user_id: string
           bio: string | null
+          cover_image: string | null
           created_at: string | null
           email: string
           first_name: string | null
@@ -708,6 +709,7 @@ export type Database = {
         Insert: {
           auth_user_id: string
           bio?: string | null
+          cover_image?: string | null
           created_at?: string | null
           email: string
           first_name?: string | null
@@ -725,6 +727,7 @@ export type Database = {
         Update: {
           auth_user_id?: string
           bio?: string | null
+          cover_image?: string | null
           created_at?: string | null
           email?: string
           first_name?: string | null
