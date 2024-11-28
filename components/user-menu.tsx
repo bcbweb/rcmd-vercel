@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import AddMenu from "./add-menu";
 
 interface Profile {
   profile_picture_url: string | null;
@@ -84,66 +85,69 @@ export default function UserMenu() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="outline-none">
-          <Avatar className="h-8 w-8">
-            <AvatarImage
-              src={profile?.profile_picture_url ?? undefined}
-              alt={profile?.username ?? user.email ?? "User avatar"}
-            />
-            <AvatarFallback>
-              {profile?.username ? getInitials(profile.username) : user.email ? getInitials(user.email) : "U"}
-            </AvatarFallback>
-          </Avatar>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end">
-        <div className="px-2 py-1.5 text-sm font-medium">
-          {profile?.username ? `@${profile.username}` : user.email}
-        </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href="/protected/profile" className="flex items-center cursor-pointer">
-              <UserIcon className="mr-2 h-4 w-4" />
-              Manage profile
-            </Link>
+    <div className="flex items-center gap-5">
+      <AddMenu />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="outline-none">
+            <Avatar className="h-8 w-8">
+              <AvatarImage
+                src={profile?.profile_picture_url ?? undefined}
+                alt={profile?.username ?? user.email ?? "User avatar"}
+              />
+              <AvatarFallback>
+                {profile?.username ? getInitials(profile.username) : user.email ? getInitials(user.email) : "U"}
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end">
+          <div className="px-2 py-1.5 text-sm font-medium">
+            {profile?.username ? `@${profile.username}` : user.email}
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem asChild>
+              <Link href="/protected/profile" className="flex items-center cursor-pointer">
+                <UserIcon className="mr-2 h-4 w-4" />
+                Manage profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/protected/profile/rcmds" className="flex items-center cursor-pointer">
+                <Rows3 className="mr-2 h-4 w-4" />
+                RCMDs
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/protected/profile/add" className="flex items-center cursor-pointer">
+                <SquarePlus className="mr-2 h-4 w-4" />
+                Add profile type
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/protected/profile/switchs" className="flex items-center cursor-pointer">
+                <ArrowLeftRight className="mr-2 h-4 w-4" />
+                Switch profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/protected/settings" className="flex items-center cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={handleSignOut}
+            className="flex items-center cursor-pointer text-red-600 focus:text-red-600"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sign out</span>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/protected/profile/rcmds" className="flex items-center cursor-pointer">
-              <Rows3 className="mr-2 h-4 w-4" />
-              RCMDs
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/protected/profile/add" className="flex items-center cursor-pointer">
-              <SquarePlus className="mr-2 h-4 w-4" />
-              Add profile type
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/protected/profile/switchs" className="flex items-center cursor-pointer">
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              Switch profile
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/protected/settings" className="flex items-center cursor-pointer">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
-            </Link>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          className="flex items-center cursor-pointer text-red-600 focus:text-red-600"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Sign out</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
