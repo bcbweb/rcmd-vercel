@@ -38,6 +38,9 @@
 			],
 			"@/components/*": [
 				"./components/*"
+			],
+			"@/assets/*": [
+				"./assets/*"
 			]
 		}
 	},

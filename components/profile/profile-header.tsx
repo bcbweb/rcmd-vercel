@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile } from '@/types';
+import ShareModal from "@/components/shared/share-modal";
 
 interface ProfileHeaderProps {
   userId: string,
@@ -66,6 +67,7 @@ export default function ProfileHeader({
   const [newProfilePictureUrl, setNewProfilePictureUrl] = useState(profilePictureUrl);
   const [newInterest, setNewInterest] = useState('');
   const [newTag, setNewTag] = useState('');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const tabs = [
     { name: 'Profile', href: `/protected/profile` },
@@ -356,12 +358,21 @@ export default function ProfileHeader({
                       </button>
                     )}
                     {showShareButton && (
-                      <button
-                        onClick={() => window.open(`/${handle}`, '_blank')}
-                        className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <Share2 className="w-5 h-5 inline-block mr-2" />
-                      </button>)}
+                      <>
+                        <button
+                          onClick={() => setIsShareModalOpen(true)}
+                          className="px-4 py-2 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <Share2 className="w-5 h-5 inline-block mr-2" />
+                        </button>
+                        {isShareModalOpen && (
+                          <ShareModal
+                            onClose={() => setIsShareModalOpen(false)}
+                            handle={handle}
+                          />
+                        )}
+                      </>
+                    )}
                   </>
                 )}
               </div>
