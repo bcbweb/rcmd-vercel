@@ -28,13 +28,35 @@ export async function uploadCoverImage(file: File, userId: string) {
       upsert: true
     });
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error uploading cover image with response: ', data);
+    throw error;
+  }
   return supabase.storage.from('covers').getPublicUrl(fileName).data.publicUrl;
 }
 
 export async function uploadContentImage(file: File, userId: string, subfolder?: string) {
+  if (!userId) throw new Error('User ID is required');
+
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    throw new Error('Invalid file type. Please upload a JPEG, PNG, or WebP image.');
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('File too large. Maximum size is 5MB.');
+  }
+
   const supabase = createClient();
-  const fileExt = file.name.split('.').pop();
+  const fileExt = file.name.split('.').pop()?.toLowerCase();
+
+  if (!fileExt || !['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
+    throw new Error('Invalid file extension');
+  }
+
+  // Ensure consistent path structure: userId/subfolder/filename
   const filePath = subfolder
     ? `${userId}/${subfolder}/${Date.now()}.${fileExt}`
     : `${userId}/${Date.now()}.${fileExt}`;

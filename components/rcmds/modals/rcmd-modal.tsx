@@ -73,8 +73,7 @@ export default function RCMDModal({ onClose, onSave, userId }: Props) {
       let imageUrl: string | undefined;
 
       if (file) {
-        // Upload to 'rcmds' subfolder in content bucket
-        imageUrl = await uploadContentImage(file, `${userId}/rcmds`);
+        imageUrl = await uploadContentImage(file, userId, 'rcmds');
       }
 
       await onSave(title, description, type, visibility, imageUrl);
