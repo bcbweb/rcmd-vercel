@@ -12,14 +12,12 @@ import BlockSkeleton from '@/components/shared/block-skeleton';
 
 interface LinkBlockProps {
   linkBlock: LinkBlockType;
-  isEditing?: boolean;
   onDelete?: () => void;
   onSave?: (block: Partial<LinkBlockType>) => void;
 }
 
 export default function LinkBlock({
   linkBlock,
-  isEditing = false,
   onDelete,
   onSave,
 }: LinkBlockProps) {
@@ -121,7 +119,6 @@ export default function LinkBlock({
             </a>
           )}
           <BlockActions
-            isEditing={isEditing}
             isEditMode={isEditMode}
             onEdit={() => setIsEditMode(true)}
             onDelete={onDelete}

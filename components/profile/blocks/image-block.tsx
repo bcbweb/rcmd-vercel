@@ -6,14 +6,12 @@ import { blockStyles } from '@/components/shared/styles';
 
 interface Props {
 	imageBlock: ImageBlockType;
-	isEditing?: boolean;
 	onDelete?: () => void;
 	onSave?: (updatedBlock: Partial<ImageBlockType>) => void;
 }
 
 export default function ImageBlock({
 	imageBlock,
-	isEditing,
 	onDelete,
 	onSave,
 }: Props) {
@@ -76,7 +74,6 @@ export default function ImageBlock({
 		<div className={blockStyles.container}>
 			<div className="flex justify-end mb-2 gap-2">
 				<BlockActions
-					isEditing={isEditing}
 					isEditMode={isEditMode}
 					onEdit={() => setIsEditMode(true)}
 					onDelete={onDelete}

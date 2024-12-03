@@ -11,14 +11,12 @@ import { blockStyles } from "@/components/shared/styles";
 
 interface RCMDBlockProps {
   rcmdBlock: RCMDBlockType;
-  isEditing?: boolean;
   onDelete?: () => void;
   onSave?: (block: Partial<RCMDBlockType>) => void;
 }
 
 export default function RCMDBlock({
   rcmdBlock,
-  isEditing = false,
   onDelete,
   onSave,
 }: RCMDBlockProps) {
@@ -102,7 +100,6 @@ export default function RCMDBlock({
         )}
 
         <BlockActions
-          isEditing={isEditing}
           isEditMode={isEditMode}
           onEdit={() => setIsEditMode(true)}
           onDelete={onDelete}

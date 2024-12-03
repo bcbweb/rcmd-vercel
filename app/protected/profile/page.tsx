@@ -161,7 +161,6 @@ export default function EditProfilePage() {
 
 				<ProfileBlocks
 					blocks={blocks}
-					isEditing={true}
 					onMove={moveBlock}
 					onDelete={handleDeleteBlock}
 				/>

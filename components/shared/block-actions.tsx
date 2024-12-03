@@ -1,8 +1,7 @@
 import { Pencil, Trash2, Check, X } from 'lucide-react';
 
 interface BlockActionsProps {
-  isEditing?: boolean;
-  isEditMode?: boolean;
+  isEditMode: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
   onSave?: () => void;
@@ -10,8 +9,7 @@ interface BlockActionsProps {
 }
 
 export default function BlockActions({
-  isEditing = false,
-  isEditMode = false,
+  isEditMode,
   onEdit,
   onDelete,
   onSave,
@@ -40,30 +38,26 @@ export default function BlockActions({
     );
   }
 
-  if (isEditing) {
-    return (
-      <div className="flex gap-2">
-        <button
-          type="button"
-          title="Edit"
-          onClick={onEdit}
-          className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 
-            dark:hover:text-gray-300 transition-colors"
-        >
-          <Pencil className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          title="Delete"
-          onClick={onDelete}
-          className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 
-            dark:hover:text-red-300 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <div className="flex gap-2">
+      <button
+        type="button"
+        title="Edit"
+        onClick={onEdit}
+        className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 
+          dark:hover:text-gray-300 transition-colors"
+      >
+        <Pencil className="w-4 h-4" />
+      </button>
+      <button
+        type="button"
+        title="Delete"
+        onClick={onDelete}
+        className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 
+          dark:hover:text-red-300 transition-colors"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
 }

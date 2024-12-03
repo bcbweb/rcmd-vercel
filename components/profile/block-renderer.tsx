@@ -16,14 +16,12 @@ import RCMDBlock from "./blocks/rcmd-block";
 
 interface Props {
 	block: ProfileBlockType;
-	isEditing: boolean;
 	onDelete?: () => void;
 	onSave?: (updatedBlock: ProfileBlockType) => void;
 }
 
 export default function BlockRenderer({
 	block,
-	isEditing,
 	onDelete,
 	onSave,
 }: Props) {
@@ -213,7 +211,6 @@ export default function BlockRenderer({
 			return (
 				<TextBlock
 					textBlock={textBlock}
-					isEditing={isEditing}
 					onDelete={onDelete}
 					onSave={handleTextBlockSave}
 				/>
@@ -223,7 +220,6 @@ export default function BlockRenderer({
 			return (
 				<ImageBlock
 					imageBlock={imageBlock}
-					isEditing={isEditing}
 					onDelete={onDelete}
 					onSave={handleImageBlockSave}
 				/>
@@ -233,7 +229,6 @@ export default function BlockRenderer({
 			return (
 				<LinkBlock
 					linkBlock={linkBlock}
-					isEditing={isEditing}
 					onDelete={onDelete}
 					onSave={handleLinkBlockSave}
 				/>
@@ -244,7 +239,6 @@ export default function BlockRenderer({
 			return (
 				<RCMDBlock
 					rcmdBlock={rcmdBlock}
-					isEditing={isEditing}
 					onDelete={onDelete}
 					onSave={handleRCMDBlockSave}
 				/>

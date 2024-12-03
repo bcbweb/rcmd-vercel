@@ -28,7 +28,6 @@ export default function LinkBlocks({
           <LinkBlock
             key={block.id}
             linkBlock={block}
-            isEditing={true}
             onDelete={() => onDelete?.(block.id)}
             onSave={onSave}
           />

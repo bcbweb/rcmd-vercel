@@ -13,7 +13,6 @@ interface RCMDBlocksProps {
 
 export default function RCMDBlocks({
   rcmds,
-  isEditing = false,
   onDelete,
   onSave
 }: RCMDBlocksProps) {
@@ -31,7 +30,6 @@ export default function RCMDBlocks({
         <RCMDBlock
           key={rcmd.id}
           rcmdBlock={rcmd}
-          isEditing={isEditing}
           onDelete={() => onDelete?.(rcmd.id)}
           onSave={onSave}
         />

@@ -8,7 +8,6 @@ import type { ProfileBlockType } from '@/types';
 interface Props {
 	block: ProfileBlockType;
 	index: number;
-	isEditing: boolean;
 	onMove?: (dragIndex: number, hoverIndex: number) => void;
 	onDelete?: (id: string) => void;
 }
@@ -16,7 +15,6 @@ interface Props {
 export default function DraggableBlock({
 	block,
 	index,
-	isEditing,
 	onMove,
 	onDelete,
 }: Props) {
@@ -28,7 +26,7 @@ export default function DraggableBlock({
 		collect: (monitor) => ({
 			isDragging: monitor.isDragging(),
 		}),
-		canDrag: () => isEditing,
+		canDrag: () => true,
 	});
 
 	const [{ isOver }, drop] = useDrop({
@@ -41,7 +39,7 @@ export default function DraggableBlock({
 		collect: (monitor) => ({
 			isOver: monitor.isOver(),
 		}),
-		canDrop: () => isEditing,
+		canDrop: () => true,
 	});
 
 	// Combine the refs
@@ -55,7 +53,6 @@ export default function DraggableBlock({
 		>
 			<BlockRenderer
 				block={block}
-				isEditing={isEditing}
 				onDelete={onDelete ? () => onDelete(block.id) : undefined}
 			/>
 		</div>
