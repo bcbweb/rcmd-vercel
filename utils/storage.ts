@@ -1,47 +1,20 @@
 import { createClient } from '@/utils/supabase/client';
 
-export async function uploadProfileImage(file: File, userId: string) {
-  const supabase = createClient();
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${userId}/${Date.now()}.${fileExt}`;
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'] as const;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-  const { data, error } = await supabase.storage
-    .from('avatars')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: true
-    });
+type Bucket = 'avatars' | 'covers' | 'content';
 
-  if (error) throw error;
-  return supabase.storage.from('avatars').getPublicUrl(fileName).data.publicUrl;
+interface UploadOptions {
+  userId: string;
+  file: File;
+  bucket: Bucket;
+  subfolder?: string;
 }
 
-export async function uploadCoverImage(file: File, userId: string) {
-  const supabase = createClient();
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${userId}/${Date.now()}.${fileExt}`;
-
-  const { data, error } = await supabase.storage
-    .from('covers')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: true
-    });
-
-  if (error) {
-    console.error('Error uploading cover image with response: ', data);
-    throw error;
-  }
-  return supabase.storage.from('covers').getPublicUrl(fileName).data.publicUrl;
-}
-
-export async function uploadContentImage(file: File, userId: string, subfolder?: string) {
-  if (!userId) throw new Error('User ID is required');
-
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-
-  if (!ALLOWED_TYPES.includes(file.type)) {
+function validateFile(file: File) {
+  if (!ALLOWED_TYPES.includes(file.type as typeof ALLOWED_TYPES[number])) {
     throw new Error('Invalid file type. Please upload a JPEG, PNG, or WebP image.');
   }
 
@@ -49,30 +22,49 @@ export async function uploadContentImage(file: File, userId: string, subfolder?:
     throw new Error('File too large. Maximum size is 5MB.');
   }
 
-  const supabase = createClient();
   const fileExt = file.name.split('.').pop()?.toLowerCase();
-
-  if (!fileExt || !['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
+  if (!fileExt || !ALLOWED_EXTENSIONS.includes(fileExt as typeof ALLOWED_EXTENSIONS[number])) {
     throw new Error('Invalid file extension');
   }
 
-  // Ensure consistent path structure: userId/subfolder/filename
+  return fileExt;
+}
+
+async function uploadFile({ userId, file, bucket, subfolder }: UploadOptions) {
+  if (!userId) throw new Error('User ID is required');
+
+  const fileExt = validateFile(file);
+  const supabase = createClient();
+
   const filePath = subfolder
     ? `${userId}/${subfolder}/${Date.now()}.${fileExt}`
     : `${userId}/${Date.now()}.${fileExt}`;
 
-  const { data, error } = await supabase.storage
-    .from('content')
+  const { error } = await supabase.storage
+    .from(bucket)
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: true
     });
 
   if (error) throw error;
-  return supabase.storage.from('content').getPublicUrl(filePath).data.publicUrl;
+
+  return supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl;
 }
 
-export async function deleteFile(bucket: 'avatars' | 'covers' | 'content', path: string) {
+export function uploadProfileImage(file: File, userId: string) {
+  return uploadFile({ userId, file, bucket: 'avatars' });
+}
+
+export function uploadCoverImage(file: File, userId: string) {
+  return uploadFile({ userId, file, bucket: 'covers' });
+}
+
+export function uploadContentImage(file: File, userId: string, subfolder?: string) {
+  return uploadFile({ userId, file, bucket: 'content', subfolder });
+}
+
+export async function deleteFile(bucket: Bucket, path: string) {
   const supabase = createClient();
   const { error } = await supabase.storage
     .from(bucket)
