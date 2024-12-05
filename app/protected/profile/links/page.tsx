@@ -5,25 +5,18 @@ import LinkBlocks from "@/components/links/link-blocks";
 import { createClient } from "@/utils/supabase/client";
 import type { LinkBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function LinksPage() {
 	const supabase = createClient();
 	const [linkBlocks, setLinkBlocks] = useState<LinkBlockType[]>([]);
 	const [isLinkSaving, setIsLinkSaving] = useState(false);
-	const [userId, setUserId] = useState<string>("");
+	const userId = useAuthStore(state => state.userId);
 
-	// Get user ID
 	useEffect(() => {
-		const getUserId = async () => {
-			const { data: { user } } = await supabase.auth.getUser();
-			if (!user) return;
-
-			setUserId(user.id);
-			fetchLinks(user.id);
-		};
-
-		getUserId();
-	}, [supabase]);
+		if (!userId) return;
+		fetchLinks(userId);
+	}, [userId]);
 
 	const fetchLinks = useCallback(async (ownerId: string) => {
 		if (!ownerId) return;
@@ -97,6 +90,7 @@ export default function LinksPage() {
 	}, [linkBlocks, supabase]);
 
 	const handleSaveLink = async (block: Partial<LinkBlockType>) => {
+		if (!userId) return;
 		try {
 			setIsLinkSaving(true);
 

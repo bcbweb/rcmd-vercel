@@ -1,20 +1,28 @@
 import { RCMD } from "@/types";
 import { createClient } from '@/utils/supabase/client';
 import { useEffect, useState } from "react";
+import { useBlockStore } from '@/stores/block-store';
+import { useModalStore } from "@/stores/modal-store";
+import { Spinner } from "@/components/ui/spinner";
 import RCMDModal from "../../rcmds/modals/rcmd-modal";
 
 interface RCMDBlockModalProps {
-  onClose: () => void;
-  onSave: (rcmdId: string) => Promise<void>;
-  userId: string;
+  profileId: string;
+  onSuccess?: () => void;
 }
 
-export default function RCMDBlockModal({ onClose, onSave, userId }: RCMDBlockModalProps) {
+export default function RCMDBlockModal({ profileId, onSuccess }: RCMDBlockModalProps) {
+  const { saveRCMDBlock, isLoading: isSaving, error } = useBlockStore();
   const [selectedRCMDId, setSelectedRCMDId] = useState('');
   const [rcmds, setRCMDs] = useState<RCMD[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showAddRCMDModal, setShowAddRCMDModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
+
+  const {
+    setIsRCMDBlockModalOpen,
+    setIsRCMDModalOpen,
+    setOnModalSuccess
+  } = useModalStore();
 
   const fetchRCMDs = async () => {
     try {
@@ -47,57 +55,47 @@ export default function RCMDBlockModal({ onClose, onSave, userId }: RCMDBlockMod
   }, []);
 
   const handleSave = async () => {
-    if (!selectedRCMDId) {
-      alert('Please select a recommendation');
-      return;
+    if (!selectedRCMDId) return;
+
+    try {
+      const success = await saveRCMDBlock(profileId, selectedRCMDId);
+      if (success) {
+        onSuccess?.();
+        setIsRCMDBlockModalOpen(false);
+      } else {
+        throw new Error(error || 'Failed to save recommendation block');
+      }
+    } catch (error) {
+      console.error('Error saving RCMD block:', error);
+      alert(error instanceof Error ? error.message : 'Failed to save recommendation block');
     }
-    await onSave(selectedRCMDId);
   };
 
-  const handleAddNewRCMD = async (
-    title: string,
-    description: string,
-    type: string,
-    visibility: string,
-    imageUrl?: string
-  ) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user found');
+  const handleClose = () => {
+    setIsRCMDBlockModalOpen(false);
+  };
 
-      const { data, error } = await supabase
-        .from('rcmds')
-        .insert([{
-          title,
-          description,
-          type,
-          visibility,
-          owner_id: user.id,
-          featured_image: imageUrl
-        }])
-        .select()
-        .single();
+  const handleAddNewClick = () => {
+    // Set up the callback to refresh RCMDs after successful creation
+    setOnModalSuccess(() => {
+      fetchRCMDs();
+    });
 
-      if (error) throw error;
-
-      setShowAddRCMDModal(false);
-      await fetchRCMDs();
-      setSelectedRCMDId(data.id);
-    } catch (error) {
-      console.error('Error adding new recommendation:', error);
-      alert('Failed to add new recommendation');
-    }
+    // Open the RCMD creation modal
+    setIsRCMDModalOpen(true);
   };
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Select RCMD</h2>
             <button
-              onClick={() => setShowAddRCMDModal(true)}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              onClick={handleAddNewClick}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 
+                transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading || isSaving}
             >
               Add New RCMD
             </button>
@@ -105,18 +103,21 @@ export default function RCMDBlockModal({ onClose, onSave, userId }: RCMDBlockMod
 
           <div className="max-h-96 overflow-y-auto">
             {isLoading ? (
-              <div className="text-center py-4">Loading...</div>
+              <div className="flex justify-center items-center py-8">
+                <Spinner className="h-8 w-8" />
+              </div>
             ) : rcmds.length === 0 ? (
-              <div className="text-center py-4 text-gray-500">
+              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
                 No recommendations found. Please add some recommendations first.
               </div>
             ) : (
               rcmds.map((rcmd) => (
                 <div
                   key={rcmd.id}
-                  className={`p-4 border rounded-lg mb-2 cursor-pointer ${selectedRCMDId === rcmd.id
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  className={`p-4 border rounded-lg mb-2 cursor-pointer transition-colors
+                    ${selectedRCMDId === rcmd.id
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50'
                     }`}
                   onClick={() => setSelectedRCMDId(rcmd.id)}
                 >
@@ -131,30 +132,32 @@ export default function RCMDBlockModal({ onClose, onSave, userId }: RCMDBlockMod
 
           <div className="mt-4 flex justify-end gap-2">
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              onClick={handleClose}
+              className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 
+                dark:hover:text-gray-200 transition-colors"
+              disabled={isSaving}
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              disabled={!selectedRCMDId || isLoading}
+              disabled={!selectedRCMDId || isSaving || isLoading}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
-                disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled:opacity-50 disabled:cursor-not-allowed transition-colors 
+                flex items-center gap-2"
             >
-              Add RCMD Block
+              {isSaving ? (
+                <>
+                  <Spinner className="h-4 w-4" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                'Add RCMD Block'
+              )}
             </button>
           </div>
         </div>
       </div>
-
-      {showAddRCMDModal && (
-        <RCMDModal
-          onClose={() => setShowAddRCMDModal(false)}
-          onSave={handleAddNewRCMD}
-          userId={userId}
-        />
-      )}
     </>
   );
 }

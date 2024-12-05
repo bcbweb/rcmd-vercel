@@ -1,27 +1,25 @@
+"use client";
+
 import { useState } from 'react';
 import { uploadContentImage } from '@/utils/storage';
 import Image from 'next/image';
+import { useModalStore } from '@/stores/modal-store';
+import { useRCMDStore } from '@/stores/rcmd-store';
 
-interface Props {
-  onClose: () => void;
-  onSave: (
-    title: string,
-    description: string,
-    type: string,
-    visibility: string,
-    imageUrl?: string
-  ) => Promise<void>;
-  userId: string;
-}
+export default function RCMDModal() {
+  const {
+    isRCMDModalOpen,
+    setIsRCMDModalOpen,
+    onModalSuccess
+  } = useModalStore();
 
-export default function RCMDModal({ onClose, onSave, userId }: Props) {
+  const { saveRCMD, isLoading: isSavingRCMD, error: rcmdError } = useRCMDStore();
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState('other');
   const [visibility, setVisibility] = useState('private');
   const [isSaving, setIsSaving] = useState(false);
-
-  // New image states
   const [file, setFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number; } | null>(null);
@@ -63,26 +61,49 @@ export default function RCMDModal({ onClose, onSave, userId }: Props) {
     }
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setType('other');
+    setVisibility('private');
+    setFile(null);
+    setUploadError(null);
+    setImageDimensions(null);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    setIsRCMDModalOpen(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSaving) return;
+    if (isSaving || isSavingRCMD) return;
 
     try {
       setIsSaving(true);
-
       let imageUrl: string | undefined;
 
       if (file) {
-        imageUrl = await uploadContentImage(file, userId, 'rcmds');
+        imageUrl = await uploadContentImage(file, 'rcmds');
       }
 
-      await onSave(title, description, type, visibility, imageUrl);
+      const newRCMD = await saveRCMD(title, description, type, visibility, imageUrl);
+
+      if (newRCMD) {
+        handleClose();
+        onModalSuccess?.();
+      } else {
+        throw new Error(rcmdError || 'Failed to create new recommendation');
+      }
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : 'Error saving RCMD');
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (!isRCMDModalOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -148,7 +169,6 @@ export default function RCMDModal({ onClose, onSave, userId }: Props) {
               </select>
             </div>
 
-            {/* New image upload field */}
             <div>
               <label className="block text-sm font-medium mb-2">
                 Featured Image
@@ -187,22 +207,21 @@ export default function RCMDModal({ onClose, onSave, userId }: Props) {
               )}
             </div>
 
-            {/* Existing buttons */}
             <div className="flex justify-end gap-3 mt-6">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="px-4 py-2 text-gray-500 hover:text-gray-700"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || isSavingRCMD}
                 className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
                   disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaving || isSavingRCMD ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

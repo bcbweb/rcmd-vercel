@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/client';
+import { useAuthStore } from '@/stores/auth-store';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'] as const;
@@ -7,7 +8,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 type Bucket = 'avatars' | 'covers' | 'content';
 
 interface UploadOptions {
-  userId: string;
+  userId?: string;
   file: File;
   bucket: Bucket;
   subfolder?: string;
@@ -30,7 +31,8 @@ function validateFile(file: File) {
   return fileExt;
 }
 
-async function uploadFile({ userId, file, bucket, subfolder }: UploadOptions) {
+async function uploadFile({ userId: providedUserId, file, bucket, subfolder }: UploadOptions) {
+  const userId = providedUserId || useAuthStore.getState().userId;
   if (!userId) throw new Error('User ID is required');
 
   const fileExt = validateFile(file);
@@ -52,15 +54,15 @@ async function uploadFile({ userId, file, bucket, subfolder }: UploadOptions) {
   return supabase.storage.from(bucket).getPublicUrl(filePath).data.publicUrl;
 }
 
-export function uploadProfileImage(file: File, userId: string) {
+export function uploadProfileImage(file: File, userId?: string) {
   return uploadFile({ userId, file, bucket: 'avatars' });
 }
 
-export function uploadCoverImage(file: File, userId: string) {
+export function uploadCoverImage(file: File, userId?: string) {
   return uploadFile({ userId, file, bucket: 'covers' });
 }
 
-export function uploadContentImage(file: File, userId: string, subfolder?: string) {
+export function uploadContentImage(file: File, subfolder?: string, userId?: string) {
   return uploadFile({ userId, file, bucket: 'content', subfolder });
 }
 

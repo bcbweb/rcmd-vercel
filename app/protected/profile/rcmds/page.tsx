@@ -5,25 +5,18 @@ import RCMDBlocks from "@/components/rcmds/rcmd-blocks";
 import { createClient } from "@/utils/supabase/client";
 import type { RCMDBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function RCMDsPage() {
 	const supabase = createClient();
 	const [rcmdBlocks, setRCMDBlocks] = useState<RCMDBlockType[]>([]);
 	const [isRCMDSaving, setIsRCMDSaving] = useState(false);
-	const [userId, setUserId] = useState<string>("");
+	const userId = useAuthStore(state => state.userId);
 
-	// Get user ID
 	useEffect(() => {
-		const getUserId = async () => {
-			const { data: { user } } = await supabase.auth.getUser();
-			if (!user) return;
-
-			setUserId(user.id);
-			refreshRCMDs(user.id);
-		};
-
-		getUserId();
-	}, [supabase]);
+		if (!userId) return;
+		refreshRCMDs(userId);
+	}, [userId]);
 
 	const refreshRCMDs = useCallback(async (ownerId: string) => {
 		if (!ownerId) return;
@@ -102,6 +95,7 @@ export default function RCMDsPage() {
 	}, [rcmdBlocks, supabase]);
 
 	const handleSaveRCMD = async (block: Partial<RCMDBlockType>) => {
+		if (!userId) return;
 		try {
 			setIsRCMDSaving(true);
 

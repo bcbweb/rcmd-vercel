@@ -16,7 +16,6 @@ import type { Profile } from '@/types';
 import ShareModal from "@/components/shared/share-modal";
 
 interface ProfileHeaderProps {
-  userId: string,
   title: string;
   handle: string;
   firstName?: string;
@@ -34,7 +33,6 @@ interface ProfileHeaderProps {
 }
 
 export default function ProfileHeader({
-  userId,
   title,
   handle,
   firstName,
@@ -164,7 +162,6 @@ export default function ProfileHeader({
         {isEditing ? (
           <CoverImageUpload
             currentImageUrl={newCoverImageUrl}
-            userId={userId}
             onUploadComplete={setNewCoverImageUrl}
           />
         ) : (
@@ -192,7 +189,6 @@ export default function ProfileHeader({
                 <ProfilePhotoUpload
                   onUploadComplete={setNewProfilePictureUrl}
                   currentPhotoUrl={newProfilePictureUrl}
-                  userId={userId}
                 />
               </div>
             ) : (

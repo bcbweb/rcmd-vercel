@@ -159,7 +159,7 @@ export default function ImageEditor({
       let finalDimensions = imageDimensions;
 
       if (previewFile) {
-        finalImageUrl = await uploadContentImage(previewFile, user.id, subfolder);
+        finalImageUrl = await uploadContentImage(previewFile, subfolder);
         finalDimensions = await getImageDimensions(previewFile);
       }
 

@@ -11,7 +11,6 @@ import { toast } from "sonner";
 export default function ProfilePhotoPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userId, setUserId] = useState<string>('');
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
@@ -29,10 +28,6 @@ export default function ProfilePhotoPage() {
           .single();
 
         if (error) throw error;
-
-        if (user?.id) {
-          setUserId(user.id);
-        }
 
         if (profile?.profile_picture_url) {
           setPhotoUrl(profile.profile_picture_url);
@@ -102,7 +97,6 @@ export default function ProfilePhotoPage() {
         <ProfilePhotoUpload
           onUploadComplete={handleUploadComplete}
           currentPhotoUrl={photoUrl}
-          userId={userId}
         />
 
         <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">

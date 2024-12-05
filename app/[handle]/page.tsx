@@ -53,7 +53,7 @@ export default async function ProfilePage({
 		.eq("handle", handle)
 		.single() as { data: Profile | null; error: unknown; };
 
-	console.log('Query error:', error);
+	console.error('Query error:', error);
 	if (!profile) return notFound();
 
 	// Sort blocks by order

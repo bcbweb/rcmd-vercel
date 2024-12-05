@@ -3,8 +3,8 @@
 import { createClient } from "@/utils/supabase/client";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { User } from '@supabase/supabase-js';
 import ProfileHeader from "@/components/profile/profile-header";
+import { useAuthStore } from "@/stores/auth-store";
 
 const PAGE_TITLES = {
   '/protected/profile': 'Edit Profile',
@@ -22,10 +22,9 @@ export default function ProfileLayout({
   const supabase = createClient();
   const router = useRouter();
   const pathname = usePathname();
-  const [userId, setUserId] = useState<string>("");
+  const userId = useAuthStore(state => state.userId);
   const [handle, setHandle] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const [firstName, setFirstName] = useState<string>("");
   const [lastName, setLastName] = useState<string>("");
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>("");
@@ -34,34 +33,9 @@ export default function ProfileLayout({
   const [tags, setTags] = useState<string[] | null>(null);
   const [bio, setBio] = useState<string>("");
   const [location, setLocation] = useState<string>("");
+  const [profileId, setProfileId] = useState<string>("");
 
   const pageTitle = pathname && (PAGE_TITLES[pathname as PathType] || 'Profile');
-
-  // Get and monitor auth state
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) {
-        console.error('Error fetching user:', error);
-        router.push('/sign-in');
-        return;
-      }
-      setUser(user);
-    };
-
-    getUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        setUser(session.user);
-      } else {
-        setUser(null);
-        router.push('/sign-in');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase, router]);
 
   const fetchProfileData = useCallback(async (userId: string) => {
     try {
@@ -90,7 +64,7 @@ export default function ProfileLayout({
         return;
       }
 
-      setUserId(userId || "");
+      setProfileId(profile.id);
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
       setHandle(profile.handle || "");
@@ -108,22 +82,21 @@ export default function ProfileLayout({
 
   useEffect(() => {
     const initializeProfile = async () => {
-      if (!user?.id) return;
-      await fetchProfileData(user.id);
+      if (!userId) return;
+      await fetchProfileData(userId);
       setIsLoading(false);
     };
 
     initializeProfile();
-  }, [user?.id, fetchProfileData]);
+  }, [userId, fetchProfileData]);
 
-  if (isLoading || !user) {
+  if (isLoading || !userId) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
 
   return (
     <div className="w-full max-w-7xl mx-auto py-8 px-4">
       <ProfileHeader
-        userId={userId}
         handle={handle}
         title={pageTitle}
         firstName={firstName}

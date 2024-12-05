@@ -1,37 +1,46 @@
 "use client";
 
 import { useState } from 'react';
+import { useModalStore } from '@/stores/modal-store';
+import { useLinkStore } from '@/stores/link-store';
+import { Spinner } from '@/components/ui/spinner';
 
-interface Props {
-  onClose: () => void;
-  onSave: (
-    title: string,
-    url: string,
-    description: string,
-    type: string,
-    visibility: string
-  ) => Promise<void>;
-}
-
-export default function LinkModal({ onClose, onSave }: Props) {
+export default function LinkModal() {
+  const {
+    isLinkModalOpen,
+    setIsLinkModalOpen,
+    onModalSuccess
+  } = useModalStore();
+  const { insertLink, isLoading } = useLinkStore();
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState('other');
   const [visibility, setVisibility] = useState('private');
-  const [isSaving, setIsSaving] = useState(false);
+
+  const handleClose = () => {
+    setIsLinkModalOpen(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSaving) return;
+    if (isLoading) return;
 
-    try {
-      setIsSaving(true);
-      await onSave(title, url, description, type, visibility);
-    } finally {
-      setIsSaving(false);
+    const link = await insertLink(
+      title,
+      url,
+      description,
+      type,
+      visibility
+    );
+
+    if (link) {
+      onModalSuccess?.();
+      handleClose();
     }
   };
+
+  if (!isLinkModalOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -114,18 +123,27 @@ export default function LinkModal({ onClose, onSave }: Props) {
           <div className="flex justify-end gap-3 mt-6">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-500 hover:text-gray-700"
+              onClick={handleClose}
+              className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 
+                dark:hover:text-gray-300"
+              disabled={isLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={isLoading}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
-                disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {isSaving ? 'Saving...' : 'Save'}
+              {isLoading ? (
+                <>
+                  <Spinner className="h-4 w-4" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                'Save'
+              )}
             </button>
           </div>
         </form>

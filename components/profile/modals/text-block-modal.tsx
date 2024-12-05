@@ -1,7 +1,12 @@
+"use client";
+
 import { useState } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
+import { Spinner } from "@/components/ui/spinner";
+import { useModalStore } from "@/stores/modal-store";
+import { useBlockStore } from "@/stores/block-store";
 import {
   Bold,
   Italic,
@@ -13,8 +18,8 @@ import {
 } from 'lucide-react';
 
 interface Props {
-  onClose: () => void;
-  onSave: (content: string) => Promise<void>;
+  profileId: string;
+  onSuccess: () => void;
 }
 
 const MenuBar = ({ editor }: { editor: Editor | null; }) => {
@@ -28,14 +33,14 @@ const MenuBar = ({ editor }: { editor: Editor | null; }) => {
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 
-                        ${editor.isActive('bold') ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+            ${editor.isActive('bold') ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
         >
           <Bold className="w-5 h-5" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleItalic().run()}
           className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 
-                        ${editor.isActive('italic') ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+            ${editor.isActive('italic') ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
         >
           <Italic className="w-5 h-5" />
         </button>
@@ -43,14 +48,14 @@ const MenuBar = ({ editor }: { editor: Editor | null; }) => {
         <button
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 
-                        ${editor.isActive('bulletList') ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+            ${editor.isActive('bulletList') ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
         >
           <List className="w-5 h-5" />
         </button>
         <button
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 
-                        ${editor.isActive('orderedList') ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+            ${editor.isActive('orderedList') ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
         >
           <ListOrdered className="w-5 h-5" />
         </button>
@@ -58,21 +63,21 @@ const MenuBar = ({ editor }: { editor: Editor | null; }) => {
         <button
           onClick={() => editor.chain().focus().setTextAlign('left').run()}
           className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 
-                        ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+            ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
         >
           <AlignLeft className="w-5 h-5" />
         </button>
         <button
           onClick={() => editor.chain().focus().setTextAlign('center').run()}
           className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 
-                        ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+            ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
         >
           <AlignCenter className="w-5 h-5" />
         </button>
         <button
           onClick={() => editor.chain().focus().setTextAlign('right').run()}
           className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 
-                        ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
+            ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
         >
           <AlignRight className="w-5 h-5" />
         </button>
@@ -81,8 +86,10 @@ const MenuBar = ({ editor }: { editor: Editor | null; }) => {
   );
 };
 
-export default function TextBlockModal({ onClose, onSave }: Props) {
+export default function TextBlockModal({ profileId, onSuccess }: Props) {
   const [isSaving, setIsSaving] = useState(false);
+  const { setIsTextBlockModalOpen } = useModalStore();
+  const { saveTextBlock } = useBlockStore();
 
   const editor = useEditor({
     extensions: [
@@ -107,7 +114,15 @@ export default function TextBlockModal({ onClose, onSave }: Props) {
     try {
       setIsSaving(true);
       const content = editor.getHTML();
-      await onSave(content);
+
+      const success = await saveTextBlock(profileId, content);
+
+      if (success) {
+        onSuccess();
+        setIsTextBlockModalOpen(false);
+      } else {
+        alert('Failed to save text block');
+      }
     } catch (error) {
       console.error('Error saving text block:', error);
       alert('Failed to save text block');
@@ -118,32 +133,39 @@ export default function TextBlockModal({ onClose, onSave }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
-        <h2 className="text-xl font-bold mb-4 dark:text-white">Add Text Block</h2>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
+        <h2 className="text-lg font-semibold mb-4">Add Text Block</h2>
 
         <div className="mb-4">
           <MenuBar editor={editor} />
-          <div className="border rounded-lg p-4 dark:border-gray-700 dark:text-white">
+          <div className="border rounded-lg p-4 dark:border-gray-700">
             <EditorContent editor={editor} />
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="mt-4 flex justify-end gap-2">
           <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 
-                            dark:hover:bg-gray-700 rounded-lg"
+            onClick={() => setIsTextBlockModalOpen(false)}
+            className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 
+              dark:hover:text-gray-200 transition-colors"
             disabled={isSaving}
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 
-                            disabled:opacity-50"
             disabled={isSaving}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
+              disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? (
+              <>
+                <Spinner className="h-4 w-4" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              'Save'
+            )}
           </button>
         </div>
       </div>
