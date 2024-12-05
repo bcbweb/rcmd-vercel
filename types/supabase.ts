@@ -1071,34 +1071,63 @@ export type Database = {
           updated_at: string | null
         }
       }
-      insert_image_block:
-        | {
-            Args: {
-              p_profile_id: string
-              p_image_url: string
-              p_caption: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_profile_id: string
-              p_image_url: string
-              p_caption: string
-              p_original_filename: string
-              p_size_bytes: number
-              p_mime_type: string
-              p_width: number
-              p_height: number
-            }
-            Returns: undefined
-          }
+      insert_image_block: {
+        Args: {
+          p_profile_id: string
+          p_image_url: string
+          p_caption: string
+          p_original_filename: string
+          p_size_bytes: number
+          p_mime_type: string
+          p_width: number
+          p_height: number
+        }
+        Returns: undefined
+      }
+      insert_link: {
+        Args: {
+          p_title: string
+          p_url: string
+          p_description: string
+          p_type: string
+          p_visibility: string
+        }
+        Returns: {
+          id: string
+          created_at: string
+          title: string
+          url: string
+          description: string
+          type: string
+          visibility: string
+          owner_id: string
+        }[]
+      }
       insert_link_block: {
         Args: {
           p_profile_id: string
           p_link_id: string
         }
         Returns: undefined
+      }
+      insert_rcmd: {
+        Args: {
+          p_title: string
+          p_description: string
+          p_type: string
+          p_visibility: string
+          p_featured_image: string
+        }
+        Returns: {
+          id: string
+          created_at: string
+          title: string
+          description: string
+          type: Database["public"]["Enums"]["rcmd_type"]
+          visibility: Database["public"]["Enums"]["rcmd_visibility"]
+          owner_id: string
+          featured_image: string
+        }[]
       }
       insert_rcmd_block: {
         Args: {

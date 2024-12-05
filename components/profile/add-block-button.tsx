@@ -4,16 +4,8 @@ import { useState } from 'react';
 import { PlusCircle } from 'lucide-react';
 import { useModalStore } from '@/stores/modal-store';
 
-interface Props {
-	profileId: string;
-	onSuccess?: () => void;
-}
-
-type BlockType = 'text' | 'image' | 'rcmd' | 'business' | 'custom' | 'link';
-
-export default function AddBlockButton({ profileId, onSuccess }: Props) {
+export default function AddBlockButton() {
 	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [selectedBlockType, setSelectedBlockType] = useState<BlockType | null>(null);
 	const {
 		setIsRCMDBlockModalOpen,
 		setIsTextBlockModalOpen,
@@ -27,7 +19,6 @@ export default function AddBlockButton({ profileId, onSuccess }: Props) {
 
 	const closeModal = () => {
 		setIsModalOpen(false);
-		setSelectedBlockType(null);
 	};
 
 	const handleRCMDSelection = () => {

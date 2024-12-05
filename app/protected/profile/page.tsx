@@ -171,10 +171,7 @@ export default function EditProfilePage() {
 		<DndProvider backend={HTML5Backend}>
 			<div>
 				<div className="flex gap-4 mb-4">
-					<AddBlockButton
-						profileId={profileId}
-						onSuccess={handleBlockAdded}
-					/>
+					<AddBlockButton />
 				</div>
 
 				<ProfileBlocks

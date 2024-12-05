@@ -6,17 +6,13 @@ import { createClient } from "@/utils/supabase/client";
 import type { RCMDBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
+import { useModalStore } from "@/stores/modal-store";
 
 export default function RCMDsPage() {
 	const supabase = createClient();
 	const [rcmdBlocks, setRCMDBlocks] = useState<RCMDBlockType[]>([]);
 	const [isRCMDSaving, setIsRCMDSaving] = useState(false);
 	const userId = useAuthStore(state => state.userId);
-
-	useEffect(() => {
-		if (!userId) return;
-		refreshRCMDs(userId);
-	}, [userId]);
 
 	const refreshRCMDs = useCallback(async (ownerId: string) => {
 		if (!ownerId) return;
@@ -31,11 +27,10 @@ export default function RCMDsPage() {
 
 			if (rcmdsError) throw rcmdsError;
 
-			// Transform rcmds data into rcmd blocks format
 			const transformedBlocks: RCMDBlockType[] = (rcmdsData || []).map(rcmd => ({
 				id: rcmd.id,
 				rcmd_id: rcmd.id,
-				profile_block_id: `profile-block-${rcmd.id}`, // Generate a unique profile block ID
+				profile_block_id: `profile-block-${rcmd.id}`,
 				created_at: rcmd.created_at,
 				updated_at: rcmd.updated_at
 			}));
@@ -49,23 +44,25 @@ export default function RCMDsPage() {
 		}
 	}, [supabase]);
 
-	const handleRCMDAdded = useCallback(async () => {
+	useEffect(() => {
 		if (!userId) return;
-		setIsRCMDSaving(true);
-		try {
-			await refreshRCMDs(userId);
-		} finally {
-			setIsRCMDSaving(false);
-		}
+		refreshRCMDs(userId);
+	}, [userId, refreshRCMDs]);
+
+	useEffect(() => {
+		useModalStore.setState({
+			onModalSuccess: async () => {
+				if (userId) {
+					await refreshRCMDs(userId);
+				}
+			}
+		});
 	}, [userId, refreshRCMDs]);
 
 	const handleDeleteRCMD = useCallback(async (id: string) => {
-		// Store current state for rollback if needed
 		const previousRCMDBlocks = [...rcmdBlocks];
 		try {
 			setIsRCMDSaving(true);
-
-			// Optimistic update
 			setRCMDBlocks(prev => prev.filter(r => r.id !== id));
 
 			const { error } = await supabase
@@ -73,21 +70,15 @@ export default function RCMDsPage() {
 				.delete()
 				.eq('id', id);
 
-			if (error) {
-				throw error;
-			}
+			if (error) throw error;
 
 		} catch (error) {
 			console.error('Error deleting recommendation:', error);
-
-			// Show user-friendly error message
 			alert(
 				error instanceof Error
 					? error.message
 					: 'Failed to delete recommendation'
 			);
-
-			// Revert the optimistic update
 			setRCMDBlocks(previousRCMDBlocks);
 		} finally {
 			setIsRCMDSaving(false);
@@ -120,7 +111,7 @@ export default function RCMDsPage() {
 	return (
 		<div>
 			<div className="flex gap-4 mb-4">
-				<AddRCMDButton onRCMDAdded={handleRCMDAdded} />
+				<AddRCMDButton />
 			</div>
 
 			<RCMDBlocks

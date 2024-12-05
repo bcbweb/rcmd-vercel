@@ -6,17 +6,13 @@ import { createClient } from "@/utils/supabase/client";
 import type { LinkBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
+import { useModalStore } from "@/stores/modal-store";
 
 export default function LinksPage() {
 	const supabase = createClient();
 	const [linkBlocks, setLinkBlocks] = useState<LinkBlockType[]>([]);
 	const [isLinkSaving, setIsLinkSaving] = useState(false);
 	const userId = useAuthStore(state => state.userId);
-
-	useEffect(() => {
-		if (!userId) return;
-		fetchLinks(userId);
-	}, [userId]);
 
 	const fetchLinks = useCallback(async (ownerId: string) => {
 		if (!ownerId) return;
@@ -48,22 +44,25 @@ export default function LinksPage() {
 		}
 	}, [supabase]);
 
-	const handleLinkAdded = useCallback(async () => {
+	useEffect(() => {
 		if (!userId) return;
-		setIsLinkSaving(true);
-		try {
-			await fetchLinks(userId);
-		} finally {
-			setIsLinkSaving(false);
-		}
+		fetchLinks(userId);
+	}, [userId, fetchLinks]);
+
+	useEffect(() => {
+		useModalStore.setState({
+			onModalSuccess: async () => {
+				if (userId) {
+					await fetchLinks(userId);
+				}
+			}
+		});
 	}, [userId, fetchLinks]);
 
 	const handleDeleteLink = useCallback(async (id: string) => {
 		const previousLinkBlocks = [...linkBlocks];
 		try {
 			setIsLinkSaving(true);
-
-			// Optimistic update
 			setLinkBlocks(prev => prev.filter(l => l.link_id !== id));
 
 			const { error } = await supabase
@@ -71,9 +70,7 @@ export default function LinksPage() {
 				.delete()
 				.eq('id', id);
 
-			if (error) {
-				throw error;
-			}
+			if (error) throw error;
 
 		} catch (error) {
 			console.error('Error deleting link:', error);
@@ -82,7 +79,6 @@ export default function LinksPage() {
 					? error.message
 					: 'Failed to delete link'
 			);
-			// Revert optimistic update
 			setLinkBlocks(previousLinkBlocks);
 		} finally {
 			setIsLinkSaving(false);
@@ -115,9 +111,7 @@ export default function LinksPage() {
 	return (
 		<div>
 			<div className="flex gap-4 mb-4">
-				<AddLinkButton
-					onLinkAdded={handleLinkAdded}
-				/>
+				<AddLinkButton />
 			</div>
 
 			<LinkBlocks

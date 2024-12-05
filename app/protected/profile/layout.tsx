@@ -33,7 +33,6 @@ export default function ProfileLayout({
   const [tags, setTags] = useState<string[] | null>(null);
   const [bio, setBio] = useState<string>("");
   const [location, setLocation] = useState<string>("");
-  const [profileId, setProfileId] = useState<string>("");
 
   const pageTitle = pathname && (PAGE_TITLES[pathname as PathType] || 'Profile');
 
@@ -64,7 +63,6 @@ export default function ProfileLayout({
         return;
       }
 
-      setProfileId(profile.id);
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
       setHandle(profile.handle || "");

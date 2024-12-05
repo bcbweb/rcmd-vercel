@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useBlockStore } from '@/stores/block-store';
 import { useModalStore } from "@/stores/modal-store";
 import { Spinner } from "@/components/ui/spinner";
-import RCMDModal from "../../rcmds/modals/rcmd-modal";
 
 interface RCMDBlockModalProps {
   profileId: string;
