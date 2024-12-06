@@ -9,6 +9,7 @@ import MOCK_PROFILES from '@/data/mock/profiles.json';
 import MOCK_RCMDS from '@/data/mock/rcmds.json';
 import MOCK_BUSINESSES from '@/data/mock/businesses.json';
 
+
 export default async function Index() {
 	const typedProfiles = MOCK_PROFILES as Profile[];
 	const typedRCMDs = MOCK_RCMDS as RCMD[];

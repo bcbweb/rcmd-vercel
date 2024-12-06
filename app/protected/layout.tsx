@@ -37,8 +37,6 @@ export default async function ProtectedLayout({
     <>
       <InitAuthStore userId={user.id} />
       {children}
-      <RCMDModal />
-      <LinkModal />
     </>
   );
 }
