@@ -359,6 +359,97 @@ export type Database = {
           },
         ]
       }
+      collection_blocks: {
+        Row: {
+          collection_id: string | null
+          created_at: string | null
+          id: string
+          profile_block_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          collection_id?: string | null
+          created_at?: string | null
+          id?: string
+          profile_block_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          collection_id?: string | null
+          created_at?: string | null
+          id?: string
+          profile_block_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_blocks_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_blocks_profile_block_id_fkey"
+            columns: ["profile_block_id"]
+            isOneToOne: false
+            referencedRelation: "profile_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collection_items: {
+        Row: {
+          collection_id: string
+          created_at: string
+          id: string
+          item_type: string
+          link_id: string | null
+          order_index: number
+          rcmd_id: string | null
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          id?: string
+          item_type: string
+          link_id?: string | null
+          order_index: number
+          rcmd_id?: string | null
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          id?: string
+          item_type?: string
+          link_id?: string | null
+          order_index?: number
+          rcmd_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collection_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_items_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_items_rcmd_id_fkey"
+            columns: ["rcmd_id"]
+            isOneToOne: false
+            referencedRelation: "rcmds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collections: {
         Row: {
           created_at: string | null
@@ -1070,6 +1161,16 @@ export type Database = {
           type: string
           updated_at: string | null
         }
+      }
+      insert_collection: {
+        Args: {
+          p_name: string
+          p_description: string
+          p_visibility: string
+          p_link_ids: string[]
+          p_rcmd_ids: string[]
+        }
+        Returns: Json
       }
       insert_image_block: {
         Args: {

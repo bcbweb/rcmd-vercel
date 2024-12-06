@@ -1,17 +1,6 @@
 import { create } from 'zustand';
 import { createClient } from '@/utils/supabase/client';
-
-interface Link {
-  id: string;
-  title: string;
-  url: string;
-  description: string;
-  type: string;
-  visibility: string;
-  owner_id: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { Link } from "@/types";
 
 interface LinkStore {
   links: Link[];

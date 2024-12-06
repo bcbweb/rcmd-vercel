@@ -2,7 +2,7 @@ import Header from "@/components/layout/header";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
-import Modals from "./modals";
+import Modals from "@/components/global-modals";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL

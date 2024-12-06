@@ -8,11 +8,13 @@ export type Creator = Tables["creators"]["Row"];
 export type Business = Tables["businesses"]["Row"];
 export type RCMD = Tables["rcmds"]["Row"];
 export type Link = Tables["links"]["Row"];
+export type Collection = Tables["collections"]["Row"];
 export type ProfileBlockType = Tables["profile_blocks"]["Row"];
 export type TextBlockType = Tables["text_blocks"]["Row"];
 export type ImageBlockType = Tables["image_blocks"]["Row"];
 export type LinkBlockType = Tables["link_blocks"]["Row"];
 export type RCMDBlockType = Tables["rcmd_blocks"]["Row"];
+export type CollectionBlockType = Tables["collection_blocks"]["Row"];
 
 // You can also create custom composite types
 export type BusinessWithOwner = Business & {

@@ -18,6 +18,7 @@ interface RCMDStore {
   isLoading: boolean;
   error: string | null;
   currentRCMD: RCMD | null;
+  rcmds: RCMD[];
   saveRCMD: (
     title: string,
     description: string,
@@ -25,6 +26,7 @@ interface RCMDStore {
     visibility: string,
     imageUrl?: string
   ) => Promise<RCMD | null>;
+  fetchRCMDs: () => Promise<void>;
 }
 
 export const useRCMDStore = create<RCMDStore>()(
@@ -33,6 +35,36 @@ export const useRCMDStore = create<RCMDStore>()(
       isLoading: false,
       error: null,
       currentRCMD: null,
+      rcmds: [],
+
+      fetchRCMDs: async () => {
+        const supabase = createClient();
+        set({ isLoading: true, error: null });
+
+        try {
+          const { data, error } = await supabase
+            .from('rcmds')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+
+          set({
+            isLoading: false,
+            rcmds: data as RCMD[]
+          });
+
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'Failed to fetch recommendations';
+          set({
+            error: errorMessage,
+            isLoading: false
+          });
+          console.error('Error fetching recommendations:', error);
+        }
+      },
 
       saveRCMD: async (
         title: string,
@@ -57,10 +89,12 @@ export const useRCMDStore = create<RCMDStore>()(
 
           if (error) throw error;
 
-          set({
+          // Update the rcmds array with the new RCMD
+          set((state) => ({
             isLoading: false,
-            currentRCMD: data as RCMD
-          });
+            currentRCMD: data as RCMD,
+            rcmds: [data as RCMD, ...state.rcmds]
+          }));
 
           return data as RCMD;
 

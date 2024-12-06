@@ -18,6 +18,7 @@ interface BlockStore {
     height: number
   ) => Promise<boolean>;
   saveLinkBlock: (profileId: string, linkId: string) => Promise<boolean>;
+  saveCollectionBlock: (profileId: string, collectionId: string) => Promise<boolean>;
 }
 
 export const useBlockStore = create<BlockStore>()(
@@ -135,7 +136,31 @@ export const useBlockStore = create<BlockStore>()(
           console.error('Error saving link block:', error);
           return false;
         }
-      }
+      },
+
+      saveCollectionBlock: async (profileId: string, collectionId: string) => {
+        const supabase = createClient();
+        set({ isLoading: true, error: null });
+
+        try {
+          const { error } = await supabase
+            .rpc('insert_collection_block', {
+              p_profile_id: profileId,
+              p_collection_id: collectionId
+            });
+
+          if (error) throw error;
+
+          set({ isLoading: false });
+          return true;
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to save collection block';
+          set({ error: errorMessage, isLoading: false });
+          console.error('Error saving collection block:', error);
+          return false;
+        }
+      },
     }),
     {
       name: 'Block Store'

@@ -71,6 +71,7 @@ export default function ProfileHeader({
     { name: 'Profile', href: `/protected/profile` },
     { name: 'Links', href: `/protected/profile/links` },
     { name: 'RCMDs', href: `/protected/profile/rcmds` },
+    { name: 'Collections', href: `/protected/profile/collections` },
   ];
 
   const handleSave = async () => {

@@ -35,7 +35,7 @@ export default async function RCMDBlock({ blockId }: RCMDBlockProps) {
       {rcmd.featured_image && (
         <div className="aspect-video relative overflow-hidden mb-4 rounded-lg">
           <Image
-            src={rcmd.featured_image}
+            src={rcmd.featured_image || ""}
             alt={rcmd.title}
             fill
             className="object-cover"

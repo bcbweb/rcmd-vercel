@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { InitAuthStore } from './init-auth-store';
-import RCMDModal from "@/components/rcmds/modals/rcmd-modal";
-import LinkModal from "@/components/links/modals/link-modal";
 
 export default async function ProtectedLayout({
   children,
