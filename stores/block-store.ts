@@ -44,9 +44,9 @@ export const useBlockStore = create<BlockStore>()(
           return true;
 
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to save recommendation block';
+          const errorMessage = error instanceof Error ? error.message : 'Failed to save RCMD block';
           set({ error: errorMessage, isLoading: false });
-          console.error('Error saving recommendation block:', error);
+          console.error('Error saving RCMD block:', error);
           return false;
         }
       },

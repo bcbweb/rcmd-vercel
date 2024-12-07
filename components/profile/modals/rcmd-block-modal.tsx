@@ -43,7 +43,7 @@ export default function RCMDBlockModal({ profileId, onSuccess }: RCMDBlockModalP
       if (error) throw error;
       setRCMDs(data || []);
     } catch (error) {
-      console.error('Error fetching recommendations:', error);
+      console.error('Error fetching RCMDs:', error);
     } finally {
       setIsLoading(false);
     }
@@ -62,11 +62,11 @@ export default function RCMDBlockModal({ profileId, onSuccess }: RCMDBlockModalP
         onSuccess?.();
         setIsRCMDBlockModalOpen(false);
       } else {
-        throw new Error(error || 'Failed to save recommendation block');
+        throw new Error(error || 'Failed to save RCMD block');
       }
     } catch (error) {
       console.error('Error saving RCMD block:', error);
-      alert(error instanceof Error ? error.message : 'Failed to save recommendation block');
+      alert(error instanceof Error ? error.message : 'Failed to save RCMD block');
     }
   };
 
@@ -107,7 +107,7 @@ export default function RCMDBlockModal({ profileId, onSuccess }: RCMDBlockModalP
               </div>
             ) : rcmds.length === 0 ? (
               <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                No recommendations found. Please add some recommendations first.
+                No RCMDs found. Please add some RCMDs first.
               </div>
             ) : (
               rcmds.map((rcmd) => (

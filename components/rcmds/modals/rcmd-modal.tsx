@@ -13,7 +13,7 @@ export default function RCMDModal() {
     onModalSuccess
   } = useModalStore();
 
-  const { saveRCMD, isLoading: isSavingRCMD, error: rcmdError } = useRCMDStore();
+  const { insertRCMD, isLoading: isSavingRCMD, error: rcmdError } = useRCMDStore();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -88,13 +88,19 @@ export default function RCMDModal() {
         imageUrl = await uploadContentImage(file, 'rcmds');
       }
 
-      const newRCMD = await saveRCMD(title, description, type, visibility, imageUrl);
+      const newRCMD = await insertRCMD(
+        title,
+        description,
+        type,
+        visibility,
+        imageUrl
+      );
 
       if (newRCMD) {
         handleClose();
         onModalSuccess?.();
       } else {
-        throw new Error(rcmdError || 'Failed to create new recommendation');
+        throw new Error(rcmdError || 'Failed to create new RCMD');
       }
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : 'Error saving RCMD');

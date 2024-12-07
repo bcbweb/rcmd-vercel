@@ -1,39 +1,44 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import RCMDBlock from "../profile/blocks/rcmd-block";
-import { useMemo } from "react";
-import type { RCMDBlockType } from '@/types/index';
+import type { RCMDBlockType } from '@/types';
 
-interface RCMDBlocksProps {
-  rcmds: RCMDBlockType[];
-  isEditing?: boolean;
+interface Props {
+  initialRCMDBlocks?: RCMDBlockType[];
   onDelete?: (id: string) => void;
   onSave?: (block: Partial<RCMDBlockType>) => void;
 }
 
 export default function RCMDBlocks({
-  rcmds,
+  initialRCMDBlocks = [],
   onDelete,
   onSave
-}: RCMDBlocksProps) {
-  const sortedRCMDs = useMemo(() => {
-    return [...rcmds].sort((a, b) => {
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return dateB - dateA;
-    });
-  }, [rcmds]);
+}: Props) {
+  const [rcmdBlocks, setRCMDBlocks] = useState<RCMDBlockType[]>(initialRCMDBlocks);
+
+  useEffect(() => {
+    setRCMDBlocks(initialRCMDBlocks);
+  }, [initialRCMDBlocks]);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {sortedRCMDs.map((rcmd) => (
-        <RCMDBlock
-          key={rcmd.id}
-          rcmdBlock={rcmd}
-          onDelete={() => onDelete?.(rcmd.id)}
-          onSave={onSave}
-        />
-      ))}
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {rcmdBlocks.map((block) => (
+          <RCMDBlock
+            key={block.id}
+            rcmdBlock={block}
+            onDelete={() => onDelete?.(block.id)}
+            onSave={onSave}
+          />
+        ))}
+      </div>
+
+      {rcmdBlocks.length === 0 && (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          No RCMD blocks found
+        </div>
+      )}
     </div>
   );
 }

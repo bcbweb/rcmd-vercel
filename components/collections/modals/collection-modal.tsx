@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useModalStore } from '@/stores/modal-store';
 import { useCollectionStore } from '@/stores/collection-store';
-import { useLinkStore } from '@/stores/link-store';
 import { useRCMDStore } from '@/stores/rcmd-store';
 import { Spinner } from '@/components/ui/spinner';
 import { Search } from 'lucide-react';
+import type { RCMDVisibility } from '@/types';
 
 export default function CollectionModal() {
   const {
@@ -15,73 +15,65 @@ export default function CollectionModal() {
     onModalSuccess
   } = useModalStore();
   const { insertCollection, isLoading } = useCollectionStore();
-  const { links, fetchLinks } = useLinkStore();
   const { rcmds, fetchRCMDs } = useRCMDStore();
 
   // Collection metadata
-  const [name, setName] = useState('');  // Changed from title
+  const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [visibility, setVisibility] = useState<'private' | 'public'>('private');
+  const [visibility, setVisibility] = useState<RCMDVisibility>('private');
 
   // Search and selection states
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLinks, setSelectedLinks] = useState<string[]>([]);
   const [selectedRCMDs, setSelectedRCMDs] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'links' | 'rcmds'>('links');
+
+  // Form validation
+  const isFormValid = name.trim() !== '' &&
+    description.trim() !== '' &&
+    selectedRCMDs.length > 0;
 
   useEffect(() => {
     if (isCollectionModalOpen) {
-      fetchLinks();
       fetchRCMDs();
     }
-  }, [isCollectionModalOpen, fetchLinks, fetchRCMDs]);
+  }, [isCollectionModalOpen, fetchRCMDs]);
 
-  const handleClose = () => {
-    setIsCollectionModalOpen(false);
-    // Reset form
-    setName('');  // Changed from setTitle
+  const resetForm = () => {
+    setName('');
     setDescription('');
     setVisibility('private');
-    setSelectedLinks([]);
     setSelectedRCMDs([]);
     setSearchQuery('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isLoading) return;
-
-    const collection = await insertCollection(
-      name,
-      description,
-      visibility,
-      selectedLinks,
-      selectedRCMDs
-    );
-
-    if (collection) {
-      onModalSuccess?.();
-      handleClose();
-    }
+  const handleClose = () => {
+    setIsCollectionModalOpen(false);
+    resetForm();
   };
 
-  const filteredLinks = links.filter(link =>
-    link.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (link.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-  );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLoading || !isFormValid) return;
+
+    try {
+      await insertCollection({
+        name,
+        description,
+        visibility,
+        linkIds: [],
+        rcmdIds: selectedRCMDs
+      });
+
+      onModalSuccess?.();
+      handleClose();
+    } catch (error) {
+      console.error('Failed to create collection:', error);
+    }
+  };
 
   const filteredRCMDs = rcmds.filter(rcmd =>
     rcmd.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (rcmd.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
-
-  const toggleLink = (linkId: string) => {
-    setSelectedLinks(prev =>
-      prev.includes(linkId)
-        ? prev.filter(id => id !== linkId)
-        : [...prev, linkId]
-    );
-  };
 
   const toggleRCMD = (rcmdId: string) => {
     setSelectedRCMDs(prev =>
@@ -103,7 +95,7 @@ export default function CollectionModal() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">
-                Name
+                Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -111,29 +103,33 @@ export default function CollectionModal() {
                 onChange={(e) => setName(e.target.value)}
                 className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
                 required
+                minLength={1}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Description
+                Description <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
                 rows={3}
+                required
+                minLength={1}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Visibility
+                Visibility <span className="text-red-500">*</span>
               </label>
               <select
                 value={visibility}
-                onChange={(e) => setVisibility(e.target.value as 'private' | 'public')}
+                onChange={(e) => setVisibility(e.target.value as RCMDVisibility)}
                 className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                required
               >
                 <option value="private">Private</option>
                 <option value="public">Public</option>
@@ -141,38 +137,22 @@ export default function CollectionModal() {
             </div>
           </div>
 
-          {/* Content Selection Section */}
+          {/* RCMD Selection Section */}
           <div className="border-t pt-4">
-            <div className="flex items-center mb-4 space-x-2">
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('links')}
-                  className={`px-4 py-2 rounded ${activeTab === 'links'
-                    ? 'bg-white dark:bg-gray-600 shadow'
-                    : 'hover:bg-gray-200 dark:hover:bg-gray-500'
-                    }`}
-                >
-                  Links ({selectedLinks.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('rcmds')}
-                  className={`px-4 py-2 rounded ${activeTab === 'rcmds'
-                    ? 'bg-white dark:bg-gray-600 shadow'
-                    : 'hover:bg-gray-200 dark:hover:bg-gray-500'
-                    }`}
-                >
-                  RCMDs ({selectedRCMDs.length})
-                </button>
-              </div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-medium">
+                Select RCMDs <span className="text-red-500">*</span>
+              </h3>
+              <span className={`text-sm ${selectedRCMDs.length === 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                Selected: {selectedRCMDs.length}
+              </span>
             </div>
 
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search RCMDs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
@@ -180,54 +160,32 @@ export default function CollectionModal() {
             </div>
 
             <div className="max-h-64 overflow-y-auto border rounded-md">
-              {activeTab === 'links' ? (
-                <div className="space-y-2 p-2">
-                  {filteredLinks.map(link => (
-                    <label
-                      key={link.id}
-                      className="flex items-center space-x-2 p-2 hover:bg-gray-50 
-                        dark:hover:bg-gray-700 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedLinks.includes(link.id)}
-                        onChange={() => toggleLink(link.id)}
-                        className="rounded border-gray-300"
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium">{link.title}</div>
-                        <div className="text-sm text-gray-500 truncate">
-                          {link.url}
-                        </div>
+              <div className="space-y-2 p-2">
+                {filteredRCMDs.map(rcmd => (
+                  <label
+                    key={rcmd.id}
+                    className="flex items-center space-x-2 p-2 hover:bg-gray-50 
+                      dark:hover:bg-gray-700 rounded cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedRCMDs.includes(rcmd.id)}
+                      onChange={() => toggleRCMD(rcmd.id)}
+                      className="rounded border-gray-300"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium">{rcmd.title}</div>
+                      <div className="text-sm text-gray-500 truncate">
+                        {rcmd.description}
                       </div>
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-2 p-2">
-                  {filteredRCMDs.map(rcmd => (
-                    <label
-                      key={rcmd.id}
-                      className="flex items-center space-x-2 p-2 hover:bg-gray-50 
-                        dark:hover:bg-gray-700 rounded cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedRCMDs.includes(rcmd.id)}
-                        onChange={() => toggleRCMD(rcmd.id)}
-                        className="rounded border-gray-300"
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium">{rcmd.title}</div>
-                        <div className="text-sm text-gray-500 truncate">
-                          {rcmd.description}
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
+            {selectedRCMDs.length === 0 && (
+              <p className="text-red-500 text-sm mt-2">Please select at least one RCMD</p>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -243,7 +201,7 @@ export default function CollectionModal() {
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !isFormValid}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
                 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >

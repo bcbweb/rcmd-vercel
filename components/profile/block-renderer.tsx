@@ -192,7 +192,7 @@ export default function BlockRenderer({
 			});
 			onSave?.(block);
 		} catch (err) {
-			console.error("Error saving recommendation block:", err);
+			console.error("Error saving RCMD block:", err);
 			throw err;
 		}
 	};

@@ -1,29 +1,30 @@
+// page.tsx
 "use client";
 
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useModalStore } from "@/stores/modal-store";
 import { useCollectionStore } from "@/stores/collection-store";
 import AddCollectionButton from "@/components/collections/add-collection-button";
-import CollectionList from "@/components/collections/collection-list";
-import { CollectionBlockType } from "@/types";
+import CollectionBlocks from "@/components/collections/collection-blocks";
+import type { Collection, CollectionBlockType } from "@/types";
+import { toast } from 'sonner';
 
 export default function CollectionsPage() {
+	const [collectionBlocks, setCollectionBlocks] = useState<CollectionBlockType[]>([]);
 	const [isCollectionSaving, setIsCollectionSaving] = useState(false);
 	const userId = useAuthStore(state => state.userId);
-
 	const { collections, fetchCollections, deleteCollection, updateCollection } = useCollectionStore();
 
-	// Transform collections to CollectionBlock format
-	const collectionBlocks = useMemo(() => {
+	const transformCollectionsToBlocks = useCallback((collections: Collection[]) => {
 		return collections.map(collection => ({
-			id: crypto.randomUUID(), // Generate a unique ID for the block
+			id: crypto.randomUUID(),
 			collection_id: collection.id,
-			profile_block_id: null,
+			profile_block_id: `profile-block-${collection.id}`,
 			created_at: new Date().toISOString(),
 			updated_at: new Date().toISOString()
-		} satisfies CollectionBlockType));
-	}, [collections]);
+		}));
+	}, []);
 
 	useEffect(() => {
 		if (userId) {
@@ -32,49 +33,55 @@ export default function CollectionsPage() {
 	}, [userId, fetchCollections]);
 
 	useEffect(() => {
+		setCollectionBlocks(transformCollectionsToBlocks(collections));
+	}, [collections, transformCollectionsToBlocks]);
+
+	useEffect(() => {
 		useModalStore.setState({
-			onModalSuccess: async () => {
+			onModalSuccess: () => {
 				if (userId) {
-					await fetchCollections(userId);
+					fetchCollections(userId);
 				}
 			}
 		});
 	}, [userId, fetchCollections]);
 
 	const handleDeleteCollection = useCallback(async (id: string) => {
-		try {
-			setIsCollectionSaving(true);
-			await deleteCollection(id);
-		} catch (error) {
-			console.error('Error deleting collection:', error);
-			alert(
-				error instanceof Error
-					? error.message
-					: 'Failed to delete collection'
-			);
-		} finally {
-			setIsCollectionSaving(false);
-		}
+		toast('Are you sure you want to delete this collection?', {
+			duration: Infinity,
+			action: {
+				label: 'Delete',
+				onClick: async () => {
+					try {
+						setIsCollectionSaving(true);
+						await deleteCollection(id);
+						toast.success('Collection deleted successfully');
+					} catch (error) {
+						toast.error(error instanceof Error ? error.message : 'Failed to delete collection');
+					} finally {
+						setIsCollectionSaving(false);
+					}
+				},
+			},
+			cancel: {
+				label: 'Cancel',
+				onClick: () => {
+					toast.dismiss();
+				},
+			},
+		});
 	}, [deleteCollection]);
 
-	const handleUpdateCollection = async (block: Partial<CollectionBlockType>) => {
+	const handleSaveCollection = async (block: Partial<CollectionBlockType>) => {
 		if (!userId || !block.collection_id) return;
 		try {
 			setIsCollectionSaving(true);
-			// Find the collection that corresponds to this block
-			const collection = collections.find(c => c.id === block.collection_id);
-			if (!collection) {
-				throw new Error('Collection not found');
-			}
-
-			// Update the collection (you'll need to specify what fields should be updated)
 			await updateCollection(block.collection_id, {
-				// Add the fields you want to update here
 				updated_at: new Date().toISOString()
 			});
 		} catch (error) {
 			console.error('Error saving collection:', error);
-			alert('Failed to save collection');
+			toast.error('Failed to save collection');
 		} finally {
 			setIsCollectionSaving(false);
 		}
@@ -86,10 +93,10 @@ export default function CollectionsPage() {
 				<AddCollectionButton />
 			</div>
 
-			<CollectionList
-				collections={collectionBlocks}
+			<CollectionBlocks
+				initialCollectionBlocks={collectionBlocks}
 				onDelete={handleDeleteCollection}
-				onUpdate={handleUpdateCollection}
+				onSave={handleSaveCollection}
 			/>
 
 			{isCollectionSaving && (

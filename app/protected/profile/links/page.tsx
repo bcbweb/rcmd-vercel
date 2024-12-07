@@ -2,104 +2,83 @@
 
 import AddLinkButton from "@/components/links/add-link-button";
 import LinkBlocks from "@/components/links/link-blocks";
-import { createClient } from "@/utils/supabase/client";
-import type { LinkBlockType } from "@/types";
+import type { Link, LinkBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useModalStore } from "@/stores/modal-store";
+import { useLinkStore } from "@/stores/link-store";
+import { toast } from 'sonner';
 
 export default function LinksPage() {
-	const supabase = createClient();
 	const [linkBlocks, setLinkBlocks] = useState<LinkBlockType[]>([]);
 	const [isLinkSaving, setIsLinkSaving] = useState(false);
 	const userId = useAuthStore(state => state.userId);
+	const { links, fetchLinks, deleteLink, updateLink } = useLinkStore();
 
-	const fetchLinks = useCallback(async (ownerId: string) => {
-		if (!ownerId) return;
-
-		try {
-			setIsLinkSaving(true);
-			const { data: linksData, error: linksError } = await supabase
-				.from('links')
-				.select('*')
-				.eq('owner_id', ownerId)
-				.order('created_at', { ascending: false });
-
-			if (linksError) throw linksError;
-
-			const transformedBlocks: LinkBlockType[] = (linksData || []).map(link => ({
-				id: link.id,
-				link_id: link.id,
-				profile_block_id: `profile-block-${link.id}`,
-				created_at: link.created_at,
-				updated_at: link.updated_at
-			}));
-
-			setLinkBlocks(transformedBlocks);
-		} catch (error) {
-			console.error('Error fetching links:', error);
-			alert('Failed to fetch links');
-		} finally {
-			setIsLinkSaving(false);
-		}
-	}, [supabase]);
+	const transformLinksToBlocks = useCallback((links: Link[]) => {
+		return links.map(link => ({
+			id: link.id,
+			link_id: link.id,
+			profile_block_id: `profile-block-${link.id}`,
+			created_at: link.created_at,
+			updated_at: link.updated_at
+		}));
+	}, []);
 
 	useEffect(() => {
-		if (!userId) return;
-		fetchLinks(userId);
+		if (userId) {
+			fetchLinks();
+		}
 	}, [userId, fetchLinks]);
 
 	useEffect(() => {
+		setLinkBlocks(transformLinksToBlocks(links));
+	}, [links, transformLinksToBlocks]);
+
+	useEffect(() => {
 		useModalStore.setState({
-			onModalSuccess: async () => {
+			onModalSuccess: () => {
 				if (userId) {
-					await fetchLinks(userId);
+					fetchLinks();
 				}
 			}
 		});
 	}, [userId, fetchLinks]);
 
 	const handleDeleteLink = useCallback(async (id: string) => {
-		const previousLinkBlocks = [...linkBlocks];
-		try {
-			setIsLinkSaving(true);
-			setLinkBlocks(prev => prev.filter(l => l.link_id !== id));
-
-			const { error } = await supabase
-				.from('links')
-				.delete()
-				.eq('id', id);
-
-			if (error) throw error;
-
-		} catch (error) {
-			console.error('Error deleting link:', error);
-			alert(
-				error instanceof Error
-					? error.message
-					: 'Failed to delete link'
-			);
-			setLinkBlocks(previousLinkBlocks);
-		} finally {
-			setIsLinkSaving(false);
-		}
-	}, [linkBlocks, supabase]);
+		toast('Are you sure you want to delete this link? Any associated profile blocks and collection items will also be deleted.', {
+			duration: Infinity,
+			action: {
+				label: 'Delete',
+				onClick: async () => {
+					try {
+						setIsLinkSaving(true);
+						await deleteLink(id);
+						await fetchLinks();
+						toast.success('Link deleted successfully');
+					} catch (error) {
+						toast.error(error instanceof Error ? error.message : 'Failed to delete link');
+					} finally {
+						setIsLinkSaving(false);
+					}
+				},
+			},
+			cancel: {
+				label: 'Cancel',
+				onClick: () => {
+					toast.dismiss();
+				},
+			},
+		});
+	}, [deleteLink, fetchLinks]);
 
 	const handleSaveLink = async (block: Partial<LinkBlockType>) => {
-		if (!userId) return;
+		if (!userId || !block.link_id) return;
 		try {
 			setIsLinkSaving(true);
-
-			const { error } = await supabase
-				.from("links")
-				.update({
-					updated_at: new Date().toISOString()
-				})
-				.eq("id", block.link_id);
-
-			if (error) throw error;
-
-			await fetchLinks(userId);
+			await updateLink(block.link_id, {
+				updated_at: new Date().toISOString()
+			});
 		} catch (error) {
 			console.error('Error saving link:', error);
 			alert('Failed to save link');

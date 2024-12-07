@@ -478,15 +478,7 @@ export type Database = {
           updated_at?: string | null
           visibility?: Database["public"]["Enums"]["rcmd_visibility"] | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "collections_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       creator_followers: {
         Row: {
@@ -1164,11 +1156,7 @@ export type Database = {
       }
       insert_collection: {
         Args: {
-          p_name: string
-          p_description: string
-          p_visibility: string
-          p_link_ids: string[]
-          p_rcmd_ids: string[]
+          payload: Json
         }
         Returns: Json
       }

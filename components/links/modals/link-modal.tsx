@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useModalStore } from '@/stores/modal-store';
 import { useLinkStore } from '@/stores/link-store';
 import { Spinner } from '@/components/ui/spinner';
+import LinkInput from '@/components/ui/link-input';
+import { LinkMetadata } from '@/types';
 
 export default function LinkModal() {
   const {
@@ -18,8 +20,17 @@ export default function LinkModal() {
   const [type, setType] = useState('other');
   const [visibility, setVisibility] = useState('private');
 
+  const resetForm = () => {
+    setTitle('');
+    setUrl('');
+    setDescription('');
+    setType('other');
+    setVisibility('private');
+  };
+
   const handleClose = () => {
     setIsLinkModalOpen(false);
+    resetForm();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,7 +47,38 @@ export default function LinkModal() {
 
     if (link) {
       onModalSuccess?.();
+      resetForm();
       handleClose();
+    }
+  };
+
+  const sanitizeText = (text: string | undefined, maxLength: number): string => {
+    if (!text) return '';
+
+    // Remove HTML tags and decode HTML entities
+    const div = document.createElement('div');
+    div.innerHTML = text;
+    const sanitized = div.textContent || div.innerText || '';
+
+    // Remove control characters and trim whitespace
+    return sanitized
+      .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+      .trim()
+      .slice(0, maxLength);
+  };
+
+  const handleMetadataFetch = (metadata: LinkMetadata) => {
+    if (metadata.title && !title) {
+      setTitle(sanitizeText(metadata.title, 100));
+    }
+    if (metadata.description && !description) {
+      setDescription(sanitizeText(metadata.description, 500));
+    }
+    if (metadata.type) {
+      const detectedType = metadata.type.toLowerCase();
+      if (['article', 'video', 'podcast', 'product'].includes(detectedType)) {
+        setType(detectedType);
+      }
     }
   };
 
@@ -51,6 +93,18 @@ export default function LinkModal() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">
+                URL
+              </label>
+              <LinkInput
+                value={url}
+                onChange={setUrl}
+                onMetadataFetch={handleMetadataFetch}
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
                 Title
               </label>
               <input
@@ -58,20 +112,6 @@ export default function LinkModal() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                URL
-              </label>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
-                placeholder="https://example.com"
                 required
               />
             </div>

@@ -8,13 +8,13 @@ interface CollectionStore {
   error: string | null;
   currentCollection: Collection | null;
   collections: Collection[];
-  insertCollection: (
-    name: string,
-    description: string,
-    visibility: RCMDVisibility,
-    linkIds: string[],
-    rcmdIds: string[]
-  ) => Promise<Collection | null>;
+  insertCollection: (input: {
+    name: string;
+    description: string;
+    visibility: RCMDVisibility;
+    linkIds: string[];
+    rcmdIds: string[];
+  }) => Promise<Collection | null>;
   fetchCollections: (userId?: string) => Promise<void>;
   deleteCollection: (id: string) => Promise<void>;
   updateCollection: (id: string, updates: Partial<Collection>) => Promise<void>;
@@ -28,35 +28,47 @@ export const useCollectionStore = create<CollectionStore>()(
       currentCollection: null,
       collections: [],
 
-      insertCollection: async (
-        name: string,
-        description: string,
-        visibility: RCMDVisibility,
-        linkIds: string[],
-        rcmdIds: string[]
-      ) => {
+      insertCollection: async (input) => {
         const supabase = createClient();
         set({ isLoading: true, error: null });
 
         try {
           const { data: collection, error } = await supabase
             .rpc('insert_collection', {
-              p_description: description,
-              p_link_ids: linkIds,
-              p_name: name,
-              p_rcmd_ids: rcmdIds,
-              p_visibility: visibility
+              payload: {
+                name: input.name,
+                description: input.description,
+                visibility: input.visibility,
+                linkIds: input.linkIds,
+                rcmdIds: input.rcmdIds
+              }
             });
 
           if (error) throw error;
 
+          // Fetch the complete collection with items
+          const { data: fullCollection, error: fetchError } = await supabase
+            .from('collections')
+            .select(`
+              *,
+              collection_items (
+                item_type,
+                link_id (*),
+                rcmd_id (*)
+              )
+            `)
+            .eq('id', collection.id)
+            .single();
+
+          if (fetchError) throw fetchError;
+
           set((state) => ({
             isLoading: false,
-            currentCollection: collection as Collection,
-            collections: [collection as Collection, ...state.collections]
+            currentCollection: fullCollection as Collection,
+            collections: [fullCollection as Collection, ...state.collections]
           }));
 
-          return collection as Collection;
+          return fullCollection as Collection;
 
         } catch (error) {
           const errorMessage = error instanceof Error

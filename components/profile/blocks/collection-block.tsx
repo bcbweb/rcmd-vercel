@@ -1,91 +1,76 @@
 "use client";
 
 import { formatDistanceToNow } from 'date-fns';
-import { createClient } from '@/utils/supabase/client';
-import { useState, useEffect } from 'react';
-import type { CollectionBlockType } from '@/types';
+import { useCallback, useEffect, useState } from 'react';
+import type { Collection, CollectionBlockType, CollectionWithItems } from '@/types';
 import BlockActions from '@/components/shared/block-actions';
 import { blockStyles } from '@/components/shared/styles';
-import BlockSkeleton from '@/components/shared/block-skeleton';
-
-interface Collection {
-  created_at: string | null;
-  description: string | null;
-  id: string;
-  name: string;
-  owner_id: string | null;
-  updated_at: string | null;
-  visibility: 'public' | 'private' | 'followers' | null;
-}
+import useEmblaCarousel from 'embla-carousel-react';
+import RCMDBlock from '@/components/profile/blocks/rcmd-block';
+import { useCollectionStore } from '@/stores/collection-store';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface CollectionBlockProps {
   collection: CollectionBlockType;
   onDelete?: () => void;
-  onUpdate?: (block: Partial<CollectionBlockType>) => void;
+  onSave?: (block: Partial<CollectionBlockType>) => void;
 }
 
 export default function CollectionBlock({
   collection,
   onDelete,
-  onUpdate,
+  onSave,
 }: CollectionBlockProps) {
-  const supabase = createClient();
-  const [collectionData, setCollectionData] = useState<Collection | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const collections = useCollectionStore(state => state.collections as CollectionWithItems[]);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editedCollection, setEditedCollection] = useState<Collection | null>(null);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'start',
+    containScroll: 'trimSnaps'
+  });
+  const [prevBtnEnabled, setPrevBtnEnabled] = useState(false);
+  const [nextBtnEnabled, setNextBtnEnabled] = useState(false);
+
+  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setPrevBtnEnabled(emblaApi.canScrollPrev());
+    setNextBtnEnabled(emblaApi.canScrollNext());
+  }, [emblaApi]);
 
   useEffect(() => {
-    const fetchCollection = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('collections')
-          .select('*')
-          .eq('id', collection.collection_id)
-          .single();
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on('select', onSelect);
+    emblaApi.on('reInit', onSelect);
+  }, [emblaApi, onSelect]);
 
-        if (error) throw error;
-        setCollectionData(data);
-        setEditedCollection(data);
-      } catch (err) {
-        console.error('Error fetching collection:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const collectionData = collections.find(c => c.id === collection.collection_id);
+  const [editedCollection, setEditedCollection] = useState(collectionData);
 
-    fetchCollection();
-  }, [collection.collection_id, supabase]);
+  if (!collectionData || !editedCollection) return null;
+
+  const rcmdItems = collectionData.collection_items?.filter(
+    item => item.item_type === 'rcmd' && item.rcmd_id
+  ) || [];
 
   const handleSave = async () => {
-    if (!editedCollection) return;
+    if (!editedCollection || !collection.collection_id) return;
 
     try {
-      const { error } = await supabase
-        .from('collections')
-        .update({
-          name: editedCollection.name,
-          description: editedCollection.description,
-          visibility: editedCollection.visibility,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', collection.collection_id);
+      await useCollectionStore.getState().updateCollection(collection.collection_id, {
+        name: editedCollection.name,
+        description: editedCollection.description,
+        visibility: editedCollection.visibility,
+      });
 
-      if (error) throw error;
-
-      setCollectionData(editedCollection);
       setIsEditMode(false);
-      onUpdate?.(collection);
+      onSave?.(collection);
     } catch (err) {
       console.error('Error updating collection:', err);
     }
   };
-
-  if (isLoading) {
-    return <BlockSkeleton lines={2} className="p-2" />;
-  }
-
-  if (!collectionData || !editedCollection) return null;
 
   return (
     <div className={blockStyles.container}>
@@ -125,6 +110,50 @@ export default function CollectionBlock({
         )
       )}
 
+      {/* Embla Carousel */}
+      {rcmdItems.length > 0 && (
+        <div className="mt-4 relative">
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex gap-4">
+              {rcmdItems.map((item) => (
+                item.rcmd_id && (
+                  <div className="flex-[0_0_300px]" key={item.rcmd_id.id}>
+                    <RCMDBlock
+                      rcmdBlock={{
+                        id: item.id,
+                        rcmd_id: item.rcmd_id.id,
+                        created_at: item.created_at,
+                        updated_at: '',
+                        profile_block_id: ''
+                      }}
+                    />
+                  </div>
+                )
+              ))}
+            </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <button
+            className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 bg-white/90 dark:bg-gray-800/90 rounded-full p-2 shadow-md hover:bg-white dark:hover:bg-gray-800 transition-opacity ${prevBtnEnabled ? 'opacity-100' : 'opacity-0'
+              }`}
+            onClick={scrollPrev}
+            disabled={!prevBtnEnabled}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+
+          <button
+            className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 bg-white/90 dark:bg-gray-800/90 rounded-full p-2 shadow-md hover:bg-white dark:hover:bg-gray-800 transition-opacity ${nextBtnEnabled ? 'opacity-100' : 'opacity-0'
+              }`}
+            onClick={scrollNext}
+            disabled={!nextBtnEnabled}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 mt-2">
         {isEditMode ? (
           <select
@@ -143,6 +172,9 @@ export default function CollectionBlock({
           <div className="flex items-center gap-2">
             <span className={blockStyles.tag}>
               {collectionData.visibility || 'public'}
+            </span>
+            <span className={blockStyles.tag}>
+              {collectionData.collection_items?.length || 0} items
             </span>
             {collectionData.created_at && (
               <span className={blockStyles.metaText}>

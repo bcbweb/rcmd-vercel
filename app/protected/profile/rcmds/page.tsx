@@ -2,107 +2,86 @@
 
 import AddRCMDButton from "@/components/rcmds/add-rcmd-button";
 import RCMDBlocks from "@/components/rcmds/rcmd-blocks";
-import { createClient } from "@/utils/supabase/client";
-import type { RCMDBlockType } from "@/types";
+import type { RCMD, RCMDBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useModalStore } from "@/stores/modal-store";
+import { useRCMDStore } from "@/stores/rcmd-store";
+import { toast } from 'sonner';
 
 export default function RCMDsPage() {
-	const supabase = createClient();
 	const [rcmdBlocks, setRCMDBlocks] = useState<RCMDBlockType[]>([]);
 	const [isRCMDSaving, setIsRCMDSaving] = useState(false);
 	const userId = useAuthStore(state => state.userId);
+	const { rcmds, fetchRCMDs, deleteRCMD, updateRCMD } = useRCMDStore();
 
-	const refreshRCMDs = useCallback(async (ownerId: string) => {
-		if (!ownerId) return;
-
-		try {
-			setIsRCMDSaving(true);
-			const { data: rcmdsData, error: rcmdsError } = await supabase
-				.from('rcmds')
-				.select('*')
-				.eq('owner_id', ownerId)
-				.order('created_at', { ascending: false });
-
-			if (rcmdsError) throw rcmdsError;
-
-			const transformedBlocks: RCMDBlockType[] = (rcmdsData || []).map(rcmd => ({
-				id: rcmd.id,
-				rcmd_id: rcmd.id,
-				profile_block_id: `profile-block-${rcmd.id}`,
-				created_at: rcmd.created_at,
-				updated_at: rcmd.updated_at
-			}));
-
-			setRCMDBlocks(transformedBlocks);
-		} catch (error) {
-			console.error('Error refreshing recommendations:', error);
-			alert('Failed to refresh recommendations');
-		} finally {
-			setIsRCMDSaving(false);
-		}
-	}, [supabase]);
+	const transformRCMDsToBlocks = useCallback((rcmds: RCMD[]) => {
+		return rcmds.map(rcmd => ({
+			id: rcmd.id,
+			rcmd_id: rcmd.id,
+			profile_block_id: `profile-block-${rcmd.id}`,
+			created_at: rcmd.created_at ?? new Date().toISOString(), // Provide default if null
+			updated_at: rcmd.updated_at ?? new Date().toISOString()  // Provide default if null
+		}));
+	}, []);
 
 	useEffect(() => {
-		if (!userId) return;
-		refreshRCMDs(userId);
-	}, [userId, refreshRCMDs]);
+		if (userId) {
+			fetchRCMDs();
+		}
+	}, [userId, fetchRCMDs]);
+
+	useEffect(() => {
+		setRCMDBlocks(transformRCMDsToBlocks(rcmds));
+	}, [rcmds, transformRCMDsToBlocks]);
 
 	useEffect(() => {
 		useModalStore.setState({
-			onModalSuccess: async () => {
+			onModalSuccess: () => {
 				if (userId) {
-					await refreshRCMDs(userId);
+					fetchRCMDs();
 				}
 			}
 		});
-	}, [userId, refreshRCMDs]);
+	}, [userId, fetchRCMDs]);
 
 	const handleDeleteRCMD = useCallback(async (id: string) => {
-		const previousRCMDBlocks = [...rcmdBlocks];
-		try {
-			setIsRCMDSaving(true);
-			setRCMDBlocks(prev => prev.filter(r => r.id !== id));
-
-			const { error } = await supabase
-				.from('rcmds')
-				.delete()
-				.eq('id', id);
-
-			if (error) throw error;
-
-		} catch (error) {
-			console.error('Error deleting recommendation:', error);
-			alert(
-				error instanceof Error
-					? error.message
-					: 'Failed to delete recommendation'
-			);
-			setRCMDBlocks(previousRCMDBlocks);
-		} finally {
-			setIsRCMDSaving(false);
-		}
-	}, [rcmdBlocks, supabase]);
+		toast('Are you sure you want to delete this RCMD?', {
+			duration: Infinity,
+			action: {
+				label: 'Delete',
+				onClick: async () => {
+					try {
+						setIsRCMDSaving(true);
+						await deleteRCMD(id);
+						await fetchRCMDs();
+						toast.success('RCMD deleted successfully');
+					} catch (error) {
+						toast.error(error instanceof Error ? error.message : 'Failed to delete RCMD');
+					} finally {
+						setIsRCMDSaving(false);
+					}
+				},
+			},
+			cancel: {
+				label: 'Cancel',
+				onClick: () => {
+					toast.dismiss();
+				},
+			},
+		});
+	}, [deleteRCMD, fetchRCMDs]);
 
 	const handleSaveRCMD = async (block: Partial<RCMDBlockType>) => {
-		if (!userId) return;
+		if (!userId || !block.rcmd_id) return;
 		try {
 			setIsRCMDSaving(true);
-
-			const { error } = await supabase
-				.from("rcmds")
-				.update({
-					updated_at: new Date().toISOString()
-				})
-				.eq("id", block.id);
-
-			if (error) throw error;
-
-			await refreshRCMDs(userId);
+			await updateRCMD(block.rcmd_id, {
+				updated_at: new Date().toISOString()
+			});
 		} catch (error) {
-			console.error('Error saving recommendation:', error);
-			alert('Failed to save recommendation');
+			console.error('Error saving RCMD:', error);
+			alert('Failed to save RCMD');
 		} finally {
 			setIsRCMDSaving(false);
 		}
@@ -115,8 +94,7 @@ export default function RCMDsPage() {
 			</div>
 
 			<RCMDBlocks
-				rcmds={rcmdBlocks}
-				isEditing={true}
+				initialRCMDBlocks={rcmdBlocks}
 				onDelete={handleDeleteRCMD}
 				onSave={handleSaveRCMD}
 			/>

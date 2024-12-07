@@ -9,6 +9,7 @@ export type Business = Tables["businesses"]["Row"];
 export type RCMD = Tables["rcmds"]["Row"];
 export type Link = Tables["links"]["Row"];
 export type Collection = Tables["collections"]["Row"];
+export type CollectionItem = Tables["collection_items"]["Row"];
 export type ProfileBlockType = Tables["profile_blocks"]["Row"];
 export type TextBlockType = Tables["text_blocks"]["Row"];
 export type ImageBlockType = Tables["image_blocks"]["Row"];
@@ -30,6 +31,31 @@ export type WithTimestamps = {
 	created_at: string;
 	updated_at: string;
 };
+
+export interface LinkMetadata {
+	title?: string;
+	description?: string;
+	image?: string;
+	favicon?: string;
+	type?: string;
+}
+
+export interface CollectionWithItems extends Collection {
+	collection_items?: Array<{
+		id: string;
+		collection_id: string;
+		item_type: 'rcmd' | 'link';
+		rcmd_id?: {
+			id: string;
+			[key: string]: any;
+		};
+		link_id?: {
+			id: string;
+			[key: string]: any;
+		};
+		created_at: string;
+	}>;
+}
 
 // Enums (if you need them in your frontend)
 export enum BusinessStatus {
