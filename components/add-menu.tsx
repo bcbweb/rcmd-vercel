@@ -5,7 +5,7 @@ import {
   Rows3,
   SquarePlus,
   Link as LinkIcon,
-  // BriefcaseBusiness
+  FolderPlus
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -52,6 +52,22 @@ export default function UserMenu() {
     }
   };
 
+  const handleCollectionClick = () => {
+    try {
+      useModalStore.setState(
+        {
+          isCollectionModalOpen: true,
+          onModalSuccess: () => router.push('/protected/profile/collections')
+        },
+        false,
+        'modal/handleCollectionClick'
+      );
+    } catch (error) {
+      console.error("Error in handleCollectionClick:", error);
+      useModalStore.setState({}, false, 'modal/handleCollectionClick/error');
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -82,12 +98,13 @@ export default function UserMenu() {
             <LinkIcon className="mr-2 h-4 w-4" />
             Link
           </DropdownMenuItem>
-          {/* <DropdownMenuItem asChild>
-            <Link href="/protected/profile/rcmds" className="flex items-center cursor-pointer">
-              <BriefcaseBusiness className="mr-2 h-4 w-4" />
-              Business
-            </Link>
-          </DropdownMenuItem> */}
+          <DropdownMenuItem
+            onSelect={handleCollectionClick}
+            className="cursor-pointer flex items-center"
+          >
+            <FolderPlus className="mr-2 h-4 w-4" />
+            Collection
+          </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
