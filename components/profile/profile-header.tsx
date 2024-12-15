@@ -14,6 +14,7 @@ import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile } from '@/types';
 import ShareModal from "@/components/shared/share-modal";
+import { toast } from "sonner";
 
 interface ProfileHeaderProps {
   title: string;
@@ -99,7 +100,7 @@ export default function ProfileHeader({
       if (onUpdate) onUpdate();
     } catch (error) {
       console.error('Error updating profile:', error);
-      alert('Error updating profile');
+      toast.error('Error updating profile');
     } finally {
       setIsLoading(false);
     }

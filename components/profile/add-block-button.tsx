@@ -10,7 +10,8 @@ export default function AddBlockButton() {
 		setIsRCMDBlockModalOpen,
 		setIsTextBlockModalOpen,
 		setIsImageBlockModalOpen,
-		setIsLinkBlockModalOpen
+		setIsLinkBlockModalOpen,
+		setIsCollectionBlockModalOpen
 	} = useModalStore();
 
 	const openBlockTypeSelector = () => {
@@ -41,6 +42,11 @@ export default function AddBlockButton() {
 		setIsLinkBlockModalOpen(true);
 	};
 
+	const handleCollectionSelection = () => {
+		setIsModalOpen(false);
+		setIsCollectionBlockModalOpen(true);
+	};
+
 	return (
 		<>
 			<button
@@ -67,6 +73,13 @@ export default function AddBlockButton() {
                   transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								RCMD
+							</button>
+							<button
+								onClick={handleCollectionSelection}
+								className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
+                  transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+							>
+								Collection
 							</button>
 							<button
 								onClick={handleTextSelection}

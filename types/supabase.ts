@@ -1160,6 +1160,13 @@ export type Database = {
         }
         Returns: Json
       }
+      insert_collection_block: {
+        Args: {
+          p_profile_id: string
+          p_collection_id: string
+        }
+        Returns: undefined
+      }
       insert_image_block: {
         Args: {
           p_profile_id: string

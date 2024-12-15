@@ -33,6 +33,7 @@
 		"embla-carousel-react": "^8.4.0",
 		"geist": "^1.2.1",
 		"html-react-parser": "^5.1.18",
+		"instagram-graph-api": "^7.0.0",
 		"install": "^0.13.0",
 		"lodash": "^4.17.21",
 		"lucide-react": "^0.456.0",

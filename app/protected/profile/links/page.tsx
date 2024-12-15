@@ -81,7 +81,7 @@ export default function LinksPage() {
 			});
 		} catch (error) {
 			console.error('Error saving link:', error);
-			alert('Failed to save link');
+			toast.error('Failed to save link');
 		} finally {
 			setIsLinkSaving(false);
 		}

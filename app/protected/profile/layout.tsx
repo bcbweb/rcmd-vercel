@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import ProfileHeader from "@/components/profile/profile-header";
 import { useAuthStore } from "@/stores/auth-store";
+import { toast } from "sonner";
 
 const PAGE_TITLES = {
   '/protected/profile': 'Edit Profile',
@@ -74,7 +75,7 @@ export default function ProfileLayout({
       setLocation(profile.location || "");
     } catch (error) {
       console.error('Error fetching profile:', error);
-      alert('Failed to load profile data');
+      toast.error('Failed to load profile data');
     }
   }, [supabase, router]);
 

@@ -6,6 +6,7 @@ import RCMDBlockModal from "@/components/profile/modals/rcmd-block-modal";
 import TextBlockModal from "@/components/profile/modals/text-block-modal";
 import ImageBlockModal from "@/components/profile/modals/image-block-modal";
 import LinkBlockModal from "@/components/profile/modals/link-block-modal";
+import CollectionBlockModal from "@/components/profile/modals/collection-block-modal";
 import { createClient } from "@/utils/supabase/client";
 import type { ProfileBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
@@ -13,6 +14,10 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useAuthStore } from "@/stores/auth-store";
 import { useModalStore } from "@/stores/modal-store";
+import { toast } from "sonner";
+import { useCollectionStore } from "@/stores/collection-store";
+import { useLinkStore } from "@/stores/link-store";
+import { useRCMDStore } from "@/stores/rcmd-store";
 
 export default function EditProfilePage() {
 	const supabase = createClient();
@@ -28,8 +33,13 @@ export default function EditProfilePage() {
 		isImageBlockModalOpen,
 		setIsImageBlockModalOpen,
 		isLinkBlockModalOpen,
-		setIsLinkBlockModalOpen
+		setIsLinkBlockModalOpen,
+		isCollectionBlockModalOpen,
+		setIsCollectionBlockModalOpen
 	} = useModalStore();
+	const fetchCollections = useCollectionStore(state => state.fetchCollections);
+	const fetchLinks = useLinkStore(state => state.fetchLinks);
+	const fetchRCMDs = useRCMDStore(state => state.fetchRCMDs);
 
 	// Get profile ID
 	useEffect(() => {
@@ -51,6 +61,15 @@ export default function EditProfilePage() {
 		getProfileId();
 	}, [userId, supabase]);
 
+	// Add effect to fetch data when profile ID is available
+	useEffect(() => {
+		if (profileId) {
+			fetchCollections(profileId);
+			fetchLinks(profileId);
+			fetchRCMDs(profileId);
+		}
+	}, [profileId, fetchCollections, fetchLinks, fetchRCMDs]);
+
 	const refreshBlocks = useCallback(async (profileId: string) => {
 		if (!profileId) return;
 
@@ -66,7 +85,7 @@ export default function EditProfilePage() {
 			setBlocks(blocksData || []);
 		} catch (error) {
 			console.error('Error refreshing blocks:', error);
-			alert('Failed to refresh blocks');
+			toast.error('Failed to refresh blocks');
 		} finally {
 			setIsBlockSaving(false);
 		}
@@ -109,7 +128,7 @@ export default function EditProfilePage() {
 
 		} catch (error) {
 			console.error('Error moving block:', error);
-			alert('Failed to update block order');
+			toast.error('Failed to update block order');
 
 			const { data: originalBlocks } = await supabase
 				.from("profile_blocks")
@@ -134,6 +153,7 @@ export default function EditProfilePage() {
 			setIsTextBlockModalOpen(false);
 			setIsImageBlockModalOpen(false);
 			setIsLinkBlockModalOpen(false);
+			setIsCollectionBlockModalOpen(false);
 		} finally {
 			setIsBlockSaving(false);
 		}
@@ -143,7 +163,8 @@ export default function EditProfilePage() {
 		setIsRCMDBlockModalOpen,
 		setIsTextBlockModalOpen,
 		setIsImageBlockModalOpen,
-		setIsLinkBlockModalOpen
+		setIsLinkBlockModalOpen,
+		setIsCollectionBlockModalOpen
 	]);
 
 	const handleDeleteBlock = useCallback(async (id: string) => {
@@ -159,7 +180,7 @@ export default function EditProfilePage() {
 			if (error) throw error;
 		} catch (error) {
 			console.error('Error deleting block:', error);
-			alert('Failed to delete block');
+			toast.error('Failed to delete block');
 		} finally {
 			setIsBlockSaving(false);
 		}
@@ -209,6 +230,13 @@ export default function EditProfilePage() {
 
 				{isLinkBlockModalOpen && (
 					<LinkBlockModal
+						profileId={profileId}
+						onSuccess={handleBlockAdded}
+					/>
+				)}
+
+				{isCollectionBlockModalOpen && (
+					<CollectionBlockModal
 						profileId={profileId}
 						onSuccess={handleBlockAdded}
 					/>

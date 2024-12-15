@@ -81,7 +81,7 @@ export default function RCMDsPage() {
 			});
 		} catch (error) {
 			console.error('Error saving RCMD:', error);
-			alert('Failed to save RCMD');
+			toast.error('Failed to save RCMD');
 		} finally {
 			setIsRCMDSaving(false);
 		}

@@ -36,7 +36,7 @@ export default function LinkBlocks({
 
       {linkBlocks.length === 0 && (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          No link blocks found
+          No links found
         </div>
       )}
     </div>

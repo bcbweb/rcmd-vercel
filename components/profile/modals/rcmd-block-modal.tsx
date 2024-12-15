@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useBlockStore } from '@/stores/block-store';
 import { useModalStore } from "@/stores/modal-store";
 import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
 
 interface RCMDBlockModalProps {
   profileId: string;
@@ -66,7 +67,7 @@ export default function RCMDBlockModal({ profileId, onSuccess }: RCMDBlockModalP
       }
     } catch (error) {
       console.error('Error saving RCMD block:', error);
-      alert(error instanceof Error ? error.message : 'Failed to save RCMD block');
+      toast.error(error instanceof Error ? error.message : 'Failed to save RCMD block');
     }
   };
 

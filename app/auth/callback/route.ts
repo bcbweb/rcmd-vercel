@@ -17,6 +17,8 @@ export async function GET(request: Request) {
 			.select('is_onboarded')
 			.single();
 
+		console.log('PROFILE', profile);
+
 		// Redirect based on onboarding status
 		if (!profile?.is_onboarded) {
 			return NextResponse.redirect(`${origin}/protected/onboarding`);

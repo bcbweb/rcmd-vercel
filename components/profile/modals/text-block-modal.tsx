@@ -16,6 +16,7 @@ import {
   AlignCenter,
   AlignRight
 } from 'lucide-react';
+import { toast } from "sonner";
 
 interface Props {
   profileId: string;
@@ -121,11 +122,11 @@ export default function TextBlockModal({ profileId, onSuccess }: Props) {
         onSuccess();
         setIsTextBlockModalOpen(false);
       } else {
-        alert('Failed to save text block');
+        toast.error('Failed to save text block');
       }
     } catch (error) {
       console.error('Error saving text block:', error);
-      alert('Failed to save text block');
+      toast.error('Failed to save text block');
     } finally {
       setIsSaving(false);
     }

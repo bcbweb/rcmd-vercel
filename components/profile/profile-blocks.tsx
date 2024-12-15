@@ -1,10 +1,9 @@
-import type { Database } from "@/types/supabase";
+import type { ProfileBlockType } from "@/types";
 import DraggableBlock from "./draggable-block";
 
-type ProfileBlock = Database["public"]["Tables"]["profile_blocks"]["Row"];
 
 interface Props {
-	blocks: ProfileBlock[];
+	blocks: ProfileBlockType[];
 	onMove?: (dragIndex: number, hoverIndex: number) => void;
 	onDelete?: (id: string) => void;
 }
@@ -16,6 +15,11 @@ export default function ProfileBlocks({
 }: Props) {
 	return (
 		<div className="space-y-4">
+			{blocks.length === 0 && (
+				<div className="text-center py-12 text-gray-500 dark:text-gray-400">
+					No blocks found
+				</div>
+			)}
 			{blocks.map((block, index) => (
 				<DraggableBlock
 					key={block.id}

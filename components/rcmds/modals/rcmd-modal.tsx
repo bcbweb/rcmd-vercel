@@ -5,6 +5,7 @@ import { uploadContentImage } from '@/utils/storage';
 import Image from 'next/image';
 import { useModalStore } from '@/stores/modal-store';
 import { useRCMDStore } from '@/stores/rcmd-store';
+import { MagicFill } from '@/components/shared/magic-fill';
 
 export default function RCMDModal() {
   const {
@@ -23,6 +24,30 @@ export default function RCMDModal() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number; } | null>(null);
+
+  const handleMetadataFound = (metadata: {
+    title?: string;
+    description?: string;
+    image?: File;
+    type?: string;
+    imageDimensions?: { width: number; height: number; };
+    embedHtml?: string; // Add this for Instagram embeds
+  }) => {
+    if (metadata.title) setTitle(metadata.title);
+    if (metadata.description) setDescription(metadata.description);
+    if (metadata.type) {
+      // Map Instagram type to your existing types if needed
+      setType(metadata.type === 'instagram' ? 'social' : metadata.type);
+    }
+    if (metadata.image) setFile(metadata.image);
+    if (metadata.imageDimensions) setImageDimensions(metadata.imageDimensions);
+
+    // Optionally store the embed HTML if you want to use it later
+    if (metadata.embedHtml) {
+      // You might want to add a new state for this
+      // setEmbedHtml(metadata.embedHtml);
+    }
+  };
 
   const getImageDimensions = (file: File): Promise<{ width: number; height: number; }> => {
     return new Promise((resolve, reject) => {
@@ -118,6 +143,7 @@ export default function RCMDModal() {
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
+            <MagicFill onMetadataFound={handleMetadataFound} />
             <div>
               <label className="block text-sm font-medium mb-1">
                 Title

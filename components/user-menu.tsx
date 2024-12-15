@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { User } from "@supabase/supabase-js";
+import { signOutAction } from "@/app/actions";
 import {
   Settings,
   LogOut,
@@ -56,10 +57,6 @@ export default function UserMenu() {
 
     return () => subscription.unsubscribe();
   }, [supabase]);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
 
   const getInitials = (name: string) => {
     return name.substring(0, 2).toUpperCase();
@@ -140,7 +137,7 @@ export default function UserMenu() {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={handleSignOut}
+            onClick={signOutAction}
             className="flex items-center cursor-pointer text-red-600 focus:text-red-600"
           >
             <LogOut className="mr-2 h-4 w-4" />

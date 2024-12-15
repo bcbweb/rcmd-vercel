@@ -6,13 +6,15 @@ import {
 	type TextBlockType,
 	type ImageBlockType,
 	type LinkBlockType,
-	type RCMDBlockType
+	type RCMDBlockType,
+	type CollectionBlockType
 } from "@/types";
 import { useEffect, useState } from "react";
 import TextBlock from "./blocks/text-block";
 import ImageBlock from "./blocks/image-block";
 import LinkBlock from "./blocks/link-block";
 import RCMDBlock from "./blocks/rcmd-block";
+import CollectionBlock from "./blocks/collection-block";
 
 interface Props {
 	block: ProfileBlockType;
@@ -30,6 +32,7 @@ export default function BlockRenderer({
 	const [imageBlock, setImageBlock] = useState<ImageBlockType | null>(null);
 	const [linkBlock, setLinkBlock] = useState<LinkBlockType | null>(null);
 	const [rcmdBlock, setRCMDBlock] = useState<RCMDBlockType | null>(null);
+	const [collectionBlock, setCollectionBlock] = useState<CollectionBlockType | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +69,13 @@ export default function BlockRenderer({
 							.eq("profile_block_id", block.id)
 							.single();
 						break;
+					case "collection":
+						query = supabase
+							.from("collection_blocks")
+							.select("*")
+							.eq("profile_block_id", block.id)
+							.single();
+						break;
 					default:
 						setIsLoading(false);
 						return;
@@ -86,6 +96,9 @@ export default function BlockRenderer({
 						break;
 					case "rcmd":
 						setRCMDBlock(data);
+						break;
+					case "collection":
+						setCollectionBlock(data);
 						break;
 				}
 			} catch (err) {
@@ -197,6 +210,30 @@ export default function BlockRenderer({
 		}
 	};
 
+	const handleCollectionBlockSave = async (updatedBlock: Partial<CollectionBlockType>) => {
+		if (!collectionBlock) return;
+
+		try {
+			const { error } = await supabase
+				.from("collection_blocks")
+				.update({
+					collection_id: updatedBlock.collection_id
+				})
+				.eq("profile_block_id", block.id);
+
+			if (error) throw error;
+
+			setCollectionBlock({
+				...collectionBlock,
+				collection_id: updatedBlock.collection_id ?? collectionBlock.collection_id
+			});
+			onSave?.(block);
+		} catch (err) {
+			console.error("Error saving collection block:", err);
+			throw err;
+		}
+	};
+
 	if (isLoading) {
 		return <div className="animate-pulse h-24 bg-gray-100 rounded-lg"></div>;
 	}
@@ -233,7 +270,6 @@ export default function BlockRenderer({
 					onSave={handleLinkBlockSave}
 				/>
 			);
-
 		case "rcmd":
 			if (!rcmdBlock) return null;
 			return (
@@ -241,6 +277,15 @@ export default function BlockRenderer({
 					rcmdBlock={rcmdBlock}
 					onDelete={onDelete}
 					onSave={handleRCMDBlockSave}
+				/>
+			);
+		case "collection":
+			if (!collectionBlock) return null;
+			return (
+				<CollectionBlock
+					collection={collectionBlock}
+					onDelete={onDelete}
+					onSave={handleCollectionBlockSave}
 				/>
 			);
 		default:

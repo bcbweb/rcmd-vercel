@@ -1,4 +1,4 @@
-import { Link } from "@/types";
+import { Collection } from "@/types";
 import { createClient } from '@/utils/supabase/client';
 import { useEffect, useState } from "react";
 import { useBlockStore } from '@/stores/block-store';
@@ -6,25 +6,25 @@ import { useModalStore } from "@/stores/modal-store";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 
-interface LinkBlockModalProps {
+interface CollectionBlockModalProps {
   profileId: string;
   onSuccess?: () => void;
 }
 
-export default function LinkBlockModal({ profileId, onSuccess }: LinkBlockModalProps) {
-  const { saveLinkBlock, isLoading: isSaving, error } = useBlockStore();
-  const [selectedLinkId, setSelectedLinkId] = useState('');
-  const [links, setLinks] = useState<Link[]>([]);
+export default function CollectionBlockModal({ profileId, onSuccess }: CollectionBlockModalProps) {
+  const { saveCollectionBlock, isLoading: isSaving, error } = useBlockStore();
+  const [selectedCollectionId, setSelectedCollectionId] = useState('');
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
 
   const {
-    setIsLinkBlockModalOpen,
-    setIsLinkModalOpen,
+    setIsCollectionBlockModalOpen,
+    setIsCollectionModalOpen,
     setOnModalSuccess
   } = useModalStore();
 
-  const fetchLinks = async () => {
+  const fetchCollections = async () => {
     try {
       setIsLoading(true);
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -36,67 +36,67 @@ export default function LinkBlockModal({ profileId, onSuccess }: LinkBlockModalP
       }
 
       const { data, error } = await supabase
-        .from('links')
+        .from('collections')
         .select('*')
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setLinks(data || []);
+      setCollections(data || []);
     } catch (error) {
-      console.error('Error fetching links:', error);
+      console.error('Error fetching collections:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLinks();
+    fetchCollections();
   }, []);
 
   const handleSave = async () => {
-    if (!selectedLinkId) return;
+    if (!selectedCollectionId) return;
 
     try {
-      const success = await saveLinkBlock(profileId, selectedLinkId);
+      const success = await saveCollectionBlock(profileId, selectedCollectionId);
       if (success) {
         onSuccess?.();
-        setIsLinkBlockModalOpen(false);
+        setIsCollectionBlockModalOpen(false);
       } else {
-        throw new Error(error || 'Failed to save link block');
+        throw new Error(error || 'Failed to save collection block');
       }
     } catch (error) {
-      console.error('Error saving link block:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save link block');
+      console.error('Error saving collection block:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save collection block');
     }
   };
 
   const handleClose = () => {
-    setIsLinkBlockModalOpen(false);
+    setIsCollectionBlockModalOpen(false);
   };
 
   const handleAddNewClick = () => {
-    // Set up the callback to refresh links after successful creation
+    // Set up the callback to refresh collections after successful creation
     setOnModalSuccess(() => {
-      fetchLinks();
+      fetchCollections();
     });
 
-    // Open the link creation modal
-    setIsLinkModalOpen(true);
+    // Open the collection creation modal
+    setIsCollectionModalOpen(true);
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Select Link</h2>
+          <h2 className="text-lg font-semibold">Select Collection</h2>
           <button
             onClick={handleAddNewClick}
             className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 
               transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isLoading || isSaving}
           >
-            Add New Link
+            Add New Collection
           </button>
         </div>
 
@@ -105,23 +105,23 @@ export default function LinkBlockModal({ profileId, onSuccess }: LinkBlockModalP
             <div className="flex justify-center items-center py-8">
               <Spinner className="h-8 w-8" />
             </div>
-          ) : links.length === 0 ? (
+          ) : collections.length === 0 ? (
             <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-              No links found. Please add some links first.
+              No collections found. Please add some collections first.
             </div>
           ) : (
-            links.map((link) => (
+            collections.map((collection) => (
               <div
-                key={link.id}
+                key={collection.id}
                 className={`p-4 border rounded-lg mb-2 cursor-pointer transition-colors
-                  ${selectedLinkId === link.id
+                  ${selectedCollectionId === collection.id
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50'
                   }`}
-                onClick={() => setSelectedLinkId(link.id)}
+                onClick={() => setSelectedCollectionId(collection.id)}
               >
-                <h3 className="font-medium">{link.title}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{link.url}</p>
+                <h3 className="font-medium">{collection.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{collection.description}</p>
               </div>
             ))
           )}
@@ -138,7 +138,7 @@ export default function LinkBlockModal({ profileId, onSuccess }: LinkBlockModalP
           </button>
           <button
             onClick={handleSave}
-            disabled={!selectedLinkId || isSaving || isLoading}
+            disabled={!selectedCollectionId || isSaving || isLoading}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
               disabled:opacity-50 disabled:cursor-not-allowed transition-colors 
               flex items-center gap-2"
@@ -149,7 +149,7 @@ export default function LinkBlockModal({ profileId, onSuccess }: LinkBlockModalP
                 <span>Saving...</span>
               </>
             ) : (
-              'Add Link Block'
+              'Add Collection Block'
             )}
           </button>
         </div>
