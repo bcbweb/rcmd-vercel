@@ -59,9 +59,10 @@ export default function ProfileLayout({
 
       if (profileError) throw profileError;
 
-      if (!profile || profile.is_onboarded !== true) {
+      // Handle onboarding redirect
+      if (!profile || !profile.is_onboarded) {
+        console.log('profile', profile);
         router.push('/protected/onboarding');
-        return;
       }
 
       setFirstName(profile.first_name || "");

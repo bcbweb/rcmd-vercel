@@ -26,11 +26,6 @@ export default async function ProtectedLayout({
     throw new Error("Failed to fetch user profile");
   }
 
-  // Handle onboarding redirect
-  if (!profile || !profile.is_onboarded) {
-    redirect("/protected/onboarding");
-  }
-
   return (
     <>
       <InitAuthStore userId={user.id} />
