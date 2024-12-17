@@ -14,18 +14,6 @@ export default async function ProtectedLayout({
     redirect("/sign-in");
   }
 
-  // Fetch user profile
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("is_onboarded")
-    .eq("auth_user_id", user.id)
-    .single();
-
-  if (profileError) {
-    console.error("Error fetching profile:", profileError);
-    throw new Error("Failed to fetch user profile");
-  }
-
   return (
     <>
       <InitAuthStore userId={user.id} />
