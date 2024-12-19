@@ -770,6 +770,47 @@ export type Database = {
           },
         ]
       }
+      profile_social_links: {
+        Row: {
+          created_at: string | null
+          handle: string
+          id: string
+          is_verified: boolean | null
+          platform: Database["public"]["Enums"]["social_platform_type"]
+          profile_id: string | null
+          updated_at: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          handle: string
+          id?: string
+          is_verified?: boolean | null
+          platform: Database["public"]["Enums"]["social_platform_type"]
+          profile_id?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          handle?: string
+          id?: string
+          is_verified?: boolean | null
+          platform?: Database["public"]["Enums"]["social_platform_type"]
+          profile_id?: string | null
+          updated_at?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_social_links_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           auth_user_id: string
@@ -1288,6 +1329,13 @@ export type Database = {
       rcmd_status: "draft" | "active" | "archived" | "flagged" | "deleted"
       rcmd_type: "product" | "service" | "place" | "experience" | "other"
       rcmd_visibility: "public" | "private" | "followers"
+      social_platform_type:
+        | "instagram"
+        | "twitter"
+        | "youtube"
+        | "tiktok"
+        | "linkedin"
+        | "facebook"
       text_alignment: "left" | "center" | "right"
       verification_status: "unverified" | "pending" | "verified" | "rejected"
     }

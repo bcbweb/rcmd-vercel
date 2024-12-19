@@ -33,11 +33,6 @@ const socialMediaSchema = z.object({
 
 type SocialMediaFormData = z.infer<typeof socialMediaSchema>;
 
-const inputClasses = {
-  default: "block w-full rounded-md border-gray-200 dark:border-gray-700 shadow-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 sm:text-sm",
-  error: "block w-full rounded-md border-red-300 dark:border-red-700 shadow-sm text-red-900 dark:text-red-100 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 sm:text-sm",
-};
-
 export default function SocialMediaPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,7 +58,6 @@ export default function SocialMediaPage() {
     name: "socialLinks"
   });
 
-  const socialLinks = watch('socialLinks');
   // Update how we track used platforms to use current field values
   const usedPlatforms = new Set(
     fields.map((field, index) => watch(`socialLinks.${index}.platform`))
