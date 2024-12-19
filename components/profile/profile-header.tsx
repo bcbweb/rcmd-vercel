@@ -4,7 +4,7 @@ import {
   Eye,
   X,
   Check,
-  Share2
+  Share2,
 } from 'lucide-react';
 import CoverImageUpload from "@/components/cover-image-upload";
 import ProfilePhotoUpload from "@/components/profile-photo-upload";
@@ -15,6 +15,7 @@ import { createClient } from "@/utils/supabase/client";
 import type { Profile } from '@/types';
 import ShareModal from "@/components/shared/share-modal";
 import { toast } from "sonner";
+import { getPlatformUrl, getSocialIcon } from '@/lib/utils';
 
 interface ProfileHeaderProps {
   title: string;
@@ -27,6 +28,10 @@ interface ProfileHeaderProps {
   tags?: string[] | null;
   bio?: string;
   location?: string;
+  socialLinks?: Array<{
+    platform: string;
+    handle: string;
+  }>;
   showEditButton?: boolean;
   showPreviewButton?: boolean;
   showShareButton?: boolean;
@@ -44,6 +49,7 @@ export default function ProfileHeader({
   tags = [],
   bio = '',
   location = '',
+  socialLinks = [],
   showEditButton = true,
   showPreviewButton = true,
   showShareButton = true,
@@ -69,9 +75,8 @@ export default function ProfileHeader({
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const tabs = [
-    { name: 'Profile', href: `/protected/profile` },
-    { name: 'Links', href: `/protected/profile/links` },
     { name: 'RCMDs', href: `/protected/profile/rcmds` },
+    { name: 'Links', href: `/protected/profile/links` },
     { name: 'Collections', href: `/protected/profile/collections` },
   ];
 
@@ -225,8 +230,26 @@ export default function ProfileHeader({
                 <span>@{handle}</span>
                 {location && (
                   <>
-                    <span>·</span>
                     <span>📍 {location}</span>
+                    {socialLinks && socialLinks.length > 0 && (
+                      <>
+                        <span>·</span>
+                        <div className="flex items-center gap-2">
+                          {socialLinks.map((link, index) => (
+                            <a
+                              key={index}
+                              href={getPlatformUrl(link.platform, link.handle)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+                              title={`${link.platform}: @${link.handle}`}
+                            >
+                              {getSocialIcon(link.platform)}
+                            </a>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>

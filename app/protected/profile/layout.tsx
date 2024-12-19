@@ -8,12 +8,18 @@ import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "sonner";
 
 const PAGE_TITLES = {
-  '/protected/profile': 'Edit Profile',
+  '/protected/profile/rcmds': 'Manage RCMDs',
   '/protected/profile/links': 'Manage Links',
-  '/protected/profile/rcmds': 'Manage RCMDs'
+  '/protected/profile/collections': 'Manage Collections',
+  '/protected/profile': 'Edit Profile',
 } as const;
 
 type PathType = keyof typeof PAGE_TITLES;
+
+type SocialLink = {
+  platform: string;
+  handle: string;
+};
 
 export default function ProfileLayout({
   children,
@@ -34,6 +40,7 @@ export default function ProfileLayout({
   const [tags, setTags] = useState<string[] | null>(null);
   const [bio, setBio] = useState<string>("");
   const [location, setLocation] = useState<string>("");
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
 
   const pageTitle = pathname && (PAGE_TITLES[pathname as PathType] || 'Profile');
 
@@ -59,36 +66,60 @@ export default function ProfileLayout({
 
       if (profileError) throw profileError;
 
-      // Handle onboarding redirect
+      // Return early if no profile or not onboarded
       if (!profile || !profile.is_onboarded) {
-        console.log('profile', profile);
-        router.push('/protected/onboarding');
+        return { needsOnboarding: true };
       }
 
-      setFirstName(profile.first_name || "");
-      setLastName(profile.last_name || "");
-      setHandle(profile.handle || "");
-      setProfilePictureUrl(profile.profile_picture_url || "");
-      setCoverImageUrl(profile.cover_image || "");
-      setInterests(profile.interests);
-      setTags(profile.tags);
-      setBio(profile.bio || "");
-      setLocation(profile.location || "");
+      // Fetch social links
+      const { data: socialLinksData, error: socialLinksError } = await supabase
+        .from("profile_social_links")
+        .select("platform, handle")
+        .eq("profile_id", profile.id);
+
+      if (socialLinksError) throw socialLinksError;
+
+      return {
+        profile,
+        socialLinks: socialLinksData || [],
+        needsOnboarding: false
+      };
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast.error('Failed to load profile data');
+      return { error: true };
     }
-  }, [supabase, router]);
+  }, [supabase]);
 
   useEffect(() => {
     const initializeProfile = async () => {
       if (!userId) return;
-      await fetchProfileData(userId);
+
+      const result = await fetchProfileData(userId);
+
+      if (result.needsOnboarding) {
+        router.push('/protected/onboarding');
+        return;
+      }
+
+      if (!result.error && result.profile) {
+        setFirstName(result.profile.first_name || "");
+        setLastName(result.profile.last_name || "");
+        setHandle(result.profile.handle || "");
+        setProfilePictureUrl(result.profile.profile_picture_url || "");
+        setCoverImageUrl(result.profile.cover_image || "");
+        setInterests(result.profile.interests);
+        setTags(result.profile.tags);
+        setBio(result.profile.bio || "");
+        setLocation(result.profile.location || "");
+        setSocialLinks(result.socialLinks);
+      }
+
       setIsLoading(false);
     };
 
     initializeProfile();
-  }, [userId, fetchProfileData]);
+  }, [userId, fetchProfileData, router]);
 
   if (isLoading || !userId) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
@@ -107,6 +138,7 @@ export default function ProfileLayout({
         tags={tags}
         bio={bio}
         location={location}
+        socialLinks={socialLinks}
       />
       <div className="w-full p-[1px] bg-gradient-to-r from-transparent via-foreground/10 to-transparent my-8" />
       {children}

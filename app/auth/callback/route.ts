@@ -9,12 +9,18 @@ export async function GET(request: Request) {
 
 	if (code) {
 		const supabase = await createClient();
-		await supabase.auth.exchangeCodeForSession(code);
+		const { data: { user } } = await supabase.auth.exchangeCodeForSession(code);
+
+		if (!user) {
+			console.error('Error signing in');
+			return NextResponse.redirect(origin);
+		}
 
 		// After session exchange, check onboarding status
 		const { data: profile } = await supabase
 			.from('profiles')
 			.select('is_onboarded')
+			.eq("auth_user_id", user.id)
 			.single();
 
 		// Redirect based on onboarding status
@@ -29,5 +35,5 @@ export async function GET(request: Request) {
 
 	// Only redirect to profile if we couldn't determine onboarding status
 	// or if user is already onboarded
-	return NextResponse.redirect(`${origin}/protected/profile`);
+	return NextResponse.redirect(`${origin}/protected/profile/rcmds`);
 }

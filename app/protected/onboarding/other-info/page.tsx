@@ -178,7 +178,7 @@ export default function OtherInfoPage() {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Tell us more about you
         </h2>
-        <StepProgress currentStep={3} totalSteps={3} />
+        <StepProgress currentStep={4} totalSteps={4} />
       </div>
 
       <form onSubmit={handleSubmit} className="p-6 space-y-6">

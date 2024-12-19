@@ -44,13 +44,30 @@ export const signInAction = async (formData: FormData) => {
 	const password = formData.get("password") as string;
 	const supabase = await createClient();
 
-	const { error } = await supabase.auth.signInWithPassword({
+	const { data: { user }, error } = await supabase.auth.signInWithPassword({
 		email,
 		password,
 	});
 
+	if (!user) {
+		console.error("Error signing in");
+		return;
+	}
+
 	if (error) {
 		return encodedRedirect("error", "/sign-in", error.message);
+	}
+
+	// // Check onboarding status
+	const { data: profile } = await supabase
+		.from('profiles')
+		.select('is_onboarded')
+		.eq("auth_user_id", user.id)
+		.single();
+
+	// Redirect based on onboarding status
+	if (!profile?.is_onboarded) {
+		return redirect('/protected/onboarding');
 	}
 
 	return redirect("/protected/profile");

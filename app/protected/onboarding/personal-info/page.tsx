@@ -8,6 +8,7 @@ import { StepProgress } from "@/components/step-progress";
 import { personalInfoSchema, type PersonalInfoFormData } from "@/lib/schemas/onboarding";
 import { createClient } from '@/utils/supabase/client';
 import { toast } from "sonner";
+import Link from "next/link";
 
 const STORAGE_KEY = 'onboarding_personal_info';
 
@@ -123,7 +124,7 @@ export default function PersonalInfoPage() {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Personal Information
         </h2>
-        <StepProgress currentStep={1} totalSteps={3} />
+        <StepProgress currentStep={2} totalSteps={4} />
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
@@ -216,6 +217,25 @@ export default function PersonalInfoPage() {
         </div>
 
         <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <Link
+            href="/protected/onboarding/social-media"
+            className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          >
+            <svg
+              className="w-5 h-5 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            Back
+          </Link>
           <button
             type="submit"
             disabled={isSubmitting}

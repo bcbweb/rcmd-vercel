@@ -90,7 +90,7 @@ export default function ProfilePhotoPage() {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Profile Photo
         </h2>
-        <StepProgress currentStep={2} totalSteps={3} />
+        <StepProgress currentStep={3} totalSteps={4} />
       </div>
 
       <form onSubmit={handleSubmit} className="p-6 space-y-6">

@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
     .single();
 
   if (profile?.is_onboarded) {
-    redirect("/protected/profile");
+    redirect("/protected/profile/rcmds");
   }
 
   return {
