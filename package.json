@@ -45,6 +45,7 @@
 		"react-dnd-html5-backend": "^16.0.1",
 		"react-dom": "18.3.1",
 		"react-hook-form": "^7.53.2",
+		"react-swipeable": "^7.0.2",
 		"sonner": "^1.7.0",
 		"zod": "^3.23.8",
 		"zustand": "^5.0.1"

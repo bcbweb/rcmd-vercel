@@ -6,9 +6,11 @@ import { SearchBar } from "@/components/ui/search-bar";
 import { GridLayout } from "@/components/shared/grid-layout";
 import { GridSkeleton } from "@/components/shared/grid-skeleton";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import type { Profile } from "@/types";
 
 export default function PeoplePage() {
+  const router = useRouter();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -36,6 +38,11 @@ export default function PeoplePage() {
     fetchProfiles();
   }, [searchQuery]);
 
+  const handleProfileClick = (handle: string | null) => {
+    if (!handle) return;
+    router.push(`/explore/people/feed/${handle}`);
+  };
+
   return (
     <div>
       <SearchBar onSearch={setSearchQuery} />
@@ -48,6 +55,7 @@ export default function PeoplePage() {
             <div
               key={profile.id}
               className="relative aspect-square cursor-pointer"
+              onClick={() => handleProfileClick(profile.handle)}
             >
               <Image
                 src={profile.profile_picture_url || "/default-avatar.png"}
