@@ -3,6 +3,8 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
 import Modals from "@/components/global-modals";
+import { createClient } from "@/utils/supabase/server";
+import { RootAuthInitializer } from "@/components/root-auth-initializer";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -15,11 +17,14 @@ export const metadata = {
   description: "Recommend your world",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>
       <body className="bg-background text-foreground">
@@ -29,6 +34,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <RootAuthInitializer initialSession={{ userId: user?.id || null }} />
+
           <Header />
           <main className="min-h-screen flex flex-col items-center">
             <div className="flex-1 w-full flex flex-col items-center">

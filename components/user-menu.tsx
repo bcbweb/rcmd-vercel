@@ -1,9 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { User } from "@supabase/supabase-js";
-import { signOutAction } from "@/app/actions";
 import {
   Settings,
   LogOut,
@@ -12,7 +9,8 @@ import {
   Rows3,
   SquarePlus
 } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
+import { signOutClient } from "@/app/client-actions";
+import { useAuthStore } from '@/stores/auth-store';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,45 +22,19 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import AddMenu from "./add-menu";
 
-interface Profile {
-  profile_picture_url: string | null;
-  handle: string | null;
-}
-
 export default function UserMenu() {
-  const supabase = createClient();
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('profile_picture_url, handle')
-          .eq('auth_user_id', user.id)
-          .single();
-        setProfile(profile);
-      }
-    };
-
-    getUser();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+  const { userId, profile, isInitialized } = useAuthStore();
 
   const getInitials = (name: string) => {
-    return name.substring(0, 2).toUpperCase();
+    return name?.substring(0, 2).toUpperCase() ?? "U";
   };
 
-  if (!user) {
+  // Don't render anything until we know the auth state
+  if (!isInitialized) {
+    return null;
+  }
+
+  if (!userId) {
     return (
       <div className="flex items-center gap-4">
         <Link
@@ -90,17 +62,17 @@ export default function UserMenu() {
             <Avatar className="h-8 w-8">
               <AvatarImage
                 src={profile?.profile_picture_url ?? undefined}
-                alt={profile?.handle ?? user.email ?? "User avatar"}
+                alt={profile?.handle ?? "User avatar"}
               />
               <AvatarFallback>
-                {profile?.handle ? getInitials(profile.handle) : user.email ? getInitials(user.email) : "U"}
+                {profile?.handle ? getInitials(profile.handle) : "U"}
               </AvatarFallback>
             </Avatar>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end">
           <div className="px-2 py-1.5 text-sm font-medium">
-            {profile?.handle ? `@${profile.handle}` : user.email}
+            {profile?.handle ? `@${profile.handle}` : "Profile"}
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
@@ -123,7 +95,7 @@ export default function UserMenu() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/protected/profile/switchs" className="flex items-center cursor-pointer">
+              <Link href="/protected/profile/switch" className="flex items-center cursor-pointer">
                 <ArrowLeftRight className="mr-2 h-4 w-4" />
                 Switch profile
               </Link>
@@ -137,7 +109,7 @@ export default function UserMenu() {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={signOutAction}
+            onClick={signOutClient}
             className="flex items-center cursor-pointer text-red-600 focus:text-red-600"
           >
             <LogOut className="mr-2 h-4 w-4" />

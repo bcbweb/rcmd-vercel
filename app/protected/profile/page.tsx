@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function ExplorePage() {
+export default function ProfilePage() {
   redirect('/protected/profile/rcmds');
 }

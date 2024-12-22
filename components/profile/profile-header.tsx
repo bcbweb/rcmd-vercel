@@ -230,6 +230,7 @@ export default function ProfileHeader({
                 <span>@{handle}</span>
                 {location && (
                   <>
+                    <span>·</span>
                     <span>📍 {location}</span>
                     {socialLinks && socialLinks.length > 0 && (
                       <>
