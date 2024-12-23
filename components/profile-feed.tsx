@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, ArrowLeft, Camera } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { useSwipeable } from "react-swipeable";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile } from "@/types";
