@@ -74,6 +74,7 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
   const handlers = useSwipeable({
     onSwipedUp: () => nextProfile?.handle && navigateToProfile(nextProfile.handle),
     onSwipedDown: () => prevProfile?.handle && navigateToProfile(prevProfile.handle),
+    preventScrollOnSwipe: true,
     trackMouse: true
   });
 
