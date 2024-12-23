@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Camera } from "lucide-react";
 import { useSwipeable } from "react-swipeable";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile } from "@/types";
@@ -19,6 +19,7 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
   const [prevProfile, setPrevProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
+
 
   const fetchProfiles = useCallback(async () => {
     setIsLoading(true);
@@ -81,58 +82,92 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
   }
 
   return (
-    <div {...handlers} className="relative h-screen w-full flex items-center justify-center">
-      {/* Navigation Arrows for Desktop */}
-      {prevProfile && (
-        <button
-          onClick={() => navigateToProfile(prevProfile.handle)}
-          className="hidden md:flex absolute left-4 z-10 p-2 bg-black/20 rounded-full hover:bg-black/40 transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6 text-white" />
-        </button>
-      )}
-
-      {nextProfile && (
-        <button
-          onClick={() => navigateToProfile(nextProfile.handle)}
-          className="hidden md:flex absolute right-4 z-10 p-2 bg-black/20 rounded-full hover:bg-black/40 transition-colors"
-        >
-          <ChevronRight className="w-6 h-6 text-white" />
-        </button>
-      )}
-
-      {/* Profile Content */}
-      <div className="relative w-full max-w-2xl mx-auto p-6">
-        <div className="aspect-square relative mb-6">
-          <Image
-            src={profile.profile_picture_url || "/default-avatar.png"}
-            alt={profile.handle || ""}
-            fill
-            className="object-cover rounded-lg"
-          />
+    <div className="min-h-screen bg-black text-white">
+      {/* Custom Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          <button
+            onClick={() => router.push('/explore/people')}
+            className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-lg font-semibold">Explore people</h1>
+          <button className="p-2 -mr-2 hover:bg-white/10 rounded-full transition-colors">
+            {/* <Camera className="w-6 h-6" /> */}
+          </button>
         </div>
+      </div>
 
-        <div className="space-y-4">
-          <div>
-            <h1 className="text-2xl font-bold">
-              {profile.first_name} {profile.last_name}
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-400">
-              @{profile.handle}
-            </p>
+      {/* Main Content */}
+      <div {...handlers} className="h-screen w-full flex items-center justify-center pt-14">
+        {/* Navigation Arrows for Desktop */}
+        {prevProfile && (
+          <button
+            onClick={() => navigateToProfile(prevProfile.handle)}
+            className="hidden md:flex absolute left-4 z-10 p-2 bg-black/20 rounded-full hover:bg-black/40 transition-colors"
+          >
+            <ChevronLeft className="w-6 h-6 text-white" />
+          </button>
+        )}
+
+        {nextProfile && (
+          <button
+            onClick={() => navigateToProfile(nextProfile.handle)}
+            className="hidden md:flex absolute right-4 z-10 p-2 bg-black/20 rounded-full hover:bg-black/40 transition-colors"
+          >
+            <ChevronRight className="w-6 h-6 text-white" />
+          </button>
+        )}
+
+        {isLoading || !profile ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
           </div>
+        ) : (
+          <div className="w-full h-full">
+            {/* Image Section */}
+            <div className="relative w-full h-full">
+              <Image
+                src={profile.profile_picture_url || "/default-avatar.png"}
+                alt={profile.handle || ""}
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
 
-          {profile.bio && (
-            <p className="text-gray-700 dark:text-gray-300">{profile.bio}</p>
-          )}
+            {/* Bottom Info Overlay */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-6">
+              <div className="space-y-2 max-w-2xl mx-auto">
+                <h2 className="text-2xl font-bold">
+                  {profile.first_name} {profile.last_name}
+                </h2>
+                <p className="text-lg text-gray-300">
+                  @{profile.handle}
+                </p>
+                {profile.bio && (
+                  <p className="text-gray-400">{profile.bio}</p>
+                )}
+              </div>
 
-          {/* Add more profile information here */}
-        </div>
+              {/* Mobile Navigation Indicator */}
+              <div className="md:hidden text-center text-sm text-gray-500 mt-6">
+                <p>Swipe up or down to see more</p>
+              </div>
+            </div>
 
-        {/* Mobile navigation hints */}
-        <div className="md:hidden text-center text-sm text-gray-500 mt-8">
-          <p>Swipe up or down to navigate between profiles</p>
-        </div>
+            {/* Like Count */}
+            <div className="absolute bottom-4 right-4 flex flex-col items-center gap-2">
+              <button className="p-2 bg-black/20 rounded-full hover:bg-black/40 transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
+              <span className="text-sm">23.3K</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

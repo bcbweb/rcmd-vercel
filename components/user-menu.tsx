@@ -9,7 +9,7 @@ import {
   Rows3,
   SquarePlus
 } from "lucide-react";
-import { signOutClient } from "@/app/client-actions";
+import { signOutClient } from "@/app/(main)/client-actions";
 import { useAuthStore } from '@/stores/auth-store';
 import {
   DropdownMenu,

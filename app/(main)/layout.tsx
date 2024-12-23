@@ -5,7 +5,7 @@ import { ThemeProvider } from "next-themes";
 import Modals from "@/components/global-modals";
 import { createClient } from "@/utils/supabase/server";
 import { RootAuthInitializer } from "@/components/root-auth-initializer";
-import "./globals.css";
+import "../globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
