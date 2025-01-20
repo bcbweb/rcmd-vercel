@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { useSwipeable } from "react-swipeable";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile } from "@/types";
+import Link from "next/link";
 
 interface ProfileFeedProps {
   currentHandle: string;
@@ -38,8 +39,8 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
         const { data: nextProfiles } = await supabase
           .from("profiles")
           .select("*")
-          .gt("created_at", currentProfile.created_at)
-          .order("created_at", { ascending: true })
+          .lt("created_at", currentProfile.created_at)
+          .order("created_at", { ascending: false })
           .limit(1);
 
         setNextProfile(nextProfiles?.[0] || null);
@@ -48,8 +49,8 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
         const { data: prevProfiles } = await supabase
           .from("profiles")
           .select("*")
-          .lt("created_at", currentProfile.created_at)
-          .order("created_at", { ascending: false })
+          .gt("created_at", currentProfile.created_at)
+          .order("created_at", { ascending: true })
           .limit(1);
 
         setPrevProfile(prevProfiles?.[0] || null);
@@ -129,13 +130,22 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
           <div className="w-full h-full">
             {/* Image Section */}
             <div className="relative w-full h-full">
-              <Image
-                src={profile.profile_picture_url || "/default-avatar.png"}
-                alt={profile.handle || ""}
-                fill
-                className="object-contain"
-                priority
-              />
+              <div className="relative h-full w-fit mx-auto">
+                <Link
+                  href={`/${profile.handle}`}
+                  className="block h-full hover:opacity-90 transition-opacity"
+                >
+                  <div className="relative h-full aspect-square">
+                    <Image
+                      src={profile.profile_picture_url || "/default-avatar.png"}
+                      alt={profile.handle || ""}
+                      fill
+                      className="object-contain"
+                      priority
+                    />
+                  </div>
+                </Link>
+              </div>
             </div>
 
             {/* Bottom Info Overlay */}

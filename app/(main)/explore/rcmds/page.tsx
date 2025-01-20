@@ -6,9 +6,11 @@ import { SearchBar } from "@/components/ui/search-bar";
 import { GridLayout } from "@/components/shared/grid-layout";
 import { GridSkeleton } from "@/components/shared/grid-skeleton";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import type { RCMD } from "@/types";
 
 export default function RCMDsPage() {
+  const router = useRouter();
   const [rcmds, setRCMDs] = useState<RCMD[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -37,6 +39,11 @@ export default function RCMDsPage() {
     fetchRCMDs();
   }, [searchQuery]);
 
+  const handleRCMDClick = (id: string | null) => {
+    if (!id) return;
+    router.push(`/explore/rcmds/feed/${id}`);
+  };
+
   return (
     <div>
       <SearchBar onSearch={setSearchQuery} />
@@ -49,6 +56,7 @@ export default function RCMDsPage() {
             <div
               key={rcmd.id}
               className="relative aspect-square cursor-pointer"
+              onClick={() => handleRCMDClick(rcmd.id)}
             >
               <Image
                 src={rcmd.featured_image || ""}

@@ -16,6 +16,7 @@ import type { Profile } from '@/types';
 import ShareModal from "@/components/shared/share-modal";
 import { toast } from "sonner";
 import { getPlatformUrl, getSocialIcon } from '@/lib/utils';
+import { Button } from '../ui/button';
 
 interface ProfileHeaderProps {
   title: string;
@@ -423,6 +424,11 @@ export default function ProfileHeader({
                 </Link>
               );
             })}
+            <Button
+              aria-label="Add page"
+            >
+              Add page
+            </Button>
 
           </nav>
         </div>
