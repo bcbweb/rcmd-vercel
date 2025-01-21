@@ -256,6 +256,7 @@ export type Database = {
           phone: string | null
           photo_gallery: string[] | null
           primary_location: Json | null
+          profile_picture_url: string | null
           rating_avg: number | null
           rating_count: number | null
           rcmd_count: number | null
@@ -293,6 +294,7 @@ export type Database = {
           phone?: string | null
           photo_gallery?: string[] | null
           primary_location?: Json | null
+          profile_picture_url?: string | null
           rating_avg?: number | null
           rating_count?: number | null
           rcmd_count?: number | null
@@ -330,6 +332,7 @@ export type Database = {
           phone?: string | null
           photo_gallery?: string[] | null
           primary_location?: Json | null
+          profile_picture_url?: string | null
           rating_avg?: number | null
           rating_count?: number | null
           rcmd_count?: number | null
@@ -349,15 +352,7 @@ export type Database = {
           view_count?: number | null
           website?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "businesses_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       collection_blocks: {
         Row: {
@@ -517,9 +512,15 @@ export type Database = {
         Row: {
           application_date: string | null
           approved_at: string | null
+          bio: string | null
           business_email: string | null
           category: string | null
+          created_at: string | null
+          handle: string | null
           id: string
+          name: string | null
+          owner_id: string
+          profile_picture_url: string | null
           social_links: Json | null
           status: string | null
           stripe_account_id: string | null
@@ -530,9 +531,15 @@ export type Database = {
         Insert: {
           application_date?: string | null
           approved_at?: string | null
+          bio?: string | null
           business_email?: string | null
           category?: string | null
+          created_at?: string | null
+          handle?: string | null
           id: string
+          name?: string | null
+          owner_id: string
+          profile_picture_url?: string | null
           social_links?: Json | null
           status?: string | null
           stripe_account_id?: string | null
@@ -543,9 +550,15 @@ export type Database = {
         Update: {
           application_date?: string | null
           approved_at?: string | null
+          bio?: string | null
           business_email?: string | null
           category?: string | null
+          created_at?: string | null
+          handle?: string | null
           id?: string
+          name?: string | null
+          owner_id?: string
+          profile_picture_url?: string | null
           social_links?: Json | null
           status?: string | null
           stripe_account_id?: string | null
@@ -553,15 +566,7 @@ export type Database = {
           verified?: boolean | null
           website?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "creators_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       image_blocks: {
         Row: {

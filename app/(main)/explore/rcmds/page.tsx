@@ -3,7 +3,6 @@
 import { createClient } from "@/utils/supabase/client";
 import { useState, useEffect } from "react";
 import { SearchBar } from "@/components/ui/search-bar";
-import { GridLayout } from "@/components/shared/grid-layout";
 import { GridSkeleton } from "@/components/shared/grid-skeleton";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -45,17 +44,17 @@ export default function RCMDsPage() {
   };
 
   return (
-    <div>
+    <div className="container mx-auto px-4">
       <SearchBar onSearch={setSearchQuery} />
 
       {isLoading ? (
         <GridSkeleton />
       ) : (
-        <GridLayout>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
           {rcmds.map((rcmd) => (
             <div
               key={rcmd.id}
-              className="relative aspect-square cursor-pointer"
+              className="relative aspect-square cursor-pointer overflow-hidden"
               onClick={() => handleRCMDClick(rcmd.id)}
             >
               <Image
@@ -79,7 +78,7 @@ export default function RCMDsPage() {
               </div>
             </div>
           ))}
-        </GridLayout>
+        </div>
       )}
     </div>
   );

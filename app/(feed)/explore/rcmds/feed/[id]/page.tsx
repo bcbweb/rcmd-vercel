@@ -2,7 +2,7 @@ import { RCMDFeed } from "@/components/rcmd-feed";
 
 type Params = Promise<{ id: string; }>;
 
-export default async function ProfileFeedPage({
+export default async function RCMDFeedPage({
   params
 }: {
   params: Params;
