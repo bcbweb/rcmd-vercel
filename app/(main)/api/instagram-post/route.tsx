@@ -19,9 +19,7 @@ export async function POST(request: Request) {
     const graphApiUrl = new URL(`https://graph.facebook.com/${API_VERSION}/instagram_oembed`);
     graphApiUrl.searchParams.append('url', postUrl);
     graphApiUrl.searchParams.append('access_token', APP_ACCESS_TOKEN!);
-    // Add fields parameter to specify exactly what we need
     graphApiUrl.searchParams.append('fields', 'thumbnail_url,author_name,provider_name,provider_url,html');
-    // Optional: Add maxwidth parameter if you want to control the size
     graphApiUrl.searchParams.append('maxwidth', '658');
 
     const response = await fetch(graphApiUrl.toString(), {

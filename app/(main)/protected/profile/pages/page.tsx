@@ -61,7 +61,6 @@ export default function EditProfilePage() {
 		getProfileId();
 	}, [userId, supabase]);
 
-	// Add effect to fetch data when profile ID is available
 	useEffect(() => {
 		if (profileId) {
 			fetchCollections(profileId);

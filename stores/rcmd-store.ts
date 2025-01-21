@@ -11,7 +11,9 @@ interface RCMDStore {
     description: string,
     type: string,
     visibility: string,
-    imageUrl?: string
+    imageUrl?: string,
+    tags?: string[],
+    url?: string
   ) => Promise<RCMD | null>;
   fetchRCMDs: (userId?: string) => Promise<void>;
   deleteRCMD: (id: string) => Promise<void>;
@@ -28,7 +30,9 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
     description: string,
     type: string,
     visibility: string,
-    imageUrl?: string
+    imageUrl?: string,
+    tags: string[] = [],
+    url?: string
   ) => {
     const supabase = createClient();
     set({ isLoading: true, error: null });
@@ -40,7 +44,9 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
           p_description: description,
           p_type: type,
           p_visibility: visibility,
-          p_featured_image: imageUrl
+          p_featured_image: imageUrl,
+          p_tags: tags,
+          p_url: url
         });
 
       if (error) throw error;

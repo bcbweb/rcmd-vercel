@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 interface ModalStore {
-  // Add block modal states
   isRCMDBlockModalOpen: boolean;
   setIsRCMDBlockModalOpen: (isOpen: boolean) => void;
   isTextBlockModalOpen: boolean;
@@ -34,7 +33,6 @@ interface ModalStore {
 export const useModalStore = create<ModalStore>()(
   devtools(
     (set) => ({
-      // Add block modals
       isRCMDBlockModalOpen: false,
       setIsRCMDBlockModalOpen: (isOpen) =>
         set({ isRCMDBlockModalOpen: isOpen }, false, 'setIsRCMDBlockModalOpen'),

@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { useModalStore } from '@/stores/modal-store';
 import { useRCMDStore } from '@/stores/rcmd-store';
 import { MagicFill } from '@/components/shared/magic-fill';
+import { TagInput } from '@/components/tag-input';
+import LinkInput from '@/components/ui/link-input';
 
 export default function RCMDModal() {
   const {
@@ -24,6 +26,8 @@ export default function RCMDModal() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number; } | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [url, setUrl] = useState('');
 
   const handleMetadataFound = (metadata: {
     title?: string;
@@ -31,7 +35,7 @@ export default function RCMDModal() {
     image?: File;
     type?: string;
     imageDimensions?: { width: number; height: number; };
-    embedHtml?: string; // Add this for Instagram embeds
+    embedHtml?: string;
   }) => {
     if (metadata.title) setTitle(metadata.title);
     if (metadata.description) setDescription(metadata.description);
@@ -46,6 +50,26 @@ export default function RCMDModal() {
     if (metadata.embedHtml) {
       // You might want to add a new state for this
       // setEmbedHtml(metadata.embedHtml);
+    }
+  };
+
+  const handleLinkMetadata = (metadata: {
+    title?: string;
+    description?: string;
+    image?: string;
+    type?: string;
+  }) => {
+    if (!title && metadata.title) setTitle(metadata.title);
+    if (!description && metadata.description) setDescription(metadata.description);
+    if (!file && metadata.image) {
+      // Convert URL to File object if needed
+      fetch(metadata.image)
+        .then(res => res.blob())
+        .then(blob => {
+          const file = new File([blob], 'preview.jpg', { type: 'image/jpeg' });
+          setFile(file);
+        })
+        .catch(console.error);
     }
   };
 
@@ -94,6 +118,8 @@ export default function RCMDModal() {
     setFile(null);
     setUploadError(null);
     setImageDimensions(null);
+    setTags([]);
+    setUrl('');
   };
 
   const handleClose = () => {
@@ -118,7 +144,9 @@ export default function RCMDModal() {
         description,
         type,
         visibility,
-        imageUrl
+        imageUrl,
+        tags,
+        url
       );
 
       if (newRCMD) {
@@ -144,6 +172,19 @@ export default function RCMDModal() {
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <MagicFill onMetadataFound={handleMetadataFound} />
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                URL (optional)
+              </label>
+              <LinkInput
+                value={url}
+                onChange={setUrl}
+                onMetadataFetch={handleLinkMetadata}
+                disabled={isSaving}
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">
                 Title
@@ -199,6 +240,20 @@ export default function RCMDModal() {
                 <option value="private">Private</option>
                 <option value="public">Public</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Tags
+              </label>
+              <TagInput
+                tags={tags}
+                onChange={setTags}
+                placeholder="Type a tag and press Enter"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                Press Enter or comma to add a tag
+              </p>
             </div>
 
             <div>

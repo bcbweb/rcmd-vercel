@@ -100,6 +100,7 @@ export default function RCMDBlock({
       {isEditingImage ? (
         <ImageEditor
           currentImageUrl={editedRCMD.featured_image || ''}
+          showCaption={false}
           onSave={handleImageSave}
           onCancel={() => setIsEditingImage(false)}
           subfolder="rcmds"
