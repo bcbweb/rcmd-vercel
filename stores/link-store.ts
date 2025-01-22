@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from 'zustand';
 import { createClient } from '@/utils/supabase/client';
 import type { Link, CollectionItem, Collection } from "@/types";

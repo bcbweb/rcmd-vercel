@@ -2,11 +2,13 @@
 
 import { URLHandleInput } from '@/components/url-handle-input';
 import countries from '@/data/countries.json';
+import { ProfilePage } from '@/types';
 
 interface ProfileEditorProps {
   handle: string;
   location: string;
   currentHandle: string;
+  pages: ProfilePage[],
   isLoading: boolean;
   isHandleValid: boolean;
   onHandleChange: (handle: string) => void;

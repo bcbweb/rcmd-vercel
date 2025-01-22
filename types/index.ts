@@ -11,6 +11,7 @@ export type Link = Tables["links"]["Row"];
 export type Collection = Tables["collections"]["Row"];
 export type CollectionItem = Tables["collection_items"]["Row"];
 export type ProfileBlockType = Tables["profile_blocks"]["Row"];
+export type ProfilePage = Tables["profile_pages"]["Row"];
 export type TextBlockType = Tables["text_blocks"]["Row"];
 export type ImageBlockType = Tables["image_blocks"]["Row"];
 export type LinkBlockType = Tables["link_blocks"]["Row"];

@@ -1,3 +1,5 @@
+"use client";
+
 import { createClient } from '@/utils/supabase/client';
 import { useAuthStore } from '@/stores/auth-store';
 

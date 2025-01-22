@@ -743,6 +743,7 @@ export type Database = {
           created_at: string | null
           display_order: number
           id: string
+          page_id: string
           profile_id: string | null
           type: string
           updated_at: string | null
@@ -752,6 +753,7 @@ export type Database = {
           created_at?: string | null
           display_order: number
           id?: string
+          page_id: string
           profile_id?: string | null
           type: string
           updated_at?: string | null
@@ -761,13 +763,62 @@ export type Database = {
           created_at?: string | null
           display_order?: number
           id?: string
+          page_id?: string
           profile_id?: string | null
           type?: string
           updated_at?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "profile_blocks_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "profile_pages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "profile_blocks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_pages: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          owner_id: string
+          profile_id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          owner_id: string
+          profile_id: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          owner_id?: string
+          profile_id?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_pages_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -822,6 +873,7 @@ export type Database = {
           bio: string | null
           cover_image: string | null
           created_at: string | null
+          default_page_id: string | null
           email: string
           first_name: string | null
           handle: string | null
@@ -839,6 +891,7 @@ export type Database = {
           bio?: string | null
           cover_image?: string | null
           created_at?: string | null
+          default_page_id?: string | null
           email: string
           first_name?: string | null
           handle?: string | null
@@ -856,6 +909,7 @@ export type Database = {
           bio?: string | null
           cover_image?: string | null
           created_at?: string | null
+          default_page_id?: string | null
           email?: string
           first_name?: string | null
           handle?: string | null
@@ -868,7 +922,15 @@ export type Database = {
           tags?: string[] | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_default_page_id_fkey"
+            columns: ["default_page_id"]
+            isOneToOne: false
+            referencedRelation: "profile_pages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rcmd_blocks: {
         Row: {
@@ -1195,6 +1257,7 @@ export type Database = {
           created_at: string | null
           display_order: number
           id: string
+          page_id: string
           profile_id: string | null
           type: string
           updated_at: string | null
@@ -1251,6 +1314,13 @@ export type Database = {
           p_link_id: string
         }
         Returns: undefined
+      }
+      insert_profile_page: {
+        Args: {
+          page_name: string
+          page_slug: string
+        }
+        Returns: string
       }
       insert_rcmd:
         | {
@@ -1326,6 +1396,7 @@ export type Database = {
           created_at: string | null
           display_order: number
           id: string
+          page_id: string
           profile_id: string | null
           type: string
           updated_at: string | null
@@ -1341,6 +1412,7 @@ export type Database = {
           created_at: string | null
           display_order: number
           id: string
+          page_id: string
           profile_id: string | null
           type: string
           updated_at: string | null

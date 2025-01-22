@@ -5,7 +5,9 @@ import { createClient } from '@/utils/supabase/client';
 import { toast } from "sonner";
 import { ProfileEditor } from '@/components/shared/profile-editor';
 import { SocialMediaEditor, type SocialMediaFormData } from '@/components/shared/social-media-editor';
-import router from "next/router";
+import { useAuthStore } from "@/stores/auth-store";
+import { useRouter } from "next/navigation";
+import { ProfilePage } from "@/types";
 
 interface ProfileData {
   handle: string;
@@ -13,9 +15,12 @@ interface ProfileData {
 }
 
 export default function EditProfilePage() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isHandleValid, setIsHandleValid] = useState(true);
+  const [pages, setPages] = useState<ProfilePage[]>([]);
   const supabase = createClient();
+  const router = useRouter();
+  const userId = useAuthStore(state => state.userId);
 
   const [profileData, setProfileData] = useState<ProfileData>({
     handle: '',
@@ -31,21 +36,38 @@ export default function EditProfilePage() {
     socialLinks: []
   });
 
+  async function loadPages(userId: string) {
+    try {
+      const { data: pages, error } = await supabase
+        .from('profile_pages')
+        .select('*')
+        .eq('owner_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setPages(pages || []);
+    } catch (error) {
+      console.error('Error loading pages:', error);
+      toast.error('Failed to load pages');
+    }
+  }
+
   async function loadUserData() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      if (!userId) {
         router.push('/sign-in');
         return;
       }
 
-      const { data: profile, error } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, handle, location')
-        .eq('auth_user_id', user.id)
+        .select('id, handle, location, default_page_id')
+        .eq('auth_user_id', userId)
         .single();
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      await loadPages(userId);
 
       const { data: socialLinks } = await supabase
         .from('profile_social_links')
@@ -55,8 +77,10 @@ export default function EditProfilePage() {
       const userData = {
         handle: profile?.handle || '',
         location: profile?.location || '',
-        email: user.email || '',
+        defaultPageId: profile?.default_page_id || null,
       };
+
+      console.log('userData', userData);
 
       setProfileData(userData);
       setOriginalData(userData);
@@ -70,17 +94,18 @@ export default function EditProfilePage() {
   }
 
   useEffect(() => {
-    loadUserData();
-  }, []);
+    if (userId) {
+      loadUserData();
+    }
+  }, [userId]);
 
   async function handleUpdateProfile(e: React.FormEvent) {
+    console.log('handleUpdateProfile', profileData);
     e.preventDefault();
     try {
       setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
+      if (!userId) throw new Error('No authenticated user');
 
-      // Update profile in database
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -88,7 +113,7 @@ export default function EditProfilePage() {
           location: profileData.location,
           updated_at: new Date().toISOString()
         })
-        .eq('auth_user_id', user.id);
+        .eq('auth_user_id', userId);
 
       if (profileError) throw profileError;
 
@@ -105,24 +130,21 @@ export default function EditProfilePage() {
   async function handleUpdateSocialMedia(data: SocialMediaFormData) {
     try {
       setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
+      if (!userId) throw new Error('No authenticated user');
 
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('id')
-        .eq('auth_user_id', user.id)
+        .eq('auth_user_id', userId)
         .single();
 
       if (error) throw error;
 
-      // Delete existing links
       await supabase
         .from('profile_social_links')
         .delete()
         .eq('profile_id', profile.id);
 
-      // Insert new links
       if (data.socialLinks.length > 0) {
         const { error } = await supabase
           .from('profile_social_links')
@@ -164,17 +186,20 @@ export default function EditProfilePage() {
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
           Basic Information
         </h2>
-        <ProfileEditor
-          handle={profileData.handle}
-          location={profileData.location}
-          currentHandle={originalData.handle}
-          isLoading={isLoading}
-          isHandleValid={isHandleValid}
-          onHandleChange={(handle) => setProfileData(prev => ({ ...prev, handle }))}
-          onLocationChange={(location) => setProfileData(prev => ({ ...prev, location }))}
-          onHandleValidityChange={(status) => setIsHandleValid(status.isAvailable)}
-          onSubmit={handleUpdateProfile}
-        />
+        <div className="space-y-6">
+          <ProfileEditor
+            handle={profileData.handle}
+            location={profileData.location}
+            pages={pages}
+            currentHandle={originalData.handle}
+            isLoading={isLoading}
+            isHandleValid={isHandleValid}
+            onHandleChange={(handle) => setProfileData(prev => ({ ...prev, handle }))}
+            onLocationChange={(location) => setProfileData(prev => ({ ...prev, location }))}
+            onHandleValidityChange={(status) => setIsHandleValid(status.isAvailable)}
+            onSubmit={handleUpdateProfile}
+          />
+        </div>
       </div>
 
       {/* Social Media Profiles */}
