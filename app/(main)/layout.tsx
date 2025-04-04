@@ -1,5 +1,4 @@
 import Header from "@/components/layout/header";
-import { ThemeSwitcher } from "@/components/common/theme-switcher";
 import { GlobalModals } from "@/components/common/modals";
 import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
@@ -33,7 +32,6 @@ export default async function RootLayout({
         className={`${GeistSans.className} antialiased bg-background flex flex-col relative min-h-screen`}
       >
         <ThemeProvider attribute="class" enableSystem>
-          <ThemeSwitcher />
           <Header />
           <div className="flex-1 mx-auto w-full">{children}</div>
           <GlobalModals />

@@ -1,3 +1,5 @@
+import { ThemeSwitcher } from "@/components/common/theme-switcher";
+
 export default function Footer() {
   const footerSections = [
     {
@@ -18,15 +20,11 @@ export default function Footer() {
     },
     {
       title: "Business",
-      links: [
-        { text: "RCMD for business", href: "/business" },
-      ],
+      links: [{ text: "RCMD for business", href: "/business" }],
     },
     {
       title: "Pricing",
-      links: [
-        { text: "RCMD plans", href: "/pricing" },
-      ],
+      links: [{ text: "RCMD plans", href: "/pricing" }],
     },
     {
       title: "Legal",
@@ -37,9 +35,7 @@ export default function Footer() {
     },
     {
       title: "Contact",
-      links: [
-        { text: "Contact us", href: "/contact" },
-      ],
+      links: [{ text: "Contact us", href: "/contact" }],
     },
   ];
 
@@ -66,6 +62,13 @@ export default function Footer() {
               </ul>
             </div>
           ))}
+        </div>
+      </div>
+      {/* Add copyright and theme switcher below the main content */}
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4 border-t mt-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+          <span>© {new Date().getFullYear()} RCMD. All rights reserved.</span>
+          <ThemeSwitcher />
         </div>
       </div>
     </footer>

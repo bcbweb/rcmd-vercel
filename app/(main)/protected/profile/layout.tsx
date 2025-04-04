@@ -32,7 +32,7 @@ export default function ProfileLayout({
     initializeProfile();
   }, [userId, fetchProfile, router]);
 
-  if (isLoading) {
+  if (isLoading || !profile) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         Loading...
@@ -40,10 +40,10 @@ export default function ProfileLayout({
     );
   }
 
-  if (!userId || !profile) {
+  if (!userId) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        No user
+        Authentication error or user not found.
       </div>
     );
   }
