@@ -789,9 +789,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          is_default: boolean
           name: string
-          owner_id: string
           profile_id: string
           slug: string
           updated_at: string
@@ -799,9 +797,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          is_default?: boolean
           name: string
-          owner_id: string
           profile_id: string
           slug: string
           updated_at?: string
@@ -809,14 +805,26 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          is_default?: boolean
           name?: string
-          owner_id?: string
           profile_id?: string
           slug?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_profile"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_profile_pages_profile"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profile_pages_profile_id_fkey"
             columns: ["profile_id"]
@@ -923,6 +931,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_default_page"
+            columns: ["default_page_id"]
+            isOneToOne: false
+            referencedRelation: "profile_pages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_default_page_id_fkey"
             columns: ["default_page_id"]
@@ -1246,6 +1261,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_profile_page: {
+        Args: {
+          page_id: string
+        }
+        Returns: undefined
+      }
       insert_block_with_order: {
         Args: {
           p_profile_id: string

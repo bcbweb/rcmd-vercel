@@ -1,4 +1,4 @@
-import { CreatorFeed } from "@/components/creator-feed";
+import { CreatorFeed } from "@/components/features/profile";
 
 type Params = Promise<{ handle: string; }>;
 

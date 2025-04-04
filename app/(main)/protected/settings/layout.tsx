@@ -3,24 +3,62 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/ui/spinner";
+import { useProfileStore } from "@/stores/profile-store";
 
 export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const pathname = usePathname();
+  const { userId, isInitialized } = useAuthStore();
+  const { profile, fetchProfile } = useProfileStore();
+  const [layoutLoading, setLayoutLoading] = useState(true);
+
+  useEffect(() => {
+    // Authentication check
+    if (isInitialized && !userId) {
+      router.push("/sign-in");
+      return;
+    }
+
+    // Only fetch profile data once when needed
+    const initialize = async () => {
+      if (isInitialized && userId && !profile) {
+        try {
+          await fetchProfile(userId);
+        } catch (error) {
+          console.error("Error fetching profile:", error);
+        }
+      }
+
+      // When initialization is complete, allow rendering the layout
+      if (isInitialized) {
+        setLayoutLoading(false);
+      }
+    };
+
+    initialize();
+  }, [userId, profile, fetchProfile, router, isInitialized]);
 
   const navItems = [
-    {
-      name: "Edit profile",
-      href: "/protected/settings/profile",
-    },
-    {
-      name: "Account management",
-      href: "/protected/settings/account",
-    },
+    { name: "Edit profile", href: "/protected/settings/profile" },
+    { name: "Account management", href: "/protected/settings/account" },
   ];
+
+  // Only show loading spinner during initial layout load
+  if (layoutLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -46,9 +84,7 @@ export default function SettingsLayout({
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
-        <div className="max-w-4xl mx-auto p-6">
-          {children}
-        </div>
+        <div className="max-w-4xl mx-auto p-6">{children}</div>
       </div>
     </div>
   );

@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { StepProgress } from "@/components/step-progress";
+import { StepProgress } from "@/components/common";
 import { createClient } from '@/utils/supabase/client';
 import { toast } from "sonner";
-import { TagInput } from "@/components/tag-input";
-import { URLHandleInput } from '@/components/url-handle-input';
+import { TagInput } from "@/components/common/forms";
+import { URLHandleInput } from '@/components/common/forms';
 import countries from '@/data/countries.json';
 
 interface OtherInfoFormData {

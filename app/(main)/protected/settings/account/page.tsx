@@ -1,74 +1,129 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from '@/utils/supabase/client';
+import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { useAuthStore } from "@/stores/auth-store";
+import { useProfileStore } from "@/stores/profile-store";
 import { toast } from "sonner";
-import router from "next/router";
+import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function AccountManagementPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [localLoading, setLocalLoading] = useState(true);
+
   const supabase = createClient();
+  const router = useRouter();
+  const { userId } = useAuthStore();
+  const { clearProfile } = useProfileStore();
+
+  useEffect(() => {
+    const fetchEmail = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        setEmail(user?.email || "");
+      } catch (error) {
+        console.error("Error fetching user email:", error);
+      } finally {
+        setLocalLoading(false);
+      }
+    };
+
+    fetchEmail();
+  }, [supabase.auth]);
 
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error("Passwords do not match");
       return;
     }
 
     try {
       setIsChangingPassword(true);
       const { error } = await supabase.auth.updateUser({
-        password: newPassword
+        password: newPassword,
       });
 
       if (error) throw error;
 
-      toast.success('Password updated successfully');
-      setNewPassword('');
-      setConfirmPassword('');
+      toast.success("Password updated successfully");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (error) {
       console.error(error);
-      toast.error('Failed to update password');
+      toast.error("Failed to update password");
     } finally {
       setIsChangingPassword(false);
     }
   }
 
   async function handleDeleteAccount() {
-    if (!window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete your account? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
     try {
       setIsDeletingAccount(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
+      if (!userId) {
+        toast.error("No authenticated user");
+        return;
+      }
 
-      // Delete profile first (assuming cascade delete is set up)
+      // Get auth user ID separately
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      // Delete profile
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from("profiles")
         .delete()
-        .eq('auth_user_id', user.id);
+        .eq("auth_user_id", userId);
 
       if (profileError) throw profileError;
 
+      // Clear auth and profile stores
+      clearProfile();
+      useAuthStore.getState().setUserId(null);
+
       // Delete auth user
-      const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
-      if (authError) throw authError;
+      if (user) {
+        // Note: admin.deleteUser may require server action depending on setup
+        const { error: authError } = await supabase.auth.admin.deleteUser(
+          user.id
+        );
+        if (authError) throw authError;
+      }
 
       await supabase.auth.signOut();
-      router.push('/sign-in');
-      toast.success('Account deleted successfully');
+      router.push("/sign-in");
+      toast.success("Account deleted successfully");
     } catch (error) {
       console.error(error);
-      toast.error('Failed to delete account');
+      toast.error("Failed to delete account");
     } finally {
       setIsDeletingAccount(false);
     }
+  }
+
+  // Show loading spinner during initial data fetch
+  if (localLoading) {
+    return (
+      <div className="flex justify-center items-center h-full py-10">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
   }
 
   return (
@@ -85,7 +140,9 @@ export default function AccountManagementPage() {
       {/* Email Section */}
       <div className="border rounded-lg p-6 space-y-4">
         <div>
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Your account</h2>
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+            Your account
+          </h2>
           <div className="mt-4 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -93,27 +150,14 @@ export default function AccountManagementPage() {
               </label>
               <input
                 type="email"
-                value="user@example.com"
+                value={email}
                 disabled
                 className="mt-1 block w-full rounded-md bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700"
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                Password
-              </label>
-              <button
-                onClick={() => setIsChangingPassword(true)}
-                className="mt-1 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700"
-              >
-                Change password
-              </button>
-            </div>
           </div>
         </div>
       </div>
-
       {/* Password Change Section */}
       <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
@@ -160,11 +204,10 @@ export default function AccountManagementPage() {
           Convert to a business account
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          With a business account you'll have access to tools like ads and analytics to grow your presence.
+          With a business account you'll have access to tools like ads and
+          analytics to grow your presence.
         </p>
-        <button
-          className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700"
-        >
+        <button className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700">
           Convert account
         </button>
       </div>
@@ -175,7 +218,8 @@ export default function AccountManagementPage() {
           Delete Account
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Once you delete your account, there is no going back. Please be certain.
+          Once you delete your account, there is no going back. Please be
+          certain.
         </p>
         <button
           onClick={handleDeleteAccount}

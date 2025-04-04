@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { StepProgress } from "@/components/step-progress";
+import { StepProgress } from "@/components/common";
 import { createClient } from '@/utils/supabase/client';
 import { toast } from "sonner";
 import { z } from "zod";

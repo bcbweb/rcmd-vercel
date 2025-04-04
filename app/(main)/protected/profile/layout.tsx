@@ -1,19 +1,10 @@
-'use client';
+"use client";
 
 import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import ProfileHeader from "@/components/profile/header/main";
+import { useRouter } from "next/navigation";
+import { ProfileHeader } from "@/components/features/profile/header";
 import { useAuthStore } from "@/stores/auth-store";
 import { useProfileStore } from "@/stores/profile-store";
-
-const PAGE_TITLES = {
-  '/protected/profile/rcmds': 'Manage RCMDs',
-  '/protected/profile/links': 'Manage Links',
-  '/protected/profile/collections': 'Manage Collections',
-  '/protected/profile': 'Edit Page',
-} as const;
-
-type PathType = keyof typeof PAGE_TITLES;
 
 export default function ProfileLayout({
   children,
@@ -21,16 +12,8 @@ export default function ProfileLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const userId = useAuthStore(state => state.userId);
-  const {
-    profile,
-    socialLinks,
-    isLoading,
-    fetchProfile
-  } = useProfileStore();
-
-  const pageTitle = pathname && (PAGE_TITLES[pathname as PathType] || 'Profile');
+  const userId = useAuthStore((state) => state.userId);
+  const { profile, socialLinks, isLoading, fetchProfile } = useProfileStore();
 
   useEffect(() => {
     const initializeProfile = async () => {
@@ -39,10 +22,10 @@ export default function ProfileLayout({
       try {
         const result = await fetchProfile(userId);
         if (result.needsOnboarding) {
-          router.push('/protected/onboarding');
+          router.push("/protected/onboarding");
         }
       } catch (error) {
-        console.error('Failed to initialize profile:', error);
+        console.error("Failed to initialize profile:", error);
       }
     };
 
@@ -50,11 +33,19 @@ export default function ProfileLayout({
   }, [userId, fetchProfile, router]);
 
   if (isLoading) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        Loading...
+      </div>
+    );
   }
 
   if (!userId || !profile) {
-    return <div className="flex justify-center items-center min-h-screen">No user</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        No user
+      </div>
+    );
   }
 
   return (

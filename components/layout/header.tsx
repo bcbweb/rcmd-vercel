@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MainNav } from "./main-nav";
 import { mainNavItems } from "@/config/navigation";
-import UserMenu from "../user-menu";
+import UserMenu from "./header/user-menu";
 
 export default function Header() {
   return (

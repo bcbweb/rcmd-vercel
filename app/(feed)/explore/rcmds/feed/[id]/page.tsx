@@ -1,4 +1,4 @@
-import { RCMDFeed } from "@/components/rcmd-feed";
+import { RCMDFeed } from "@/components/features/rcmd";
 
 type Params = Promise<{ id: string; }>;
 

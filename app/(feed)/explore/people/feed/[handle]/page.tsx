@@ -1,4 +1,4 @@
-import { ProfileFeed } from "@/components/profile-feed";
+import { ProfileFeed } from "@/components/features/profile";
 
 type Params = Promise<{ handle: string; }>;
 

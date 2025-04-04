@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/client";
 import { useState, useEffect } from "react";
 import { SearchBar } from "@/components/ui/search-bar";
-import { GridSkeleton } from "@/components/shared/grid-skeleton";
+import { GridSkeleton } from "@/components/common";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { Profile } from "@/types";

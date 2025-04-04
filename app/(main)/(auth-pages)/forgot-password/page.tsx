@@ -1,37 +1,57 @@
+"use client";
+
 import { forgotPasswordAction } from "@/app/(main)/actions";
-import { FormMessage, type Message } from "@/components/form-message";
-import { SubmitButton } from "@/components/submit-button";
+import { FormMessage, type Message } from "@/components/common/forms";
+import { SubmitButton } from "@/components/common/forms";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { SmtpMessage } from "../smtp-message";
+import { useSearchParams } from "next/navigation";
 
-export default async function ForgotPassword(props: {
-	searchParams: Promise<Message>;
-}) {
-	const searchParams = await props.searchParams;
-	return (
-		<>
-			<form className="flex-1 flex flex-col w-full gap-2 text-foreground [&>input]:mb-6 min-w-64 max-w-64 mx-auto">
-				<div>
-					<h1 className="text-2xl font-medium">Reset Password</h1>
-					<p className="text-sm text-secondary-foreground">
-						Already have an account?{" "}
-						<Link className="text-primary underline" href="/sign-in">
-							Sign in
-						</Link>
-					</p>
-				</div>
-				<div className="flex flex-col gap-2 [&>input]:mb-3 mt-8">
-					<Label htmlFor="email">Email</Label>
-					<Input name="email" placeholder="you@example.com" required />
-					<SubmitButton formAction={forgotPasswordAction}>
-						Reset Password
-					</SubmitButton>
-					<FormMessage message={searchParams} />
-				</div>
-			</form>
-			<SmtpMessage />
-		</>
-	);
+export default function ForgotPassword() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+  const success = searchParams.get("success");
+
+  // Create a message object from search params
+  let message: Message | null = null;
+
+  if (error) {
+    message = { error };
+  } else if (success) {
+    message = { success };
+  }
+
+  return (
+    <>
+      <form className="flex flex-col min-w-64 max-w-64 mx-auto">
+        <h1 className="text-2xl font-medium">Forgot password</h1>
+        <p className="text-sm text-foreground">
+          Enter your email address and we will send you a link to reset your
+          password.
+        </p>
+        <div className="flex flex-col gap-2 [&>input]:mb-3 mt-8">
+          <Label htmlFor="email">Email</Label>
+          <Input name="email" placeholder="you@example.com" required />
+          <input
+            type="hidden"
+            name="callbackUrl"
+            value="/protected/reset-password"
+          />
+          <SubmitButton
+            formAction={forgotPasswordAction}
+            pendingText="Sending email..."
+          >
+            Send reset email
+          </SubmitButton>
+          <div className="text-center">
+            <Link className="text-xs text-foreground underline" href="/sign-in">
+              Back to sign in
+            </Link>
+          </div>
+          {message && <FormMessage message={message} />}
+        </div>
+      </form>
+    </>
+  );
 }

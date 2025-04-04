@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { StepProgress } from "@/components/step-progress";
+import { StepProgress } from "@/components/common";
 import { personalInfoSchema, type PersonalInfoFormData } from "@/lib/schemas/onboarding";
 import { createClient } from '@/utils/supabase/client';
 import { toast } from "sonner";

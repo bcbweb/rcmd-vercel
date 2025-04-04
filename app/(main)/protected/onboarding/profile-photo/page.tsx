@@ -3,28 +3,30 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { StepProgress } from "@/components/step-progress";
-import ProfilePhotoUpload from "@/components/profile-photo-upload";
-import { createClient } from '@/utils/supabase/client';
+import { StepProgress } from "@/components/common";
+import { ProfilePhotoUpload } from "@/components/common/media";
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 
 export default function ProfilePhotoPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [photoUrl, setPhotoUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
     async function loadProfile() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) return;
 
         const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('id, profile_picture_url')
-          .eq('auth_user_id', user.id)
+          .from("profiles")
+          .select("id, profile_picture_url")
+          .eq("auth_user_id", user.id)
           .single();
 
         if (error) throw error;
@@ -33,8 +35,8 @@ export default function ProfilePhotoPage() {
           setPhotoUrl(profile.profile_picture_url);
         }
       } catch (error) {
-        console.error('Error loading profile:', error);
-        toast.error('Failed to load profile data');
+        console.error("Error loading profile:", error);
+        toast.error("Failed to load profile data");
       } finally {
         setIsLoading(false);
       }
@@ -53,16 +55,18 @@ export default function ProfilePhotoPage() {
     try {
       setIsSubmitting(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("No authenticated user");
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
           profile_picture_url: photoUrl,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('auth_user_id', user.id);
+        .eq("auth_user_id", user.id);
 
       if (error) throw error;
       router.push("/protected/onboarding/other-info");

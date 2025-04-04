@@ -1,7 +1,7 @@
 import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
 import { createClient } from "@/utils/supabase/server";
-import { RootAuthInitializer } from "@/components/root-auth-initializer";
+import { RootAuthInitializer } from "@/components/features/auth";
 import "../globals.css";
 
 export default async function FeedRootLayout({
@@ -10,7 +10,9 @@ export default async function FeedRootLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>
