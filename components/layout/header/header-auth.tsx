@@ -4,8 +4,6 @@ import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 export default async function AuthButton() {
   const supabase = await createClient();
