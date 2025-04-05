@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+You are building an app called RCMD. RCMD is short for "Recommendation".
+The purpose is to allow users to curate an inventory of recommendations, links to share with others, but also has page building functionality by allowing the user to add different types of content blocks.
+RCMDs have their own public shareable pages.
+Users can also add additional shareable pages to their profile and populate them with blocks, assigning one of them to be the default.
+
