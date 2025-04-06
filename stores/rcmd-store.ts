@@ -1,8 +1,8 @@
 "use client";
 
-import { create } from 'zustand';
-import { createClient } from '@/utils/supabase/client';
-import type { RCMD } from '@/types';
+import { create } from "zustand";
+import { createClient } from "@/utils/supabase/client";
+import type { RCMD } from "@/types";
 
 interface RCMDStore {
   rcmds: RCMD[];
@@ -15,7 +15,15 @@ interface RCMDStore {
     visibility: string,
     imageUrl?: string,
     tags?: string[],
-    url?: string
+    url?: string,
+    location?: {
+      placeId: string;
+      address: string;
+      coordinates?: {
+        lat?: number;
+        lng?: number;
+      };
+    }
   ) => Promise<RCMD | null>;
   fetchRCMDs: (userId?: string) => Promise<void>;
   deleteRCMD: (id: string) => Promise<void>;
@@ -34,33 +42,50 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
     visibility: string,
     imageUrl?: string,
     tags: string[] = [],
-    url?: string
+    url?: string,
+    location?: {
+      placeId: string;
+      address: string;
+      coordinates?: {
+        lat?: number;
+        lng?: number;
+      };
+    }
   ) => {
     const supabase = createClient();
     set({ isLoading: true, error: null });
 
     try {
-      const { data, error } = await supabase
-        .rpc('insert_rcmd', {
-          p_title: title,
-          p_description: description,
-          p_type: type,
-          p_visibility: visibility,
-          p_featured_image: imageUrl,
-          p_tags: tags,
-          p_url: url
-        });
+      const locationData = location
+        ? {
+            placeId: location.placeId,
+            address: location.address,
+            coordinates: location.coordinates,
+          }
+        : null;
+
+      const { data, error } = await supabase.rpc("insert_rcmd", {
+        p_title: title,
+        p_description: description,
+        p_type: type,
+        p_visibility: visibility,
+        p_featured_image: imageUrl,
+        p_tags: tags,
+        p_url: url,
+        p_location: locationData,
+      });
 
       if (error) throw error;
 
       set((state) => ({
         rcmds: [data[0] as RCMD, ...state.rcmds],
-        isLoading: false
+        isLoading: false,
       }));
 
       return data[0] as RCMD;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to insert RCMD';
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to insert RCMD";
       set({ error: errorMessage, isLoading: false });
       return null;
     }
@@ -72,17 +97,20 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
 
     try {
       let query = supabase
-        .from('rcmds')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("rcmds")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (userId) {
-        query = query.eq('owner_id', userId);
+        query = query.eq("owner_id", userId);
       } else {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
         if (userError) throw userError;
-        if (!user) throw new Error('No user found');
-        query = query.eq('owner_id', user.id);
+        if (!user) throw new Error("No user found");
+        query = query.eq("owner_id", user.id);
       }
 
       const { data, error } = await query;
@@ -91,7 +119,8 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
 
       set({ rcmds: data || [], isLoading: false });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch RCMDs';
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to fetch RCMDs";
       set({ error: errorMessage, isLoading: false });
     }
   },
@@ -101,21 +130,18 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const { error } = await supabase
-        .from('rcmds')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("rcmds").delete().eq("id", id);
 
       if (error) throw error;
 
-      set(state => ({
-        rcmds: state.rcmds.filter(rcmd => rcmd.id !== id),
-        isLoading: false
+      set((state) => ({
+        rcmds: state.rcmds.filter((rcmd) => rcmd.id !== id),
+        isLoading: false,
       }));
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to delete RCMD'
+        error: error instanceof Error ? error.message : "Failed to delete RCMD",
       });
       throw error;
     }
@@ -135,27 +161,25 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
       }));
 
       const { error } = await supabase
-        .from('rcmds')
+        .from("rcmds")
         .update({
           ...updates,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
+        .eq("id", id)
         .select();
 
       if (error) throw error;
 
       set({ isLoading: false });
-
     } catch (error) {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : 'Failed to update RCMD';
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to update RCMD";
 
       const { data } = await supabase
-        .from('rcmds')
-        .select('*')
-        .eq('id', id)
+        .from("rcmds")
+        .select("*")
+        .eq("id", id)
         .single();
 
       if (data) {
@@ -163,15 +187,13 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
           error: errorMessage,
           isLoading: false,
           rcmds: state.rcmds.map((rcmd) =>
-            rcmd.id === id
-              ? data as RCMD
-              : rcmd
-          )
+            rcmd.id === id ? (data as RCMD) : rcmd
+          ),
         }));
       } else {
         set({
           error: errorMessage,
-          isLoading: false
+          isLoading: false,
         });
       }
 

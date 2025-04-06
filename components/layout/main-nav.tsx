@@ -17,29 +17,68 @@ import { Menu, X } from "lucide-react";
 
 interface MainNavProps {
   items?: MainNavItem[];
+  authButtons?: React.ReactNode;
 }
 
-export function MainNav({ items }: MainNavProps) {
+export function MainNav({ items, authButtons }: MainNavProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+
+  const preventClickTrigger = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Desktop Menu */}
+      <NavigationMenu className="hidden md:block">
+        <NavigationMenuList>
+          {items?.map((item) => (
+            <NavigationMenuItem key={item.title}>
+              {item.items ? (
+                <>
+                  <NavigationMenuTrigger onClick={preventClickTrigger}>
+                    {item.title}
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                      {item.items.map((subItem) => (
+                        <ListItem
+                          key={subItem.title}
+                          title={subItem.title}
+                          href={subItem.href}
+                        >
+                          {subItem.description}
+                        </ListItem>
+                      ))}
+                    </ul>
+                  </NavigationMenuContent>
+                </>
+              ) : (
+                <Link href={item.href ?? "#"} legacyBehavior passHref>
+                  <NavigationMenuLink
+                    className={cn(navigationMenuTriggerStyle())}
+                  >
+                    {item.title}
+                  </NavigationMenuLink>
+                </Link>
+              )}
+            </NavigationMenuItem>
+          ))}
+        </NavigationMenuList>
+      </NavigationMenu>
+
+      {/* Mobile Menu Button - moved to end for right alignment */}
       <button
-        className="md:hidden p-2"
+        className="md:hidden p-2 ml-auto"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Toggle menu"
       >
-        {isOpen ? (
-          <X className="h-6 w-6" />
-        ) : (
-          <Menu className="h-6 w-6" />
-        )}
+        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden fixed inset-x-0 top-16 bg-background border-b shadow-lg">
+        <div className="md:hidden fixed inset-x-0 top-16 bg-background border-b shadow-lg z-50">
           <nav className="px-4 py-2">
             {items?.map((item) => (
               <div key={item.title} className="py-2">
@@ -70,43 +109,14 @@ export function MainNav({ items }: MainNavProps) {
                 )}
               </div>
             ))}
+
+            {/* Render auth buttons in mobile menu */}
+            {authButtons && (
+              <div className="py-4 border-t mt-2">{authButtons}</div>
+            )}
           </nav>
         </div>
       )}
-
-      {/* Desktop Menu */}
-      <NavigationMenu className="hidden md:block">
-        <NavigationMenuList>
-          {items?.map((item) => (
-            <NavigationMenuItem key={item.title}>
-              {item.items ? (
-                <>
-                  <NavigationMenuTrigger>{item.title}</NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                      {item.items.map((subItem) => (
-                        <ListItem
-                          key={subItem.title}
-                          title={subItem.title}
-                          href={subItem.href}
-                        >
-                          {subItem.description}
-                        </ListItem>
-                      ))}
-                    </ul>
-                  </NavigationMenuContent>
-                </>
-              ) : (
-                <Link href={item.href ?? "#"} legacyBehavior passHref>
-                  <NavigationMenuLink className={cn(navigationMenuTriggerStyle())}>
-                    {item.title}
-                  </NavigationMenuLink>
-                </Link>
-              )}
-            </NavigationMenuItem>
-          ))}
-        </NavigationMenuList>
-      </NavigationMenu>
     </>
   );
 }

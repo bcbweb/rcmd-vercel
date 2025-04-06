@@ -30,7 +30,7 @@ export default function ForgotPassword() {
           Enter your email address and we will send you a link to reset your
           password.
         </p>
-        <div className="flex flex-col gap-2 [&>input]:mb-3 mt-8">
+        <div className="flex flex-col gap-2 [&>input]:mb-3 mt-8 w-full">
           <Label htmlFor="email">Email</Label>
           <Input name="email" placeholder="you@example.com" required />
           <input

@@ -24,6 +24,26 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import AddMenu from "@/components/common/add-menu";
 import { useEffect } from "react";
 
+// Separate component for auth buttons to reuse in mobile menu
+export function AuthButtons({ className = "" }: { className?: string }) {
+  return (
+    <div className={`flex items-center gap-4 ${className}`}>
+      <Link
+        href="/sign-in"
+        className="text-sm font-medium text-muted-foreground hover:text-primary"
+      >
+        Sign in
+      </Link>
+      <Link
+        href="/sign-up"
+        className="text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md"
+      >
+        Sign up
+      </Link>
+    </div>
+  );
+}
+
 export default function UserMenu() {
   const { userId, isInitialized } = useAuthStore();
   const { profile, fetchProfile } = useProfileStore();
@@ -45,19 +65,8 @@ export default function UserMenu() {
 
   if (!userId) {
     return (
-      <div className="flex items-center gap-4">
-        <Link
-          href="/sign-in"
-          className="text-sm font-medium text-muted-foreground hover:text-primary"
-        >
-          Sign in
-        </Link>
-        <Link
-          href="/sign-up"
-          className="text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md"
-        >
-          Sign up
-        </Link>
+      <div className="hidden md:block">
+        <AuthButtons />
       </div>
     );
   }
