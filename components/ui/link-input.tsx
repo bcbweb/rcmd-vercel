@@ -227,7 +227,10 @@ export default function LinkInput({
                   ? (() => {
                       try {
                         return new URL(value).hostname;
-                      } catch (e) {
+                      } catch (
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                        _error
+                      ) {
                         return "";
                       }
                     })()
@@ -241,9 +244,10 @@ export default function LinkInput({
                 src={metadata.image}
                 alt="Link preview"
                 className="w-20 h-20 object-cover rounded"
-                onError={(e) => {
+                onError={(event) => {
                   // Hide the image on error
-                  (e.target as HTMLImageElement).style.display = "none";
+                  const target = event.currentTarget as HTMLImageElement;
+                  target.style.display = "none";
                 }}
               />
             )}

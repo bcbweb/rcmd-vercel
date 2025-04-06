@@ -1407,6 +1407,31 @@ export type Database = {
               url: string
             }[]
           }
+        | {
+            Args: {
+              p_title: string
+              p_description: string
+              p_type: string
+              p_visibility: string
+              p_featured_image?: string
+              p_tags?: string[]
+              p_url?: string
+              p_location?: Json
+            }
+            Returns: {
+              id: string
+              created_at: string
+              title: string
+              description: string
+              type: Database["public"]["Enums"]["rcmd_type"]
+              visibility: Database["public"]["Enums"]["rcmd_visibility"]
+              owner_id: string
+              featured_image: string
+              tags: string[]
+              url: string
+              location: Json
+            }[]
+          }
       insert_rcmd_block: {
         Args: {
           p_profile_id: string

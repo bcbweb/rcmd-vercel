@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { StepProgress } from "@/components/common";
-import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import {
   Trash2,
@@ -78,7 +77,6 @@ export default function SocialMediaPage() {
     SocialIntegration[]
   >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const supabase = createClient();
   const [showTwitterModal, setShowTwitterModal] = useState(false);
   const [twitterUsername, setTwitterUsername] = useState("");
   const [isManualConnecting, setIsManualConnecting] = useState(false);

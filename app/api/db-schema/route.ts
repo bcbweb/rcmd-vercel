@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   // Only allow running this in development
   if (process.env.NODE_ENV !== "development") {
     return NextResponse.json(
@@ -96,10 +96,12 @@ export async function GET(request: NextRequest) {
       success: true,
       message: "Database schema updated successfully",
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error updating database schema:", error);
     return NextResponse.json(
-      { error: `Failed to update database schema: ${error.message}` },
+      {
+        error: `Failed to update database schema: ${error instanceof Error ? error.message : "Unknown error"}`,
+      },
       { status: 500 }
     );
   }

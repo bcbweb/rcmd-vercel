@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { uploadContentImage } from "@/utils/storage";
 import Image from "next/image";
 import { useModalStore } from "@/stores/modal-store";
 import { useRCMDStore } from "@/stores/rcmd-store";
-import { MagicFill } from "@/components/common";
 import { TagInput } from "@/components/common/forms";
 import LinkInput from "@/components/ui/link-input";
 import { Spinner } from "@/components/ui/spinner";
 import Script from "next/script";
 
-// Update TypeScript declarations for Google Maps
+// Fix TypeScript declarations for Google Maps
 declare global {
   interface Window {
     google: {
@@ -24,33 +23,36 @@ declare global {
               componentRestrictions?: { country: string | string[] };
               fields?: string[];
             }
-          ) => {
-            addListener: (event: string, callback: () => void) => void;
-            getPlace: () => {
-              place_id?: string;
-              name?: string;
-              formatted_address?: string;
-              geometry?: {
-                location: {
-                  lat: () => number;
-                  lng: () => number;
-                };
-              };
-              address_components?: Array<{
-                long_name: string;
-                short_name: string;
-                types: string[];
-              }>;
-            };
-          };
+          ) => GoogleMapsAutocomplete;
         };
         event: {
-          clearInstanceListeners: (instance: any) => void;
+          clearInstanceListeners: (instance: GoogleMapsAutocomplete) => void;
         };
       };
     };
   }
 }
+
+// Define a type for the Google Maps Autocomplete
+type GoogleMapsAutocomplete = {
+  addListener: (event: string, callback: () => void) => void;
+  getPlace: () => {
+    place_id?: string;
+    name?: string;
+    formatted_address?: string;
+    geometry?: {
+      location: {
+        lat(): number;
+        lng(): number;
+      };
+    };
+    address_components?: Array<{
+      long_name: string;
+      short_name: string;
+      types: string[];
+    }>;
+  };
+};
 
 export default function RCMDModal() {
   const { isRCMDModalOpen, setIsRCMDModalOpen, onModalSuccess } =
@@ -75,7 +77,7 @@ export default function RCMDModal() {
   } | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [url, setUrl] = useState("");
-  const [isFetchingMetadataImage, setIsFetchingMetadataImage] = useState(false);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [metadataImageUrl, setMetadataImageUrl] = useState<string | null>(null);
   const [location, setLocation] = useState<{
     placeId: string;
@@ -84,17 +86,57 @@ export default function RCMDModal() {
     lng?: number;
   } | null>(null);
   const [locationInput, setLocationInput] = useState("");
-  const [locationSuggestions, setLocationSuggestions] = useState<
-    Array<{
-      placeId: string;
-      description: string;
-    }>
-  >([]);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
-  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const locationInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<any>(null);
+  const autocompleteRef = useRef<GoogleMapsAutocomplete | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
+
+  // Add modal focus trap reference
+  const modalRef = useRef<HTMLDivElement>(null);
+  const initialFocusRef = useRef<HTMLInputElement>(null);
+
+  // Define resetForm function
+  const resetForm = useCallback(() => {
+    setTitle("");
+    setDescription("");
+    setType("other");
+    setVisibility("private");
+    setFile(null);
+    setUploadError(null);
+    setImageDimensions(null);
+    setTags([]);
+    setUrl("");
+    setLocation(null);
+    setLocationInput("");
+    setMetadataImageUrl(null);
+  }, []);
+
+  // Define handleClose function
+  const handleClose = useCallback(() => {
+    resetForm();
+    setIsRCMDModalOpen(false);
+  }, [resetForm, setIsRCMDModalOpen]);
+
+  // Add keyboard event handling for the modal
+  useEffect(() => {
+    if (!isRCMDModalOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Close on ESC key
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+
+    // Focus the first input when modal opens
+    if (initialFocusRef.current) {
+      initialFocusRef.current.focus();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isRCMDModalOpen, handleClose]);
 
   // Add effect to prevent background scrolling when modal is open
   useEffect(() => {
@@ -111,7 +153,7 @@ export default function RCMDModal() {
     }
   }, [isRCMDModalOpen]);
 
-  // Initialize Google Maps Autocomplete
+  // Initialize Google Maps Autocomplete with better error handling
   useEffect(() => {
     if (
       !isRCMDModalOpen ||
@@ -121,6 +163,8 @@ export default function RCMDModal() {
     ) {
       return;
     }
+
+    let autocompleteInstance: GoogleMapsAutocomplete | null = null;
 
     try {
       // Create the autocomplete object
@@ -132,103 +176,63 @@ export default function RCMDModal() {
         }
       );
 
+      autocompleteInstance = autocomplete;
+
       // Store the autocomplete instance
       autocompleteRef.current = autocomplete;
 
-      // Add place_changed event listener
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete.getPlace();
-        if (place.place_id) {
-          // Set the location state with the selected place details
-          setLocation({
-            placeId: place.place_id,
-            address: place.formatted_address || place.name || locationInput,
-            lat: place.geometry?.location.lat(),
-            lng: place.geometry?.location.lng(),
-          });
+      // Add place_changed event listener with better error handling
+      const placeChangedListener = () => {
+        try {
+          const place = autocomplete.getPlace();
 
-          // Update the input value to show the formatted address
-          setLocationInput(
-            place.formatted_address || place.name || locationInput
-          );
+          // More comprehensive checks for place data
+          if (!place) {
+            console.warn("No place data received from Google Maps");
+            return;
+          }
 
-          // Hide suggestions since we've selected a place
-          setShowLocationSuggestions(false);
+          if (place.place_id) {
+            // More robust handling of optional fields
+            const lat = place.geometry?.location?.lat?.();
+            const lng = place.geometry?.location?.lng?.();
+
+            // Set the location state with the selected place details
+            setLocation({
+              placeId: place.place_id,
+              address: place.formatted_address || place.name || locationInput,
+              ...(lat !== undefined && { lat }),
+              ...(lng !== undefined && { lng }),
+            });
+
+            // Update the input value to show the formatted address
+            setLocationInput(
+              place.formatted_address || place.name || locationInput
+            );
+          }
+        } catch (error) {
+          console.error("Error handling place change:", error);
         }
-      });
+      };
 
-      // Clean up on unmount
+      autocomplete.addListener("place_changed", placeChangedListener);
+
+      // Clean up on unmount with better error handling
       return () => {
-        if (autocompleteRef.current) {
-          window.google.maps.event.clearInstanceListeners(
-            autocompleteRef.current
-          );
+        if (autocompleteInstance && window.google?.maps?.event) {
+          try {
+            window.google.maps.event.clearInstanceListeners(
+              autocompleteInstance
+            );
+          } catch (error) {
+            console.error("Error cleaning up Google Maps listeners:", error);
+          }
         }
       };
     } catch (error) {
       console.error("Error initializing Google Maps Autocomplete:", error);
     }
-  }, [isRCMDModalOpen, mapsLoaded]);
-
-  const handleMetadataFound = (metadata: {
-    title?: string;
-    description?: string;
-    image?: File;
-    type?: string;
-    imageDimensions?: { width: number; height: number };
-    embedHtml?: string;
-  }) => {
-    if (metadata.title) setTitle(metadata.title);
-    if (metadata.description) setDescription(metadata.description);
-    if (metadata.type) {
-      // Map Instagram type to your existing types if needed
-      setType(metadata.type === "instagram" ? "social" : metadata.type);
-    }
-    if (metadata.image) setFile(metadata.image);
-    if (metadata.imageDimensions) setImageDimensions(metadata.imageDimensions);
-
-    // Optionally store the embed HTML if you want to use it later
-    if (metadata.embedHtml) {
-      // You might want to add a new state for this
-      // setEmbedHtml(metadata.embedHtml);
-    }
-  };
-
-  // Add this new helper function to fetch and upload the external image
-  const fetchAndUploadExternalImage = async (
-    imageUrl: string
-  ): Promise<string | null> => {
-    try {
-      console.log("Fetching external image:", imageUrl);
-      // Use the fetch API to get the image
-      const response = await fetch("/api/proxy-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to proxy image: ${response.statusText}`);
-      }
-
-      // Get the image as a blob
-      const blob = await response.blob();
-
-      // Create a File object from the blob
-      const file = new File([blob], "og-image.jpg", {
-        type: blob.type || "image/jpeg",
-      });
-
-      // Upload the file to Supabase storage
-      const uploadedUrl = await uploadContentImage(file, "rcmds");
-      console.log("Image uploaded successfully:", uploadedUrl);
-
-      return uploadedUrl;
-    } catch (error) {
-      console.error("Error fetching/uploading external image:", error);
-      return null;
-    }
-  };
+  }, [isRCMDModalOpen, mapsLoaded, locationInput]);
 
   const handleLinkMetadata = (metadata: {
     title?: string;
@@ -239,6 +243,7 @@ export default function RCMDModal() {
   }) => {
     console.log("Received metadata:", metadata); // Debug log
     try {
+      setIsLoadingMetadata(true);
       // Set title and description if they're not already set
       if (!title && metadata.title) setTitle(metadata.title);
       if (!description && metadata.description)
@@ -283,6 +288,8 @@ export default function RCMDModal() {
         );
     } catch (error) {
       console.error("Error processing metadata:", error);
+    } finally {
+      setIsLoadingMetadata(false);
     }
   };
 
@@ -335,29 +342,40 @@ export default function RCMDModal() {
     setUploadError(null);
   };
 
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setType("other");
-    setVisibility("private");
-    setFile(null);
-    setUploadError(null);
-    setImageDimensions(null);
-    setTags([]);
-    setUrl("");
-    setLocation(null);
-    setLocationInput("");
-    setMetadataImageUrl(null);
+  // Form validation
+  const [formErrors, setFormErrors] = useState<{
+    title?: string;
+    description?: string;
+  }>({});
+
+  // Validate form before submission
+  const validateForm = (): boolean => {
+    const errors: {
+      title?: string;
+      description?: string;
+    } = {};
+
+    if (!title.trim()) {
+      errors.title = "Title is required";
+    }
+
+    if (!description.trim()) {
+      errors.description = "Description is required";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  const handleClose = () => {
-    resetForm();
-    setIsRCMDModalOpen(false);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Update handleSubmit to use validation
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSaving || isSavingRCMD) return;
+
+    // Validate form first
+    if (!validateForm()) {
+      return;
+    }
 
     try {
       setIsSaving(true);
@@ -369,8 +387,15 @@ export default function RCMDModal() {
         imageUrl = uploadedUrl || undefined;
       }
       // Otherwise if we have a local file, upload it
-      else if (file) {
-        imageUrl = await uploadContentImage(file, "rcmds");
+      else if (file && !metadataImageUrl) {
+        try {
+          imageUrl = await uploadContentImage(file, "rcmds");
+        } catch (error) {
+          console.error("Error uploading file:", error);
+          setUploadError("Failed to upload image. Please try again.");
+          setIsSaving(false);
+          return;
+        }
       }
 
       // Format location data for submission
@@ -403,6 +428,7 @@ export default function RCMDModal() {
         throw new Error(rcmdError || "Failed to create new RCMD");
       }
     } catch (error) {
+      console.error("Error saving RCMD:", error);
       setUploadError(
         error instanceof Error ? error.message : "Error saving RCMD"
       );
@@ -435,8 +461,12 @@ export default function RCMDModal() {
 
   // Load Google Maps API script
   const handleGoogleMapsLoad = () => {
-    console.log("Google Maps API loaded");
-    setMapsLoaded(true);
+    try {
+      console.log("Google Maps API loaded");
+      setMapsLoaded(true);
+    } catch (error) {
+      console.error("Error loading Google Maps API:", error);
+    }
   };
 
   // Simplified location input change handler
@@ -464,7 +494,7 @@ export default function RCMDModal() {
   // Handle click outside location suggestions
   useEffect(() => {
     const handleClickOutside = () => {
-      setShowLocationSuggestions(false);
+      // setShowLocationSuggestions(false);
     };
 
     document.addEventListener("click", handleClickOutside);
@@ -473,66 +503,212 @@ export default function RCMDModal() {
     };
   }, []);
 
+  // Improved image preview function with memoization pattern
+  const getImagePreviewUrl = (file: File | null): string => {
+    if (!file) return "";
+
+    // Skip the try/catch for the type check, which is unnecessary
+    if (!(file instanceof Blob)) return "";
+
+    try {
+      return URL.createObjectURL(file);
+    } catch (error) {
+      console.error("Error creating object URL:", error);
+      return "";
+    }
+  };
+
+  // Add this new helper function to fetch and upload the external image
+  const fetchAndUploadExternalImage = async (
+    imageUrl: string
+  ): Promise<string | null> => {
+    try {
+      console.log("Fetching external image:", imageUrl);
+      // Use the fetch API to get the image
+      const response = await fetch("/api/proxy-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to proxy image: ${response.statusText}`);
+      }
+
+      // Get the image as a blob
+      const blob = await response.blob();
+
+      // Create a File object from the blob
+      const file = new File([blob], "og-image.jpg", {
+        type: blob.type || "image/jpeg",
+      });
+
+      // Upload the file to Supabase storage
+      const uploadedUrl = await uploadContentImage(file, "rcmds");
+      console.log("Image uploaded successfully:", uploadedUrl);
+
+      return uploadedUrl;
+    } catch (error) {
+      console.error("Error fetching/uploading external image:", error);
+      return null;
+    }
+  };
+
   if (!isRCMDModalOpen) return null;
 
   return (
     <>
       <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&v=quarterly`}
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}&libraries=places&v=quarterly`}
         onLoad={handleGoogleMapsLoad}
+        onError={(e) => console.error("Error loading Google Maps API:", e)}
         strategy="lazyOnload"
-        async
       />
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-hidden">
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-auto">
-          <h2 className="text-lg font-semibold mb-4">New RCMD</h2>
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-heading"
+      >
+        <div
+          ref={modalRef}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-auto"
+          tabIndex={-1} // For focus capturing
+        >
+          <h2 id="modal-heading" className="text-lg font-semibold mb-4">
+            New RCMD
+          </h2>
 
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              {/* Will implement once we get full Facebook access
-              <MagicFill onMetadataFound={handleMetadataFound} /> */}
+          <form
+            onSubmit={handleSubmit}
+            aria-label="Create new recommendation"
+            noValidate
+          >
+            <div
+              className="space-y-4"
+              role="group"
+              aria-labelledby="rcmd-form-heading"
+            >
+              <h3 id="rcmd-form-heading" className="sr-only">
+                Recommendation details
+              </h3>
 
               <div>
-                <label className="block text-sm font-medium mb-1">URL</label>
-                <LinkInput
-                  value={url}
-                  onChange={setUrl}
-                  onMetadataFetch={handleLinkMetadata}
-                  onClear={handleUrlClear}
-                  disabled={isSaving}
-                />
+                <label
+                  htmlFor="rcmd-url"
+                  className="block text-sm font-medium mb-1"
+                >
+                  URL
+                </label>
+                <div id="rcmd-url">
+                  <LinkInput
+                    value={url}
+                    onChange={setUrl}
+                    onMetadataFetch={handleLinkMetadata}
+                    onClear={handleUrlClear}
+                    disabled={isSaving}
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Title</label>
+                <label
+                  htmlFor="rcmd-title"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Title
+                  {formErrors.title && (
+                    <span className="text-red-500 ml-1" aria-hidden="true">
+                      *
+                    </span>
+                  )}
+                </label>
                 <input
+                  id="rcmd-title"
                   type="text"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (e.target.value.trim()) {
+                      setFormErrors((prev) => ({ ...prev, title: undefined }));
+                    }
+                  }}
+                  className={`w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 ${
+                    formErrors.title ? "border-red-500" : ""
+                  }`}
                   required
+                  aria-required="true"
+                  aria-invalid={!!formErrors.title}
+                  aria-describedby={
+                    formErrors.title ? "title-error" : undefined
+                  }
+                  ref={initialFocusRef}
                 />
+                {formErrors.title && (
+                  <div id="title-error" className="text-red-500 text-sm mt-1">
+                    {formErrors.title}
+                  </div>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label
+                  htmlFor="rcmd-description"
+                  className="block text-sm font-medium mb-1"
+                >
                   Description
+                  {formErrors.description && (
+                    <span className="text-red-500 ml-1" aria-hidden="true">
+                      *
+                    </span>
+                  )}
                 </label>
                 <textarea
+                  id="rcmd-description"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    if (e.target.value.trim()) {
+                      setFormErrors((prev) => ({
+                        ...prev,
+                        description: undefined,
+                      }));
+                    }
+                  }}
+                  className={`w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 ${
+                    formErrors.description ? "border-red-500" : ""
+                  }`}
                   rows={4}
                   required
+                  aria-required="true"
+                  aria-invalid={!!formErrors.description}
+                  aria-describedby={
+                    formErrors.description ? "description-error" : undefined
+                  }
                 />
+                {formErrors.description && (
+                  <div
+                    id="description-error"
+                    className="text-red-500 text-sm mt-1"
+                  >
+                    {formErrors.description}
+                  </div>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Type</label>
+                <label
+                  htmlFor="rcmd-type"
+                  className="block text-sm font-medium mb-1"
+                >
+                  Type
+                </label>
                 <select
+                  id="rcmd-type"
                   value={type}
                   onChange={(e) => setType(e.target.value)}
                   className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                  aria-required="true"
                 >
                   <option value="other">Other</option>
                   <option value="product">Product</option>
@@ -543,13 +719,18 @@ export default function RCMDModal() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label
+                  htmlFor="rcmd-visibility"
+                  className="block text-sm font-medium mb-1"
+                >
                   Visibility
                 </label>
                 <select
+                  id="rcmd-visibility"
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value)}
                   className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                  aria-required="true"
                 >
                   <option value="private">Private</option>
                   <option value="public">Public</option>
@@ -580,14 +761,18 @@ export default function RCMDModal() {
                     placeholder="Search for a location..."
                     className="w-full p-2 pl-10 border rounded-md dark:bg-gray-700 dark:border-gray-600"
                     ref={locationInputRef}
+                    aria-label="Location search"
+                    autoComplete="off"
                   />
 
                   {/* Location Icon */}
                   <svg
-                    className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
+                    xmlns="http://www.w3.org/2000/svg"
                     fill="none"
-                    stroke="currentColor"
                     viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -620,6 +805,7 @@ export default function RCMDModal() {
                         viewBox="0 0 24 24"
                         stroke="currentColor"
                         className="h-4 w-4"
+                        aria-hidden="true"
                       >
                         <path
                           strokeLinecap="round"
@@ -683,10 +869,10 @@ export default function RCMDModal() {
                       Image from website metadata
                     </span>
                   )}
-                  {isFetchingMetadataImage && (
+                  {isLoadingMetadata && (
                     <span className="text-sm text-blue-500 flex items-center">
                       <Spinner className="h-4 w-4 mr-2" />
-                      Loading image...
+                      Loading metadata...
                     </span>
                   )}
                 </div>
@@ -700,33 +886,59 @@ export default function RCMDModal() {
                           alt="Preview from website"
                           fill
                           className="object-contain"
-                          unoptimized={true}
+                          sizes="(max-width: 768px) 100vw, 400px"
+                          priority
+                          onError={() => {
+                            console.error("Error loading metadata image");
+                            setUploadError("Failed to load image preview");
+                            setMetadataImageUrl(null); // Clear the invalid URL
+                          }}
                         />
                       </div>
                     ) : (
                       // For local user uploaded file
-                      <Image
-                        src={URL.createObjectURL(file as Blob)}
-                        alt="Preview"
-                        width={200}
-                        height={200}
-                        className="max-h-40 object-contain"
-                      />
+                      file && (
+                        <div className="image-preview-container">
+                          {getImagePreviewUrl(file) ? (
+                            <Image
+                              src={getImagePreviewUrl(file)}
+                              alt="Image preview"
+                              width={200}
+                              height={200}
+                              className="max-h-40 object-contain"
+                              onError={() => {
+                                setUploadError(
+                                  "Error displaying image preview"
+                                );
+                                setFile(null); // Clear the problematic file
+                              }}
+                            />
+                          ) : (
+                            <div className="p-4 border border-gray-200 rounded text-gray-500 text-sm">
+                              Preview not available
+                            </div>
+                          )}
+                        </div>
+                      )
                     )}
+
+                    {/* Image details information */}
                     <div className="text-sm text-gray-500 mt-1">
                       {!metadataImageUrl && file && (
                         <div>
-                          Size: {(file.size / 1024 / 1024).toFixed(2)} MB
+                          <span className="sr-only">File size:</span>
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
                         </div>
                       )}
                       {imageDimensions && (
                         <div>
-                          {metadataImageUrl ? "Estimated " : ""}Dimensions:{" "}
+                          <span className="sr-only">Image dimensions:</span>
+                          {metadataImageUrl ? "Estimated " : ""}
                           {imageDimensions.width}x{imageDimensions.height}px
                         </div>
                       )}
                       {metadataImageUrl && (
-                        <div className="text-blue-500">
+                        <div className="text-blue-500" aria-live="polite">
                           Using image from website metadata
                         </div>
                       )}
@@ -758,10 +970,22 @@ export default function RCMDModal() {
                   disabled={isSaving || isSavingRCMD}
                   className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
                     disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-busy={isSaving || isSavingRCMD}
                 >
                   {isSaving || isSavingRCMD ? "Saving..." : "Save"}
                 </button>
               </div>
+
+              {/* General form error message area - visible on API errors */}
+              {uploadError && !formErrors.title && !formErrors.description && (
+                <div
+                  className="text-red-500 text-sm mt-3 p-2 bg-red-50 rounded"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  {uploadError}
+                </div>
+              )}
             </div>
           </form>
         </div>

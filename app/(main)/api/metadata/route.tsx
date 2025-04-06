@@ -12,9 +12,11 @@ export async function POST(req: Request) {
     let urlObj;
     try {
       urlObj = new URL(url);
-    } catch (error) {
+    } catch (urlError: unknown) {
       return NextResponse.json(
-        { error: "Invalid URL format" },
+        {
+          error: `Invalid URL format: ${urlError instanceof Error ? urlError.message : "Unknown error"}`,
+        },
         { status: 400 }
       );
     }
