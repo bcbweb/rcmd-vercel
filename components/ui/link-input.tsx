@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { Spinner } from "@/components/ui/spinner";
+import punycode from "punycode";
 
 interface LinkInputProps {
   value: string;
@@ -9,6 +11,9 @@ interface LinkInputProps {
   onMetadataFetch?: (metadata: LinkMetadata) => void;
   disabled?: boolean;
   onClear?: () => void;
+  placeholder?: string;
+  className?: string;
+  hidePreview?: boolean;
 }
 
 interface LinkMetadata {
@@ -21,102 +26,79 @@ interface LinkMetadata {
 }
 
 export default function LinkInput({
-  value,
+  value = "",
   onChange,
   onMetadataFetch,
   disabled = false,
   onClear,
+  placeholder = "Enter URL...",
+  className = "",
+  hidePreview = false,
 }: LinkInputProps) {
   const [isValid, setIsValid] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
-  const [debouncedValue, setDebouncedValue] = useState(value);
 
-  // URL validation regex
-  const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+  // Use useMemo for the regex
+  const urlRegex = useMemo(
+    () => /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
+    []
+  );
 
-  // Debounce the URL value
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedValue(value);
-    }, 500);
+  // Define fetch metadata function with useCallback
+  const fetchMetadata = useCallback(async () => {
+    if (!value) return;
 
-    return () => clearTimeout(timer);
-  }, [value]);
-
-  // Fetch metadata when debounced URL changes
-  useEffect(() => {
-    // Don't fetch if there's no URL or it's invalid
-    if (!debouncedValue || !urlRegex.test(debouncedValue)) {
-      setMetadata(null);
+    // Skip if not a valid URL
+    if (!urlRegex.test(value)) {
       setIsFetching(false);
       return;
     }
 
-    // Skip fetching if we're already fetching this same URL
-    if (isFetching && metadata?.url === debouncedValue) {
-      return;
+    try {
+      // You'll need to implement this API endpoint
+      const response = await fetch(
+        `/api/metadata?url=${encodeURIComponent(value)}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Error fetching metadata: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setMetadata(data);
+
+      if (onMetadataFetch) {
+        onMetadataFetch(data);
+      }
+    } catch (error) {
+      console.error("Error fetching metadata:", error);
+    } finally {
+      setIsFetching(false);
     }
+  }, [value, urlRegex, onMetadataFetch]);
 
-    const fetchMetadata = async () => {
-      // Don't fetch if we already have metadata for this URL
-      if (metadata?.url === debouncedValue) {
-        return;
-      }
-
+  // Fetch metadata when url changes
+  useEffect(() => {
+    if (
+      value &&
+      !isFetching &&
+      value !== metadata?.url &&
+      urlRegex.test(value)
+    ) {
       setIsFetching(true);
-      try {
-        // You'll need to implement this API endpoint
-        const response = await fetch("/api/metadata", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: debouncedValue }),
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch metadata");
-
-        const data = await response.json();
-
-        // Add the URL to the metadata for reference
-        const metadataWithUrl = {
-          ...data,
-          url: debouncedValue,
-        };
-
-        setMetadata(metadataWithUrl);
-        onMetadataFetch?.(metadataWithUrl);
-      } catch (error) {
-        console.error("Error fetching metadata:", error);
-        setMetadata(null);
-      } finally {
-        setIsFetching(false);
-      }
-    };
-
-    fetchMetadata();
-  }, [debouncedValue, onMetadataFetch]);
+      fetchMetadata();
+    }
+  }, [value, isFetching, metadata?.url, urlRegex, fetchMetadata]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-
-    // Auto-prefix http:// if needed
-    let formattedValue = newValue;
-    if (
-      newValue &&
-      !newValue.startsWith("http://") &&
-      !newValue.startsWith("https://") &&
-      newValue.includes(".")
-    ) {
-      formattedValue = `https://${newValue}`;
-    }
-
-    // Only update validity if value isn't empty
-    setIsValid(!newValue || urlRegex.test(formattedValue));
-    onChange(formattedValue);
+    const url = e.target.value;
+    onChange(url);
+    setIsValid(urlRegex.test(url));
   };
 
   return (
-    <div className="space-y-2">
+    <div className={`w-full ${className}`}>
       <div className="relative">
         {/* URL Input */}
         <div className="relative flex items-center">
@@ -125,13 +107,12 @@ export default function LinkInput({
             value={value}
             onChange={handleChange}
             disabled={disabled}
-            placeholder="https://example.com"
+            placeholder={placeholder}
             className={`
               w-full p-2 pl-10 border rounded-md 
-              dark:bg-gray-700 dark:border-gray-600
-              ${!isValid && value ? "border-red-500" : ""}
-              ${disabled ? "opacity-50 cursor-not-allowed" : ""}
-              ${isFetching || value ? "pr-10" : ""} 
+              focus:outline-none focus:ring-2 focus:ring-blue-500
+              ${isValid ? "border-gray-300" : "border-red-500"}
+              ${disabled ? "bg-gray-100 cursor-not-allowed" : ""}
             `}
           />
 
@@ -190,14 +171,16 @@ export default function LinkInput({
       </div>
 
       {/* Preview Card */}
-      {metadata && !isFetching && (
+      {!hidePreview && metadata && !isFetching && (
         <div className="mt-4 border rounded-lg p-4 dark:border-gray-600">
           <div className="flex items-start space-x-4">
             {/* Favicon */}
             {metadata.favicon && (
-              <img
+              <Image
                 src={metadata.favicon}
                 alt="Site favicon"
+                width={24}
+                height={24}
                 className="w-6 h-6 rounded"
                 onError={(e) => {
                   // Hide the image on error
@@ -226,7 +209,11 @@ export default function LinkInput({
                 {value && value.trim() !== "" && urlRegex.test(value)
                   ? (() => {
                       try {
-                        return new URL(value).hostname;
+                        const url = new URL(
+                          value.startsWith("http") ? value : `https://${value}`
+                        );
+                        // Use punycode to handle potential IDNs (international domain names)
+                        return punycode.toASCII(url.hostname);
                       } catch (
                         // eslint-disable-next-line @typescript-eslint/no-unused-vars
                         _error
@@ -240,9 +227,11 @@ export default function LinkInput({
 
             {/* Preview Image */}
             {metadata.image && (
-              <img
+              <Image
                 src={metadata.image}
                 alt="Link preview"
+                width={80}
+                height={80}
                 className="w-20 h-20 object-cover rounded"
                 onError={(event) => {
                   // Hide the image on error

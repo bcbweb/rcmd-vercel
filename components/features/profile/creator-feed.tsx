@@ -23,77 +23,90 @@ export function CreatorFeed({ currentHandle }: CreatorFeedProps) {
   const observerTarget = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  const fetchCreators = useCallback(async (isInitial: boolean = false) => {
-    if (isLoading) return;
+  const fetchCreators = useCallback(
+    async (isInitial: boolean = false) => {
+      if (isLoading) return;
 
-    setIsLoading(true);
+      setIsLoading(true);
 
-    const baseSelect = `*`;
+      const baseSelect = `*`;
 
-    const createBaseQuery = () =>
-      supabase
-        .from("creators")
-        .select(baseSelect)
-        .order("created_at", { ascending: false })
-        .limit(ITEMS_PER_PAGE);
+      const createBaseQuery = () =>
+        supabase
+          .from("creators")
+          .select(baseSelect)
+          .order("created_at", { ascending: false })
+          .limit(ITEMS_PER_PAGE);
 
-    try {
-      let query = createBaseQuery();
+      try {
+        let query = createBaseQuery();
 
-      if (isInitial && currentHandle) {
-        // Get the current creator first
-        const { data: currentCreator } = await createBaseQuery()
-          .eq("handle", currentHandle)
-          .limit(1)
-          .single();
+        if (isInitial && currentHandle) {
+          // Get the current creator first
+          const { data: currentCreator } = await createBaseQuery()
+            .eq("handle", currentHandle)
+            .limit(1)
+            .single();
 
-        // If found, create new query with timestamp condition
-        if (currentCreator) {
-          query = createBaseQuery().lte("created_at", currentCreator.created_at);
+          // If found, create new query with timestamp condition
+          if (currentCreator) {
+            query = createBaseQuery().lte(
+              "created_at",
+              currentCreator.created_at
+            );
+          }
+        } else if (creators.length > 0) {
+          // Pagination query
+          query = createBaseQuery().lt(
+            "created_at",
+            creators[creators.length - 1].created_at
+          );
         }
-      } else if (creators.length > 0) {
-        // Pagination query
-        query = createBaseQuery().lt("created_at", creators[creators.length - 1].created_at);
+
+        const { data: newProfiles, error: fetchError } = await query;
+
+        if (fetchError) throw fetchError;
+
+        if (newProfiles) {
+          const creatorsArray = Array.isArray(newProfiles)
+            ? newProfiles
+            : [newProfiles];
+          setCreators((prev) =>
+            isInitial ? creatorsArray : [...prev, ...creatorsArray]
+          );
+          setHasMore(creatorsArray.length === ITEMS_PER_PAGE);
+        } else {
+          if (isInitial) setCreators([]);
+          setHasMore(false);
+        }
+      } catch (error) {
+        console.error("Error fetching creators:", error);
+        setError("Error loading creators");
+        setCreators([]);
+      } finally {
+        setIsLoading(false);
       }
-
-      const { data: newProfiles, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-
-      if (newProfiles) {
-        const creatorsArray = Array.isArray(newProfiles) ? newProfiles : [newProfiles];
-        setCreators(prev => isInitial ? creatorsArray : [...prev, ...creatorsArray]);
-        setHasMore(creatorsArray.length === ITEMS_PER_PAGE);
-      } else {
-        if (isInitial) setCreators([]);
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error("Error fetching creators:", error);
-      setError("Error loading creators");
-      setCreators([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentHandle, isLoading, creators]);
+    },
+    [currentHandle, isLoading, creators, supabase]
+  );
 
   useEffect(() => {
     setCreators([]); // Reset creators when currentHandle changes
     setHasMore(true); // Reset hasMore
     fetchCreators(true);
-  }, [currentHandle]);
+  }, [currentHandle, fetchCreators]);
 
   // Intersection Observer setup
   useEffect(() => {
     const observer = new IntersectionObserver(
-      entries => {
+      (entries) => {
         if (entries[0]?.isIntersecting && hasMore && !isLoading) {
           fetchCreators(false);
         }
       },
       {
         root: null,
-        rootMargin: '100px',
+        rootMargin: "100px",
         threshold: 0.1,
       }
     );
@@ -111,7 +124,7 @@ export function CreatorFeed({ currentHandle }: CreatorFeedProps) {
         <div className="text-center">
           <p className="text-xl">{error}</p>
           <button
-            onClick={() => router.push('/explore/people')}
+            onClick={() => router.push("/explore/people")}
             className="mt-4 px-4 py-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
           >
             Back to Explore
@@ -127,7 +140,7 @@ export function CreatorFeed({ currentHandle }: CreatorFeedProps) {
       <div className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <button
-            onClick={() => router.push('/explore/people')}
+            onClick={() => router.push("/explore/people")}
             className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -140,10 +153,7 @@ export function CreatorFeed({ currentHandle }: CreatorFeedProps) {
       {/* Feed Content */}
       <div className="pt-14 pb-4 px-4 max-w-2xl mx-auto">
         {creators.map((creator, index) => (
-          <div
-            key={creator.id}
-            className="mb-8"
-          >
+          <div key={creator.id} className="mb-8">
             <Link href={`/${creator.handle}`} className="block">
               <div className="relative aspect-square w-full mb-4">
                 <Image
@@ -156,24 +166,16 @@ export function CreatorFeed({ currentHandle }: CreatorFeedProps) {
               </div>
 
               <div className="space-y-2">
-                <h2 className="text-xl font-bold">
-                  {creator.name}
-                </h2>
+                <h2 className="text-xl font-bold">{creator.name}</h2>
                 <p className="text-gray-400">@{creator.handle}</p>
-                {creator.bio && (
-                  <p className="text-gray-400">{creator.bio}</p>
-                )}
+                {creator.bio && <p className="text-gray-400">{creator.bio}</p>}
               </div>
             </Link>
           </div>
         ))}
 
         {/* Observer target element */}
-        <div
-          ref={observerTarget}
-          className="h-10 -mt-10"
-          aria-hidden="true"
-        />
+        <div ref={observerTarget} className="h-10 -mt-10" aria-hidden="true" />
 
         {isLoading && (
           <div className="flex justify-center py-4">

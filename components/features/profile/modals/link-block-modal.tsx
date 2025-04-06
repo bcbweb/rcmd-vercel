@@ -1,9 +1,9 @@
 "use client";
 
 import { Link } from "@/types";
-import { createClient } from '@/utils/supabase/client';
-import { useEffect, useState } from "react";
-import { useBlockStore } from '@/stores/block-store';
+import { createClient } from "@/utils/supabase/client";
+import { useEffect, useState, useCallback } from "react";
+import { useBlockStore } from "@/stores/block-store";
 import { useModalStore } from "@/stores/modal-store";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
@@ -13,48 +13,51 @@ interface LinkBlockModalProps {
   onSuccess?: () => void;
 }
 
-export default function LinkBlockModal({ profileId, onSuccess }: LinkBlockModalProps) {
+export default function LinkBlockModal({
+  profileId,
+  onSuccess,
+}: LinkBlockModalProps) {
   const { saveLinkBlock, isLoading: isSaving, error } = useBlockStore();
-  const [selectedLinkId, setSelectedLinkId] = useState('');
+  const [selectedLinkId, setSelectedLinkId] = useState("");
   const [links, setLinks] = useState<Link[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
 
-  const {
-    setIsLinkBlockModalOpen,
-    setIsLinkModalOpen,
-    setOnModalSuccess
-  } = useModalStore();
+  const { setIsLinkBlockModalOpen, setIsLinkModalOpen, setOnModalSuccess } =
+    useModalStore();
 
-  const fetchLinks = async () => {
+  const fetchLinks = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
       if (userError) throw userError;
       if (!user) {
-        console.error('No user found');
+        console.error("No user found");
         return;
       }
 
       const { data, error } = await supabase
-        .from('links')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("links")
+        .select("*")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setLinks(data || []);
     } catch (error) {
-      console.error('Error fetching links:', error);
+      console.error("Error fetching links:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
     fetchLinks();
-  }, []);
+  }, [fetchLinks]);
 
   const handleSave = async () => {
     if (!selectedLinkId) return;
@@ -65,11 +68,13 @@ export default function LinkBlockModal({ profileId, onSuccess }: LinkBlockModalP
         onSuccess?.();
         setIsLinkBlockModalOpen(false);
       } else {
-        throw new Error(error || 'Failed to save link block');
+        throw new Error(error || "Failed to save link block");
       }
     } catch (error) {
-      console.error('Error saving link block:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save link block');
+      console.error("Error saving link block:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save link block"
+      );
     }
   };
 
@@ -116,14 +121,17 @@ export default function LinkBlockModal({ profileId, onSuccess }: LinkBlockModalP
               <div
                 key={link.id}
                 className={`p-4 border rounded-lg mb-2 cursor-pointer transition-colors
-                  ${selectedLinkId === link.id
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50'
+                  ${
+                    selectedLinkId === link.id
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
                   }`}
                 onClick={() => setSelectedLinkId(link.id)}
               >
                 <h3 className="font-medium">{link.title}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{link.url}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {link.url}
+                </p>
               </div>
             ))
           )}
@@ -151,7 +159,7 @@ export default function LinkBlockModal({ profileId, onSuccess }: LinkBlockModalP
                 <span>Saving...</span>
               </>
             ) : (
-              'Add Link Block'
+              "Add Link Block"
             )}
           </button>
         </div>

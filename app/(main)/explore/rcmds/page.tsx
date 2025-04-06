@@ -26,7 +26,9 @@ export default function RCMDsPage() {
         .order("created_at", { ascending: false });
 
       if (searchQuery) {
-        query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+        query.or(
+          `title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`
+        );
       }
 
       const { data, error } = await query;
@@ -36,7 +38,7 @@ export default function RCMDsPage() {
     }
 
     fetchRCMDs();
-  }, [searchQuery]);
+  }, [searchQuery, supabase]);
 
   const handleRCMDClick = (id: string | null) => {
     if (!id) return;
@@ -73,7 +75,9 @@ export default function RCMDsPage() {
                   <span>{rcmd.like_count} likes</span>
                 </div>
                 {rcmd.description && (
-                  <p className="text-xs mt-1 text-gray-300 line-clamp-2">{rcmd.description}</p>
+                  <p className="text-xs mt-1 text-gray-300 line-clamp-2">
+                    {rcmd.description}
+                  </p>
                 )}
               </div>
             </div>

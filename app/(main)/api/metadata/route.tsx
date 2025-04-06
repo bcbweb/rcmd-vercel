@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
+import punycode from "punycode";
 
 export async function POST(req: Request) {
   try {
@@ -11,7 +12,12 @@ export async function POST(req: Request) {
 
     let urlObj;
     try {
+      // Handle URL parsing with punycode support
       urlObj = new URL(url);
+      // Handle potential IDN in hostname
+      if (urlObj.hostname.includes("xn--")) {
+        urlObj.hostname = punycode.toUnicode(urlObj.hostname);
+      }
     } catch (urlError: unknown) {
       return NextResponse.json(
         {

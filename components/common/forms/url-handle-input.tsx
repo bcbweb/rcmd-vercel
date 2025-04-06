@@ -76,13 +76,13 @@ export function URLHandleInput({
   }, 300);
 
   useEffect(() => {
-    if (value) {
-      debouncedCheckHandle(value);
+    if (value === "") {
+      setIsHandleAvailable(false);
+      return;
     }
-    return () => {
-      debouncedCheckHandle.cancel();
-    };
-  }, [value]);
+
+    debouncedCheckHandle(value);
+  }, [value, debouncedCheckHandle]);
 
   useEffect(() => {
     if (onAvailabilityChange) {

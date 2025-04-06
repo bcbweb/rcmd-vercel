@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { StepProgress } from "@/components/common";
 import { toast } from "sonner";
+import Image from "next/image";
 import {
   Trash2,
   Check,
@@ -314,7 +315,7 @@ export default function SocialMediaPage() {
                     <div className="flex items-center p-4">
                       <div className="flex-shrink-0 mr-4">
                         <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">
-                          <img
+                          <Image
                             src={platform.icon}
                             alt={platform.label}
                             width={24}

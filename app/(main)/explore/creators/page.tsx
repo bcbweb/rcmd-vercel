@@ -24,7 +24,9 @@ export default function CreatorsPage() {
         .order("created_at", { ascending: false });
 
       if (searchQuery) {
-        query.or(`name.ilike.%${searchQuery}%,handle.ilike.%${searchQuery}%,category.ilike.%${searchQuery}%`);
+        query.or(
+          `name.ilike.%${searchQuery}%,handle.ilike.%${searchQuery}%,bio.ilike.%${searchQuery}%`
+        );
       }
 
       const { data, error } = await query;
@@ -34,7 +36,7 @@ export default function CreatorsPage() {
     }
 
     fetchCreators();
-  }, [searchQuery]);
+  }, [searchQuery, supabase]);
 
   const handleCreatorClick = (handle: string | null) => {
     if (!handle) return;
@@ -68,11 +70,17 @@ export default function CreatorsPage() {
                 <p className="text-xs text-gray-200">@{creator.handle}</p>
                 <p className="text-xs text-gray-300">{creator.category}</p>
                 <div className="flex items-center mt-1">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${creator.status === 'approved' ? 'bg-green-500' :
-                    creator.status === 'pending' ? 'bg-yellow-500' :
-                      creator.status === 'rejected' ? 'bg-red-500' :
-                        'bg-gray-500'
-                    } bg-opacity-50`}>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      creator.status === "approved"
+                        ? "bg-green-500"
+                        : creator.status === "pending"
+                          ? "bg-yellow-500"
+                          : creator.status === "rejected"
+                            ? "bg-red-500"
+                            : "bg-gray-500"
+                    } bg-opacity-50`}
+                  >
                     {creator.status}
                   </span>
                   {creator.verified && (

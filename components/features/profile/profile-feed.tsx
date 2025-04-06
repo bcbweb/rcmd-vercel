@@ -23,77 +23,90 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
   const observerTarget = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  const fetchProfiles = useCallback(async (isInitial: boolean = false) => {
-    if (isLoading) return;
+  const fetchProfiles = useCallback(
+    async (isInitial: boolean = false) => {
+      if (isLoading) return;
 
-    setIsLoading(true);
+      setIsLoading(true);
 
-    const baseSelect = `*`;
+      const baseSelect = `*`;
 
-    const createBaseQuery = () =>
-      supabase
-        .from("profiles")
-        .select(baseSelect)
-        .order("created_at", { ascending: false })
-        .limit(ITEMS_PER_PAGE);
+      const createBaseQuery = () =>
+        supabase
+          .from("profiles")
+          .select(baseSelect)
+          .order("created_at", { ascending: false })
+          .limit(ITEMS_PER_PAGE);
 
-    try {
-      let query = createBaseQuery();
+      try {
+        let query = createBaseQuery();
 
-      if (isInitial && currentHandle) {
-        // Get the current profile first
-        const { data: currentProfile } = await createBaseQuery()
-          .eq("handle", currentHandle)
-          .limit(1)
-          .single();
+        if (isInitial && currentHandle) {
+          // Get the current profile first
+          const { data: currentProfile } = await createBaseQuery()
+            .eq("handle", currentHandle)
+            .limit(1)
+            .single();
 
-        // If found, create new query with timestamp condition
-        if (currentProfile) {
-          query = createBaseQuery().lte("created_at", currentProfile.created_at);
+          // If found, create new query with timestamp condition
+          if (currentProfile) {
+            query = createBaseQuery().lte(
+              "created_at",
+              currentProfile.created_at
+            );
+          }
+        } else if (profiles.length > 0) {
+          // Pagination query
+          query = createBaseQuery().lt(
+            "created_at",
+            profiles[profiles.length - 1].created_at
+          );
         }
-      } else if (profiles.length > 0) {
-        // Pagination query
-        query = createBaseQuery().lt("created_at", profiles[profiles.length - 1].created_at);
+
+        const { data: newProfiles, error: fetchError } = await query;
+
+        if (fetchError) throw fetchError;
+
+        if (newProfiles) {
+          const profilesArray = Array.isArray(newProfiles)
+            ? newProfiles
+            : [newProfiles];
+          setProfiles((prev) =>
+            isInitial ? profilesArray : [...prev, ...profilesArray]
+          );
+          setHasMore(profilesArray.length === ITEMS_PER_PAGE);
+        } else {
+          if (isInitial) setProfiles([]);
+          setHasMore(false);
+        }
+      } catch (error) {
+        console.error("Error fetching profiles:", error);
+        setError("Error loading profiles");
+        setProfiles([]);
+      } finally {
+        setIsLoading(false);
       }
-
-      const { data: newProfiles, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-
-      if (newProfiles) {
-        const profilesArray = Array.isArray(newProfiles) ? newProfiles : [newProfiles];
-        setProfiles(prev => isInitial ? profilesArray : [...prev, ...profilesArray]);
-        setHasMore(profilesArray.length === ITEMS_PER_PAGE);
-      } else {
-        if (isInitial) setProfiles([]);
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error("Error fetching profiles:", error);
-      setError("Error loading profiles");
-      setProfiles([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentHandle, isLoading, profiles]);
+    },
+    [currentHandle, isLoading, profiles, supabase]
+  );
 
   useEffect(() => {
     setProfiles([]); // Reset profiles when currentHandle changes
     setHasMore(true); // Reset hasMore
     fetchProfiles(true);
-  }, [currentHandle]);
+  }, [currentHandle, fetchProfiles]);
 
   // Intersection Observer setup
   useEffect(() => {
     const observer = new IntersectionObserver(
-      entries => {
+      (entries) => {
         if (entries[0]?.isIntersecting && hasMore && !isLoading) {
           fetchProfiles(false);
         }
       },
       {
         root: null,
-        rootMargin: '100px',
+        rootMargin: "100px",
         threshold: 0.1,
       }
     );
@@ -111,7 +124,7 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
         <div className="text-center">
           <p className="text-xl">{error}</p>
           <button
-            onClick={() => router.push('/explore/people')}
+            onClick={() => router.push("/explore/people")}
             className="mt-4 px-4 py-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
           >
             Back to Explore
@@ -127,7 +140,7 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
       <div className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <button
-            onClick={() => router.push('/explore/people')}
+            onClick={() => router.push("/explore/people")}
             className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -140,10 +153,7 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
       {/* Feed Content */}
       <div className="pt-14 pb-4 px-4 max-w-2xl mx-auto">
         {profiles.map((profile, index) => (
-          <div
-            key={profile.id}
-            className="mb-8"
-          >
+          <div key={profile.id} className="mb-8">
             <Link href={`/${profile.handle}`} className="block">
               <div className="relative aspect-square w-full mb-4">
                 <Image
@@ -160,20 +170,14 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
                   {profile.first_name} {profile.last_name}
                 </h2>
                 <p className="text-gray-400">@{profile.handle}</p>
-                {profile.bio && (
-                  <p className="text-gray-400">{profile.bio}</p>
-                )}
+                {profile.bio && <p className="text-gray-400">{profile.bio}</p>}
               </div>
             </Link>
           </div>
         ))}
 
         {/* Observer target element */}
-        <div
-          ref={observerTarget}
-          className="h-10 -mt-10"
-          aria-hidden="true"
-        />
+        <div ref={observerTarget} className="h-10 -mt-10" aria-hidden="true" />
 
         {isLoading && (
           <div className="flex justify-center py-4">

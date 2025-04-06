@@ -1,9 +1,9 @@
 "use client";
 
 import { Collection } from "@/types";
-import { createClient } from '@/utils/supabase/client';
-import { useEffect, useState } from "react";
-import { useBlockStore } from '@/stores/block-store';
+import { createClient } from "@/utils/supabase/client";
+import { useEffect, useState, useCallback } from "react";
+import { useBlockStore } from "@/stores/block-store";
 import { useModalStore } from "@/stores/modal-store";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
@@ -13,9 +13,12 @@ interface CollectionBlockModalProps {
   onSuccess?: () => void;
 }
 
-export default function CollectionBlockModal({ profileId, onSuccess }: CollectionBlockModalProps) {
+export default function CollectionBlockModal({
+  profileId,
+  onSuccess,
+}: CollectionBlockModalProps) {
   const { saveCollectionBlock, isLoading: isSaving, error } = useBlockStore();
-  const [selectedCollectionId, setSelectedCollectionId] = useState('');
+  const [selectedCollectionId, setSelectedCollectionId] = useState("");
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
@@ -23,53 +26,63 @@ export default function CollectionBlockModal({ profileId, onSuccess }: Collectio
   const {
     setIsCollectionBlockModalOpen,
     setIsCollectionModalOpen,
-    setOnModalSuccess
+    setOnModalSuccess,
   } = useModalStore();
 
-  const fetchCollections = async () => {
+  const fetchCollections = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
       if (userError) throw userError;
       if (!user) {
-        console.error('No user found');
+        console.error("No user found");
         return;
       }
 
       const { data, error } = await supabase
-        .from('collections')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("collections")
+        .select("*")
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setCollections(data || []);
     } catch (error) {
-      console.error('Error fetching collections:', error);
+      console.error("Error fetching collections:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
     fetchCollections();
-  }, []);
+  }, [fetchCollections]);
 
   const handleSave = async () => {
     if (!selectedCollectionId) return;
 
     try {
-      const success = await saveCollectionBlock(profileId, selectedCollectionId);
+      const success = await saveCollectionBlock(
+        profileId,
+        selectedCollectionId
+      );
       if (success) {
         onSuccess?.();
         setIsCollectionBlockModalOpen(false);
       } else {
-        throw new Error(error || 'Failed to save collection block');
+        throw new Error(error || "Failed to save collection block");
       }
     } catch (error) {
-      console.error('Error saving collection block:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save collection block');
+      console.error("Error saving collection block:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to save collection block"
+      );
     }
   };
 
@@ -116,14 +129,17 @@ export default function CollectionBlockModal({ profileId, onSuccess }: Collectio
               <div
                 key={collection.id}
                 className={`p-4 border rounded-lg mb-2 cursor-pointer transition-colors
-                  ${selectedCollectionId === collection.id
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50'
+                  ${
+                    selectedCollectionId === collection.id
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
                   }`}
                 onClick={() => setSelectedCollectionId(collection.id)}
               >
                 <h3 className="font-medium">{collection.name}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{collection.description}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {collection.description}
+                </p>
               </div>
             ))
           )}
@@ -151,7 +167,7 @@ export default function CollectionBlockModal({ profileId, onSuccess }: Collectio
                 <span>Saving...</span>
               </>
             ) : (
-              'Add Collection Block'
+              "Add Collection Block"
             )}
           </button>
         </div>

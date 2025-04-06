@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SocialPlatform } from "@/utils/social-auth";
 import { createClient } from "@/utils/supabase/server";
+import punycode from "punycode";
 
 // Define a type for the user profile returned by social platforms
 interface SocialUserProfile {
@@ -77,6 +78,15 @@ function generateRedirectUrl(
 ) {
   const baseUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/protected/onboarding/social-media`;
   const url = new URL(baseUrl);
+
+  // Handle potential IDNs in the URL
+  try {
+    if (url.hostname.includes("xn--")) {
+      url.hostname = punycode.toUnicode(url.hostname);
+    }
+  } catch (e) {
+    console.error("Error converting punycode:", e);
+  }
 
   if (status === "success") {
     url.searchParams.set("success", `connected_${platform}`);

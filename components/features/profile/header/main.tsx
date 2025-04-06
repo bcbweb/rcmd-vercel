@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { ProfilePage } from "@/types";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
@@ -68,29 +68,25 @@ export default function ProfileHeaderMain({
   const [isAddingPage, setIsAddingPage] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  // Fetch custom pages on component mount
-  useEffect(() => {
-    fetchCustomPages();
-  }, []);
+  // Define fetchCustomPages with useCallback
+  const fetchCustomPages = useCallback(async () => {
+    if (!userId) return;
 
-  const fetchCustomPages = async () => {
     try {
-      // First get the user's profile ID
-      const { data: profile, error: profileError } = await supabase
+      // Get profile ID first
+      const { data: profile } = await supabase
         .from("profiles")
         .select("id, default_page_id")
         .eq("auth_user_id", userId)
         .single();
 
-      if (profileError || !profile) {
-        throw profileError || new Error("Profile not found");
-      }
+      if (!profile) throw new Error("Profile not found");
 
       // Now fetch pages using profile_id
       const { data: pages, error } = await supabase
         .from("profile_pages")
         .select("*")
-        .eq("profile_id", profile.id) // Changed from owner_id
+        .eq("profile_id", profile.id)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -101,7 +97,12 @@ export default function ProfileHeaderMain({
       console.error("Error fetching pages:", error);
       toast.error("Failed to load custom pages");
     }
-  };
+  }, [supabase, userId]);
+
+  // Fetch custom pages on component mount
+  useEffect(() => {
+    fetchCustomPages();
+  }, [fetchCustomPages]);
 
   const handleAddPage = async (pageName: string) => {
     if (!pageName.trim()) {

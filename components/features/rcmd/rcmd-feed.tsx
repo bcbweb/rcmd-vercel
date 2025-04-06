@@ -23,12 +23,13 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
   const observerTarget = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  const fetchRCMDs = useCallback(async (isInitial: boolean = false) => {
-    if (isLoading) return;
+  const fetchRCMDs = useCallback(
+    async (isInitial: boolean = false) => {
+      if (isLoading) return;
 
-    setIsLoading(true);
+      setIsLoading(true);
 
-    const baseSelect = `
+      const baseSelect = `
       *,
       profiles(
         id,
@@ -41,68 +42,70 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
       )
     `;
 
-    const createBaseQuery = () =>
-      supabase
-        .from("rcmds")
-        .select(baseSelect)
-        .order("created_at", { ascending: false })
-        .limit(ITEMS_PER_PAGE);
+      const createBaseQuery = () =>
+        supabase
+          .from("rcmds")
+          .select(baseSelect)
+          .order("created_at", { ascending: false })
+          .limit(ITEMS_PER_PAGE);
 
-    try {
-      let query = createBaseQuery();
+      try {
+        let query = createBaseQuery();
 
-      if (isInitial && currentId) {
-        // Get the current RCMD first
-        const { data: currentRCMD } = await createBaseQuery()
-          .eq("id", currentId)
-          .limit(1)
-          .single();
+        if (isInitial && currentId) {
+          // Get the current RCMD first
+          const { data: currentRCMD } = await createBaseQuery()
+            .eq("id", currentId)
+            .limit(1)
+            .single();
 
-        // If found, create new query with timestamp condition
-        if (currentRCMD) {
-          query = createBaseQuery().lte("created_at", currentRCMD.created_at);
+          // If found, create new query with timestamp condition
+          if (currentRCMD) {
+            query = createBaseQuery().lte("created_at", currentRCMD.created_at);
+          }
+        } else if (rcmds.length > 0) {
+          // Pagination query
+          query = createBaseQuery().lt(
+            "created_at",
+            rcmds[rcmds.length - 1].created_at
+          );
         }
-      } else if (rcmds.length > 0) {
-        // Pagination query
-        query = createBaseQuery().lt("created_at", rcmds[rcmds.length - 1].created_at);
+
+        const { data: newRCMDs, error: fetchError } = await query;
+
+        if (fetchError) throw fetchError;
+
+        if (newRCMDs) {
+          const rcmdsArray = Array.isArray(newRCMDs) ? newRCMDs : [newRCMDs];
+          setRCMDs((prev) =>
+            isInitial ? rcmdsArray : [...prev, ...rcmdsArray]
+          );
+          setHasMore(rcmdsArray.length === ITEMS_PER_PAGE);
+        } else {
+          if (isInitial) setRCMDs([]);
+          setHasMore(false);
+        }
+      } catch (error) {
+        console.error("Error fetching RCMDs:", error);
+        setError("Error loading RCMDs");
+        setRCMDs([]);
+      } finally {
+        setIsLoading(false);
       }
-
-      const { data: newRCMDs, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-
-      if (newRCMDs) {
-        const rcmdsArray = Array.isArray(newRCMDs) ? newRCMDs : [newRCMDs];
-        setRCMDs(prev => isInitial ? rcmdsArray : [...prev, ...rcmdsArray]);
-        setHasMore(rcmdsArray.length === ITEMS_PER_PAGE);
-      } else {
-        if (isInitial) setRCMDs([]);
-        setHasMore(false);
-      }
-    } catch (error) {
-      console.error("Error fetching RCMDs:", error);
-      setError("Error loading RCMDs");
-      setRCMDs([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentId, isLoading, rcmds]);
+    },
+    [currentId, isLoading, rcmds, supabase]
+  );
 
   useEffect(() => {
     setRCMDs([]); // Reset rcmds when currentId changes
     setHasMore(true); // Reset hasMore
     fetchRCMDs(true);
-  }, [currentId]);
-
-  // Initial load
-  useEffect(() => {
-    fetchRCMDs(true);
-  }, [currentId]);
+  }, [currentId, fetchRCMDs]);
 
   // Intersection Observer setup
   useEffect(() => {
     const observer = new IntersectionObserver(
-      entries => {
+      (entries) => {
         // If the target is visible and we have more items to load
         if (entries[0]?.isIntersecting && hasMore && !isLoading) {
           fetchRCMDs(false);
@@ -110,7 +113,7 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
       },
       {
         root: null, // Use viewport as root
-        rootMargin: '100px', // Start loading before the element is visible
+        rootMargin: "100px", // Start loading before the element is visible
         threshold: 0.1, // Trigger when even 10% of the target is visible
       }
     );
@@ -128,7 +131,7 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
         <div className="text-center">
           <p className="text-xl">{error}</p>
           <button
-            onClick={() => router.push('/explore/rcmds')}
+            onClick={() => router.push("/explore/rcmds")}
             className="mt-4 px-4 py-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
           >
             Back to Explore
@@ -144,7 +147,7 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
       <div className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <button
-            onClick={() => router.push('/explore/rcmds')}
+            onClick={() => router.push("/explore/rcmds")}
             className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -157,10 +160,7 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
       {/* Feed Content */}
       <div className="pt-14 pb-4 px-4 max-w-2xl mx-auto">
         {rcmds.map((rcmd, index) => (
-          <div
-            key={rcmd.id}
-            className="mb-8"
-          >
+          <div key={rcmd.id} className="mb-8">
             <Link href={`/rcmd/${rcmd.id}`} className="block">
               <div className="relative aspect-square w-full mb-4">
                 <Image
@@ -196,11 +196,7 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
         ))}
 
         {/* Observer target element */}
-        <div
-          ref={observerTarget}
-          className="h-10 -mt-10"
-          aria-hidden="true"
-        />
+        <div ref={observerTarget} className="h-10 -mt-10" aria-hidden="true" />
 
         {isLoading && (
           <div className="flex justify-center py-4">

@@ -25,7 +25,9 @@ export default function PeoplePage() {
         .order("created_at", { ascending: false });
 
       if (searchQuery) {
-        query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,handle.ilike.%${searchQuery}%`);
+        query.or(
+          `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,handle.ilike.%${searchQuery}%`
+        );
       }
 
       const { data, error } = await query;
@@ -35,7 +37,7 @@ export default function PeoplePage() {
     }
 
     fetchProfiles();
-  }, [searchQuery]);
+  }, [searchQuery, supabase]);
 
   const handleProfileClick = (handle: string | null) => {
     if (!handle) return;
@@ -70,7 +72,9 @@ export default function PeoplePage() {
                 </h3>
                 <p className="text-xs text-gray-200">@{profile.handle}</p>
                 {profile.bio && (
-                  <p className="text-xs mt-1 text-gray-300 line-clamp-2">{profile.bio}</p>
+                  <p className="text-xs mt-1 text-gray-300 line-clamp-2">
+                    {profile.bio}
+                  </p>
                 )}
               </div>
             </div>

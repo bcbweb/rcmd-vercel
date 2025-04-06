@@ -1,9 +1,9 @@
 "use client";
 
 import { RCMD } from "@/types";
-import { createClient } from '@/utils/supabase/client';
-import { useEffect, useState } from "react";
-import { useBlockStore } from '@/stores/block-store';
+import { createClient } from "@/utils/supabase/client";
+import { useEffect, useState, useCallback } from "react";
+import { useBlockStore } from "@/stores/block-store";
 import { useModalStore } from "@/stores/modal-store";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
@@ -13,48 +13,51 @@ interface RCMDBlockModalProps {
   onSuccess?: () => void;
 }
 
-export default function RCMDBlockModal({ profileId, onSuccess }: RCMDBlockModalProps) {
+export default function RCMDBlockModal({
+  profileId,
+  onSuccess,
+}: RCMDBlockModalProps) {
   const { saveRCMDBlock, isLoading: isSaving, error } = useBlockStore();
-  const [selectedRCMDId, setSelectedRCMDId] = useState('');
+  const [selectedRCMDId, setSelectedRCMDId] = useState("");
   const [rcmds, setRCMDs] = useState<RCMD[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
 
-  const {
-    setIsRCMDBlockModalOpen,
-    setIsRCMDModalOpen,
-    setOnModalSuccess
-  } = useModalStore();
+  const { setIsRCMDBlockModalOpen, setIsRCMDModalOpen, setOnModalSuccess } =
+    useModalStore();
 
-  const fetchRCMDs = async () => {
+  const fetchRCMDs = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
       if (userError) throw userError;
       if (!user) {
-        console.error('No user found');
+        console.error("No user found");
         return;
       }
 
       const { data, error } = await supabase
-        .from('rcmds')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("rcmds")
+        .select("*")
+        .eq("creator_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setRCMDs(data || []);
     } catch (error) {
-      console.error('Error fetching RCMDs:', error);
+      console.error("Error fetching RCMDs:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [supabase]);
 
   useEffect(() => {
     fetchRCMDs();
-  }, []);
+  }, [fetchRCMDs]);
 
   const handleSave = async () => {
     if (!selectedRCMDId) return;
@@ -65,11 +68,13 @@ export default function RCMDBlockModal({ profileId, onSuccess }: RCMDBlockModalP
         onSuccess?.();
         setIsRCMDBlockModalOpen(false);
       } else {
-        throw new Error(error || 'Failed to save RCMD block');
+        throw new Error(error || "Failed to save RCMD block");
       }
     } catch (error) {
-      console.error('Error saving RCMD block:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save RCMD block');
+      console.error("Error saving RCMD block:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save RCMD block"
+      );
     }
   };
 
@@ -117,9 +122,10 @@ export default function RCMDBlockModal({ profileId, onSuccess }: RCMDBlockModalP
                 <div
                   key={rcmd.id}
                   className={`p-4 border rounded-lg mb-2 cursor-pointer transition-colors
-                    ${selectedRCMDId === rcmd.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50'
+                    ${
+                      selectedRCMDId === rcmd.id
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                        : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
                     }`}
                   onClick={() => setSelectedRCMDId(rcmd.id)}
                 >
@@ -154,7 +160,7 @@ export default function RCMDBlockModal({ profileId, onSuccess }: RCMDBlockModalP
                   <span>Saving...</span>
                 </>
               ) : (
-                'Add RCMD Block'
+                "Add RCMD Block"
               )}
             </button>
           </div>

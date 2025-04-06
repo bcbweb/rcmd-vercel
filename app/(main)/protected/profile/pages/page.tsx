@@ -45,34 +45,7 @@ export default function ProfilePage() {
   const fetchLinks = useLinkStore((state) => state.fetchLinks);
   const fetchRCMDs = useRCMDStore((state) => state.fetchRCMDs);
 
-  // Get profile ID
-  useEffect(() => {
-    const getProfileId = async () => {
-      if (!userId) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("auth_user_id", userId)
-        .single();
-
-      if (profile) {
-        setProfileId(profile.id);
-        refreshBlocks(profile.id);
-      }
-    };
-
-    getProfileId();
-  }, [userId, supabase]);
-
-  useEffect(() => {
-    if (profileId) {
-      fetchCollections(profileId);
-      fetchLinks(profileId);
-      fetchRCMDs(profileId);
-    }
-  }, [profileId, fetchCollections, fetchLinks, fetchRCMDs]);
-
+  // Define refreshBlocks function first
   const refreshBlocks = useCallback(
     async (profileId: string) => {
       if (!profileId) return;
@@ -96,6 +69,34 @@ export default function ProfilePage() {
     },
     [supabase]
   );
+
+  // Get profile ID
+  useEffect(() => {
+    const getProfileId = async () => {
+      if (!userId) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("auth_user_id", userId)
+        .single();
+
+      if (profile) {
+        setProfileId(profile.id);
+        refreshBlocks(profile.id);
+      }
+    };
+
+    getProfileId();
+  }, [userId, supabase, refreshBlocks]);
+
+  useEffect(() => {
+    if (profileId) {
+      fetchCollections(profileId);
+      fetchLinks(profileId);
+      fetchRCMDs(profileId);
+    }
+  }, [profileId, fetchCollections, fetchLinks, fetchRCMDs]);
 
   const moveBlock = useCallback(
     async (dragIndex: number, hoverIndex: number) => {

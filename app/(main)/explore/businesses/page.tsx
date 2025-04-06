@@ -26,7 +26,9 @@ export default function BusinessesPage() {
         .order("created_at", { ascending: false });
 
       if (searchQuery) {
-        query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+        query.or(
+          `name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`
+        );
       }
 
       const { data, error } = await query;
@@ -36,7 +38,7 @@ export default function BusinessesPage() {
     }
 
     fetchBusinesses();
-  }, [searchQuery]);
+  }, [searchQuery, supabase]);
 
   const handleBusinessClick = (id: string | null) => {
     if (!id) return;
