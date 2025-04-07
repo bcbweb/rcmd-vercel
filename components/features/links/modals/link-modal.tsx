@@ -198,14 +198,19 @@ export default function LinkModal() {
 
   // Add handler for URL clearing
   const handleUrlClear = () => {
+    console.log("LinkModal: URL clear requested");
     setUrl("");
     setReceivedMetadata(null);
+    setMetadataError(null);
+
     // Only reset these if they were likely set from metadata
     if (!url) {
       setTitle("");
       setDescription("");
       setType("other");
     }
+
+    console.log("LinkModal: URL clear completed");
   };
 
   // Effect to clear metadata when URL changes

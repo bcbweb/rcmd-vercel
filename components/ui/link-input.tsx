@@ -10,6 +10,19 @@ import React, {
 import Image from "next/image";
 import { Spinner } from "@/components/ui/spinner";
 
+interface LinkMetadata {
+  url?: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  favicon?: string;
+  type?: string;
+  _timestamp?: number;
+}
+
+// Export the interface for use by other components
+export type { LinkMetadata };
+
 interface LinkInputProps {
   value: string;
   onChange: (value: string) => void;
@@ -19,15 +32,6 @@ interface LinkInputProps {
   placeholder?: string;
   className?: string;
   hidePreview?: boolean;
-}
-
-export interface LinkMetadata {
-  title?: string;
-  description?: string;
-  image?: string;
-  favicon?: string;
-  type?: string;
-  url?: string;
 }
 
 // Add this outside the component to use with the error handler
@@ -68,6 +72,7 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
     const [metadata, setMetadata] = useState<LinkMetadata | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [shouldFetch, setShouldFetch] = useState(false);
+    const [lastFetchedUrl, setLastFetchedUrl] = useState<string>("");
 
     // Use useMemo for the regex
     const urlRegex = useMemo(
@@ -78,25 +83,77 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
     // Normalize URL for consistent processing
     const normalizeUrl = useCallback((url: string): string => {
       if (!url) return "";
-      return url.startsWith("http") ? url : `https://${url}`;
+
+      try {
+        // First add protocol if missing
+        let normalizedUrl = url.trim();
+        if (
+          !normalizedUrl.startsWith("http://") &&
+          !normalizedUrl.startsWith("https://")
+        ) {
+          normalizedUrl = `https://${normalizedUrl}`;
+        }
+
+        // Try to create a proper URL object for consistent formatting
+        const urlObj = new URL(normalizedUrl);
+
+        // Standardize to lowercase and remove 'www.'
+        let hostname = urlObj.hostname.toLowerCase();
+        if (hostname.startsWith("www.")) {
+          hostname = hostname.substring(4);
+        }
+
+        // Rebuild the URL with standardized hostname
+        urlObj.hostname = hostname;
+
+        // Remove trailing slash and query parameters for comparison purposes
+        let fullUrl = urlObj.origin + urlObj.pathname;
+        if (fullUrl.endsWith("/")) {
+          fullUrl = fullUrl.slice(0, -1);
+        }
+
+        return fullUrl;
+      } catch (e) {
+        console.warn("URL normalization failed:", e);
+        // Return a more basic normalization if URL parsing fails
+        return url.trim().toLowerCase();
+      }
     }, []);
 
-    // Define fetch metadata function with useCallback
+    // Define fetch metadata function with useCallback and return a Promise
     const fetchMetadata = useCallback(async () => {
       if (!value || !urlRegex.test(value)) {
         setIsFetching(false);
-        return;
+        return Promise.resolve(); // Return resolved promise for early exits
+      }
+
+      const normalizedUrl = normalizeUrl(value);
+
+      console.log("URL comparison:", {
+        raw: value,
+        normalized: normalizedUrl,
+        lastFetched: lastFetchedUrl,
+        isSame: normalizedUrl === lastFetchedUrl,
+        hasMetadata: !!metadata?.url,
+      });
+
+      // Skip if we've already fetched this URL and have metadata for it
+      if (lastFetchedUrl === normalizedUrl && metadata?.url) {
+        console.log("Skipping fetch for already loaded URL:", normalizedUrl);
+        setIsFetching(false);
+        setShouldFetch(false);
+        return Promise.resolve(); // Return resolved promise for skips
       }
 
       setError(null);
       setIsFetching(true);
+      // Keep existing metadata visible during fetch to prevent flickering
 
       try {
         // Add timeout to the fetch
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-        const normalizedUrl = normalizeUrl(value);
         console.log("Fetching metadata for:", normalizedUrl);
 
         // Using proper error handling with try/catch for the API call
@@ -132,7 +189,7 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
           // Only use fallbacks if the data doesn't exist
           title: data.title || fullDomain,
           description: data.description || `Content from ${fullDomain}`,
-          url: data.url || normalizedUrl,
+          url: data.url || normalizedUrl, // Use normalized URL for consistent comparisons
           // Add timestamp to force state update
           _timestamp: Date.now(),
         };
@@ -149,37 +206,47 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
           `- url: ${data.url ? "FROM API" : "NORMALIZED"} = "${processedMetadata.url}"`
         );
 
-        // Set local state first
+        // Set local state first - use a single state update to prevent flicker
         setMetadata(processedMetadata);
+        setLastFetchedUrl(normalizedUrl); // Track this URL as successfully fetched
         setError(null);
 
         // Only call onMetadataFetch after ensuring metadata is processed
         if (onMetadataFetch) {
           console.log("Calling onMetadataFetch with:", processedMetadata);
-
-          // Add a delay to ensure React state updates properly and data is fully available
-          setTimeout(() => {
-            onMetadataFetch(processedMetadata);
-          }, 250); // Increased delay for more reliability
+          onMetadataFetch(processedMetadata);
         }
+
+        return Promise.resolve(); // Return resolved promise for successful fetches
       } catch (error) {
         console.error("Error fetching metadata:", error);
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
         setError(`Could not fetch metadata: ${errorMessage}`);
-        setMetadata(null);
+        // Don't reset metadata on error to prevent flickering
+        // Only reset if it's a new URL with no metadata yet
+        if (!metadata?.url) {
+          setMetadata(null);
+        }
+        return Promise.reject(error); // Return rejected promise for errors
       } finally {
-        // Allow a short delay before marking fetch as complete
-        setTimeout(() => {
-          setIsFetching(false);
-          setShouldFetch(false);
-        }, 200);
+        // Complete the fetching state without delays to prevent flicker
+        setIsFetching(false);
+        setShouldFetch(false);
       }
-    }, [value, urlRegex, onMetadataFetch, normalizeUrl]);
+    }, [
+      value,
+      urlRegex,
+      onMetadataFetch,
+      normalizeUrl,
+      metadata?.url,
+      lastFetchedUrl,
+    ]);
 
     // Intelligent URL validation before fetch
     const validateAndPrepareFetch = useCallback(() => {
-      if (!value) {
+      // Skip validation for empty or very short inputs
+      if (!value || value.length < 5) {
         setIsValid(true);
         return;
       }
@@ -209,54 +276,182 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
       const isValidUrl = urlRegex.test(value);
       setIsValid(isValidUrl);
 
-      // Only set up fetch if URL is valid, appears complete, and changed from last fetch
+      const normalizedUrl = normalizeUrl(value);
+
+      console.log("Validate URL:", {
+        raw: value,
+        normalized: normalizedUrl,
+        lastFetched: lastFetchedUrl,
+        shouldFetch:
+          isValidUrl && isCompleteUrl && normalizedUrl !== lastFetchedUrl,
+      });
+
+      // Only set up fetch if URL is valid, appears complete, and not already fetched
       if (
         isValidUrl &&
         isCompleteUrl &&
         value &&
-        (!metadata?.url || normalizeUrl(value) !== metadata.url)
+        normalizedUrl !== lastFetchedUrl && // Compare with last fetched URL instead
+        !isFetching
       ) {
         // Use debounce to wait until user stops typing
         setShouldFetch(true);
       }
-    }, [value, metadata?.url, urlRegex, normalizeUrl]);
+    }, [value, urlRegex, normalizeUrl, isFetching, lastFetchedUrl]);
 
     // Debounce URL changes to prevent fetching while typing
     useEffect(() => {
+      // Skip debounce if URL is empty or very short
+      if (!value || value.length < 5) {
+        return;
+      }
+
+      // Skip if we already fetched this exact URL
+      const normalizedUrl = normalizeUrl(value);
+      if (normalizedUrl === lastFetchedUrl && metadata?.url) {
+        console.log("Skipping effect for already fetched URL:", normalizedUrl);
+        return;
+      }
+
       const debounceTimer = setTimeout(() => {
         validateAndPrepareFetch();
       }, 800); // 800ms debounce for typing
 
       return () => clearTimeout(debounceTimer);
-    }, [value, validateAndPrepareFetch]);
+    }, [
+      value,
+      validateAndPrepareFetch,
+      lastFetchedUrl,
+      normalizeUrl,
+      metadata?.url,
+    ]);
 
-    // Separate effect to trigger fetch when shouldFetch changes
+    // Updated to prevent race conditions in fetching
     useEffect(() => {
       if (shouldFetch && !isFetching) {
-        fetchMetadata();
-      }
-    }, [shouldFetch, isFetching, fetchMetadata]);
+        // Create a version-stable reference to the current normalized URL
+        const currentNormalizedUrl = normalizeUrl(value);
 
+        // Double-check that we haven't already fetched this URL
+        if (currentNormalizedUrl === lastFetchedUrl && metadata?.url) {
+          console.log("Skipping duplicate fetch in trigger effect");
+          setShouldFetch(false);
+          return;
+        }
+
+        console.log("Triggering metadata fetch", {
+          value,
+          currentNormalizedUrl,
+          lastFetchedUrl,
+        });
+
+        // Add a flag for race condition detection
+        const fetchStartTime = Date.now();
+
+        // Store the active element before fetching
+        const activeElement = document.activeElement;
+        const inputRef = ref as React.MutableRefObject<HTMLInputElement | null>;
+
+        fetchMetadata().then(() => {
+          // Race condition check - if the URL has changed during fetch, log it
+          if (normalizeUrl(value) !== currentNormalizedUrl) {
+            console.log("URL changed during fetch - race condition detected", {
+              fetchDuration: Date.now() - fetchStartTime,
+              originalUrl: currentNormalizedUrl,
+              newUrl: normalizeUrl(value),
+            });
+          }
+        });
+
+        // Ensure focus is maintained after the fetch starts
+        if (activeElement === inputRef?.current && inputRef?.current) {
+          requestAnimationFrame(() => {
+            inputRef.current?.focus();
+          });
+        }
+      }
+    }, [
+      shouldFetch,
+      isFetching,
+      fetchMetadata,
+      ref,
+      value,
+      normalizeUrl,
+      lastFetchedUrl,
+      metadata?.url,
+    ]);
+
+    // Add an effect to detect when value is cleared externally
+    useEffect(() => {
+      // If the value prop is empty but we still have metadata, clear it
+      if ((!value || value.trim() === "") && (metadata || lastFetchedUrl)) {
+        console.log("LinkInput: External clear detected, resetting metadata");
+
+        // Clear all metadata state
+        setMetadata(null);
+        setLastFetchedUrl("");
+        setError(null);
+        setShouldFetch(false);
+      }
+    }, [value, metadata, lastFetchedUrl]);
+
+    // Add a resetState helper function for reuse
+    const resetState = useCallback(() => {
+      setMetadata(null);
+      setLastFetchedUrl("");
+      setError(null);
+      setShouldFetch(false);
+      setIsValid(true);
+    }, []);
+
+    // Update handleChange to use resetState for consistency
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // First update the URL value
       const url = e.target.value;
       onChange(url);
 
-      // If user clears the input, also clear metadata
-      if (!url) {
-        setMetadata(null);
-        setError(null);
+      // If the URL changed significantly, reset shouldFetch for this URL
+      if (normalizeUrl(url) !== lastFetchedUrl) {
+        setShouldFetch(false);
+      }
+
+      // If user clears the input, reset metadata and URL tracking
+      if (!url || url.trim() === "") {
+        console.log("LinkInput: URL cleared, resetting metadata");
+
+        // Use requestAnimationFrame to batch these state changes and maintain focus
+        requestAnimationFrame(() => {
+          resetState();
+        });
       }
     };
 
+    // Update handleClear to use the new resetState function
     const handleClear = () => {
+      console.log("LinkInput: Clear button clicked");
+
+      // Keep track of the input to focus after clearing
+      const inputRef = ref as React.MutableRefObject<HTMLInputElement | null>;
+
+      // First call the onClear callback if provided
       if (onClear) {
         onClear();
       } else {
         onChange("");
       }
-      setMetadata(null);
-      setError(null);
-      setIsValid(true);
+
+      // Use requestAnimationFrame to batch state updates and maintain focus
+      requestAnimationFrame(() => {
+        // Force immediate metadata clearing
+        resetState();
+
+        // Re-focus the input
+        if (inputRef?.current) {
+          inputRef.current.focus();
+        }
+
+        console.log("LinkInput: Metadata cleared");
+      });
     };
 
     // Define a helper function to handle image fallbacks - outside the event handler
@@ -308,6 +503,15 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
       },
       []
     );
+
+    // Add a cleanup function to ensure we don't have lingering effects
+    useEffect(() => {
+      return () => {
+        // Cancel any pending fetches or operations when component unmounts
+        setIsFetching(false);
+        setShouldFetch(false);
+      };
+    }, []);
 
     return (
       <div className={`relative w-full ${className}`}>
@@ -380,114 +584,128 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
         {/* Error Message */}
         {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
 
-        {/* Preview Card */}
-        {!hidePreview && metadata && !isFetching && (
-          <div className="mt-4 border rounded-lg p-4 dark:border-gray-600">
-            <div className="flex items-start space-x-4">
-              {/* Favicon */}
-              {metadata.favicon && (
-                <Image
-                  src={metadata.favicon}
-                  alt="Site favicon"
-                  width={24}
-                  height={24}
-                  className="w-6 h-6 rounded"
-                  onError={(e) => {
-                    // Hide the image on error
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              )}
-
-              <div className="flex-1 min-w-0">
-                {/* Title */}
-                {metadata.title && (
-                  <h3 className="text-sm font-medium truncate">
-                    {metadata.title}
-                  </h3>
+        {/* Preview Card with stable key and opacity transition for smoother UI */}
+        <div
+          className={`mt-4 overflow-hidden transition-all duration-300 ease-in-out ${
+            !hidePreview && metadata
+              ? "max-h-96 opacity-100"
+              : "max-h-0 opacity-0"
+          }`}
+        >
+          {metadata && (
+            <div
+              className={`border rounded-lg p-4 dark:border-gray-600 ${
+                isFetching ? "opacity-60" : "opacity-100"
+              } transition-opacity duration-200`}
+              key={`preview-${lastFetchedUrl || metadata.url || Date.now()}`}
+              data-testid="metadata-preview"
+            >
+              <div className="flex items-start space-x-4">
+                {/* Favicon */}
+                {metadata.favicon && (
+                  <Image
+                    src={metadata.favicon}
+                    alt="Site favicon"
+                    width={24}
+                    height={24}
+                    className="w-6 h-6 rounded"
+                    onError={(e) => {
+                      // Hide the image on error
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
                 )}
 
-                {/* Description */}
-                {metadata.description && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                    {metadata.description}
+                <div className="flex-1 min-w-0">
+                  {/* Title */}
+                  {metadata.title && (
+                    <h3 className="text-sm font-medium truncate">
+                      {metadata.title}
+                    </h3>
+                  )}
+
+                  {/* Description */}
+                  {metadata.description && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                      {metadata.description}
+                    </p>
+                  )}
+
+                  {/* Domain */}
+                  <p className="text-xs text-gray-400 mt-1">
+                    {value && value.trim() !== "" && urlRegex.test(value)
+                      ? getDomainFromUrl(value)
+                      : ""}
                   </p>
-                )}
+                </div>
 
-                {/* Domain */}
-                <p className="text-xs text-gray-400 mt-1">
-                  {value && value.trim() !== "" && urlRegex.test(value)
-                    ? getDomainFromUrl(value)
-                    : ""}
-                </p>
-              </div>
-
-              {/* Preview Image */}
-              {metadata.image && (
-                <div className="flex-shrink-0 relative">
-                  {/* Use Next.js Image when possible */}
-                  <div
-                    className="w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-700"
-                    data-metadata-preview="true"
-                  >
-                    {/* We need to determine if we can use Next.js Image or fallback to img */}
-                    {process.env.NODE_ENV === "development" ? (
-                      // In development, use regular img tag to avoid domain restrictions
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={metadata.image}
-                        alt="Link preview"
-                        className="w-full h-full object-cover"
-                        onError={(event) => {
-                          // Add fallback image or show placeholder
-                          const target =
-                            event.currentTarget as HTMLImageElement;
-                          target.onerror = null; // Prevent infinite error loop
-
-                          // Use our fallback handler
-                          handleImageFallback(target, metadata);
-                        }}
-                      />
-                    ) : (
-                      // In production, use proxy API with a dynamic import
-                      <div className="w-full h-full relative">
-                        <Image
-                          src={`/api/proxy-image?url=${encodeURIComponent(metadata.image)}`}
+                {/* Preview Image */}
+                {metadata.image && (
+                  <div className="flex-shrink-0 relative">
+                    {/* Use Next.js Image when possible */}
+                    <div
+                      className="w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-700"
+                      data-metadata-preview="true"
+                    >
+                      {/* We need to determine if we can use Next.js Image or fallback to img */}
+                      {process.env.NODE_ENV === "development" ? (
+                        // In development, use regular img tag to avoid domain restrictions
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={metadata.image}
                           alt="Link preview"
-                          fill
-                          className="object-cover"
-                          onError={() => {
-                            // Show favicon placeholder on error
-                            const container = document.querySelector(
-                              '[data-metadata-preview="true"]'
-                            );
-                            if (container) {
-                              const placeholderEl =
-                                container.querySelector(".image-placeholder");
-                              if (placeholderEl) {
-                                placeholderEl.classList.remove("hidden");
-                                // Set the placeholder text
-                                placeholderEl.textContent =
-                                  metadata?.title?.charAt(0).toUpperCase() ||
-                                  "?";
-                              }
-                            }
+                          className="w-full h-full object-cover"
+                          onError={(event) => {
+                            // Add fallback image or show placeholder
+                            const target =
+                              event.currentTarget as HTMLImageElement;
+                            target.onerror = null; // Prevent infinite error loop
+
+                            // Use our fallback handler
+                            handleImageFallback(target, metadata);
                           }}
                         />
-                      </div>
-                    )}
+                      ) : (
+                        // In production, use proxy API with a dynamic import
+                        <div className="w-full h-full relative">
+                          <Image
+                            src={`/api/proxy-image?url=${encodeURIComponent(metadata.image)}`}
+                            alt="Link preview"
+                            fill
+                            className="object-cover"
+                            onError={() => {
+                              // Show favicon placeholder on error
+                              const container = document.querySelector(
+                                '[data-metadata-preview="true"]'
+                              );
+                              if (container) {
+                                const placeholderEl =
+                                  container.querySelector(".image-placeholder");
+                                if (placeholderEl) {
+                                  placeholderEl.classList.remove("hidden");
+                                  // Set the placeholder text
+                                  placeholderEl.textContent =
+                                    metadata?.title?.charAt(0).toUpperCase() ||
+                                    "?";
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
 
-                    {/* Placeholder for when image fails - using empty content initially */}
-                    <div className="image-placeholder hidden w-full h-full flex items-center justify-center bg-blue-100 dark:bg-blue-800 text-blue-500 dark:text-blue-300 text-xl font-bold">
-                      {/* Initialize with a question mark that will be replaced if needed */}
-                      ?
+                      {/* Placeholder for when image fails - using empty content initially */}
+                      <div className="image-placeholder hidden w-full h-full flex items-center justify-center bg-blue-100 dark:bg-blue-800 text-blue-500 dark:text-blue-300 text-xl font-bold">
+                        {/* Initialize with a question mark that will be replaced if needed */}
+                        ?
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }

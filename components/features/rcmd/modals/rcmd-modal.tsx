@@ -553,6 +553,7 @@ export default function RCMDModal() {
 
   // Add a function to handle URL clearing
   const handleUrlClear = () => {
+    console.log("RCMD Modal: URL clear requested");
     // First set URL to empty to prevent further fetch attempts
     setUrl("");
     setMetadataError(null);
@@ -564,7 +565,7 @@ export default function RCMDModal() {
       setDescription("");
     }
 
-    // Clear file and metadata image URL separately
+    // Always clear file and metadata image URL when URL is cleared
     if (file) {
       setFile(null);
       setImageDimensions(null);
@@ -572,6 +573,8 @@ export default function RCMDModal() {
     if (metadataImageUrl) {
       setMetadataImageUrl(null);
     }
+
+    console.log("RCMD Modal: URL clear completed");
   };
 
   // Load Google Maps API script
@@ -665,6 +668,9 @@ export default function RCMDModal() {
       return uploadedUrl;
     } catch (error) {
       console.error("Error fetching/uploading external image:", error);
+      setUploadError(
+        "Failed to load image from website. Using default image instead."
+      );
       return null;
     }
   };

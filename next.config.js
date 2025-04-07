@@ -14,17 +14,45 @@ const nextConfig = {
     return config;
   },
   images: {
-    domains: [
-      "www.google.com",
-      "favicon.ico",
-      "icons.duckduckgo.com",
-      "icon.horse",
-      "t0.gstatic.com",
-      "t1.gstatic.com",
-      "t2.gstatic.com",
-      "t3.gstatic.com",
-    ],
     remotePatterns: [
+      // Convert domains to remotePatterns
+      {
+        protocol: "https",
+        hostname: "www.google.com",
+      },
+      {
+        protocol: "https",
+        hostname: "favicon.ico",
+      },
+      {
+        protocol: "https",
+        hostname: "icons.duckduckgo.com",
+      },
+      {
+        protocol: "https",
+        hostname: "icon.horse",
+      },
+      {
+        protocol: "https",
+        hostname: "t0.gstatic.com",
+      },
+      {
+        protocol: "https",
+        hostname: "t1.gstatic.com",
+      },
+      {
+        protocol: "https",
+        hostname: "t2.gstatic.com",
+      },
+      {
+        protocol: "https",
+        hostname: "t3.gstatic.com",
+      },
+      {
+        protocol: "https",
+        hostname: "rothys.com",
+      },
+      // Existing remotePatterns
       {
         protocol: "https",
         hostname: "dmhigtssxgoupibxazoe.supabase.co",
@@ -89,6 +117,38 @@ const nextConfig = {
         protocol: "https",
         hostname: "*.twimg.com",
         pathname: "/**",
+      },
+      // Brand and retail sites
+      {
+        protocol: "https",
+        hostname: "*.shopify.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "*.shopify.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.cdn.shopify.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.files.wordpress.com",
+        pathname: "/**",
+      },
+      // Add a pattern for Rothys and similar ecommerce sites
+      {
+        protocol: "http",
+        hostname: "*.com",
+        pathname: "/cdn/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.com",
+        pathname: "/cdn/**",
       },
     ],
   },
