@@ -128,7 +128,7 @@ export default function LinkModal() {
         console.warn("Received incomplete metadata:", metadata);
       }
 
-      // Store incoming metadata in state rather than immediately updating form fields
+      // Always store incoming metadata and replace any existing metadata
       setReceivedMetadata(metadata);
     } catch (error) {
       console.error("Error processing metadata in LinkModal:", error);
@@ -200,15 +200,14 @@ export default function LinkModal() {
   const handleUrlClear = () => {
     console.log("LinkModal: URL clear requested");
     setUrl("");
+    // Always clear metadata when URL is cleared
     setReceivedMetadata(null);
     setMetadataError(null);
 
-    // Only reset these if they were likely set from metadata
-    if (!url) {
-      setTitle("");
-      setDescription("");
-      setType("other");
-    }
+    // Reset all form fields that might have been populated from metadata
+    setTitle("");
+    setDescription("");
+    setType("other");
 
     console.log("LinkModal: URL clear completed");
   };
@@ -218,6 +217,7 @@ export default function LinkModal() {
     // If URL is cleared or significantly changed, clear any existing metadata
     if (!url || url.trim() === "") {
       setReceivedMetadata(null);
+      setMetadataError(null);
     }
   }, [url]);
 
