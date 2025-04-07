@@ -195,18 +195,22 @@ export default function RCMDModal() {
     let autocompleteInstance: GoogleMapsAutocomplete | null = null;
 
     try {
-      // Create the autocomplete object
+      // Create the autocomplete object with more specific fields
       const autocomplete = new window.google.maps.places.Autocomplete(
         locationInputRef.current,
         {
           types: ["establishment", "geocode"],
-          fields: ["place_id", "formatted_address", "geometry", "name"],
+          fields: [
+            "place_id",
+            "formatted_address",
+            "geometry",
+            "name",
+            "address_components",
+          ],
         }
       );
 
       autocompleteInstance = autocomplete;
-
-      // Store the autocomplete instance
       autocompleteRef.current = autocomplete;
 
       // Add place_changed event listener with better error handling
@@ -220,33 +224,38 @@ export default function RCMDModal() {
             return;
           }
 
-          if (place.place_id) {
-            // More robust handling of optional fields
-            const lat = place.geometry?.location?.lat?.();
-            const lng = place.geometry?.location?.lng?.();
-
-            // Set the location state with the selected place details
-            setLocation({
-              place_id: place.place_id,
-              description:
-                place.formatted_address || place.name || locationInput,
-              ...(lat !== undefined && { lat }),
-              ...(lng !== undefined && { lng }),
-            });
-
-            // Update the input value to show the formatted address
-            setLocationInput(
-              place.formatted_address || place.name || locationInput
-            );
+          // Check if we have a valid place selection (not just user input)
+          if (!place.place_id) {
+            console.warn("Invalid place selection - no place_id");
+            return;
           }
+
+          // Get coordinates if available
+          const lat = place.geometry?.location?.lat?.();
+          const lng = place.geometry?.location?.lng?.();
+
+          // Get the most specific address possible
+          const description =
+            place.formatted_address || place.name || locationInput;
+
+          // Update both states in a single batch to prevent race conditions
+          setLocation({
+            place_id: place.place_id,
+            description,
+            ...(lat !== undefined && { lat }),
+            ...(lng !== undefined && { lng }),
+          });
+          setLocationInput(description);
         } catch (error) {
           console.error("Error handling place change:", error);
+          // Clear location data on error
+          setLocation(null);
         }
       };
 
       autocomplete.addListener("place_changed", placeChangedListener);
 
-      // Clean up on unmount with better error handling
+      // Clean up on unmount
       return () => {
         if (autocompleteInstance && window.google?.maps?.event) {
           try {
@@ -260,8 +269,10 @@ export default function RCMDModal() {
       };
     } catch (error) {
       console.error("Error initializing Google Maps Autocomplete:", error);
+      // Show error state to user
+      setLocation(null);
     }
-  }, [isRCMDModalOpen, mapsLoaded, locationInput]);
+  }, [isRCMDModalOpen, mapsLoaded]);
 
   const handleLinkMetadata = (metadata: {
     title?: string;
@@ -531,25 +542,30 @@ export default function RCMDModal() {
     console.log("RCMD Modal: URL clear completed");
   };
 
-  // Load Google Maps API script
+  // Load Google Maps API script with better error handling
   const handleGoogleMapsLoad = () => {
     try {
-      console.log("Google Maps API loaded");
+      if (!window.google?.maps?.places) {
+        throw new Error("Google Maps Places API not loaded correctly");
+      }
+      console.log("Google Maps API loaded successfully");
       setMapsLoaded(true);
     } catch (error) {
       console.error("Error loading Google Maps API:", error);
+      // Show error state to user
+      setMapsLoaded(false);
     }
   };
 
-  // Simplified location input change handler
+  // Simplified location input change handler with better error handling
   const handleLocationInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const value = e.target.value;
     setLocationInput(value);
 
-    // Clear the location data if the input is cleared
-    if (!value) {
+    // Only clear location data if input is cleared
+    if (!value.trim()) {
       setLocation(null);
     }
   };
@@ -617,7 +633,10 @@ export default function RCMDModal() {
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}&libraries=places&v=quarterly`}
         onLoad={handleGoogleMapsLoad}
-        onError={(e) => console.error("Error loading Google Maps API:", e)}
+        onError={(e) => {
+          console.error("Error loading Google Maps API:", e);
+          setMapsLoaded(false);
+        }}
         strategy="lazyOnload"
       />
       <div
@@ -838,11 +857,21 @@ export default function RCMDModal() {
                       value={locationInput}
                       onChange={handleLocationInputChange}
                       placeholder="Search for a location..."
-                      className="w-full p-2 pl-10 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                      className={`w-full p-2 pl-10 border rounded-md dark:bg-gray-700 dark:border-gray-600 ${
+                        !mapsLoaded ? "bg-gray-100 dark:bg-gray-600" : ""
+                      }`}
                       ref={locationInputRef}
                       aria-label="Location search"
                       autoComplete="off"
+                      disabled={!mapsLoaded}
                     />
+                    {!mapsLoaded && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 dark:bg-gray-600/50 rounded-md">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          Loading location search...
+                        </span>
+                      </div>
+                    )}
 
                     {/* Location Icon */}
                     <svg

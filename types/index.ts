@@ -60,6 +60,7 @@ export interface CollectionWithItems extends Collection {
       id: string;
       [key: string]: any;
     };
+    rcmds?: RCMD;
     created_at: string;
   }>;
 }

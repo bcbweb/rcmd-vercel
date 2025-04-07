@@ -4,6 +4,15 @@ import { createClient } from "@/utils/supabase/server";
 import { RootAuthInitializer } from "@/components/features/auth";
 import "../globals.css";
 
+export const metadata = {
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+};
+
 export default async function FeedRootLayout({
   children,
 }: {
