@@ -1262,17 +1262,11 @@ export type Database = {
     }
     Functions: {
       delete_profile_page: {
-        Args: {
-          page_id: string
-        }
+        Args: { page_id: string }
         Returns: undefined
       }
       insert_block_with_order: {
-        Args: {
-          p_profile_id: string
-          p_content: Json
-          p_type: string
-        }
+        Args: { p_profile_id: string; p_content: Json; p_type: string }
         Returns: {
           auth_user_id: string
           created_at: string | null
@@ -1285,16 +1279,11 @@ export type Database = {
         }
       }
       insert_collection: {
-        Args: {
-          payload: Json
-        }
+        Args: { payload: Json }
         Returns: Json
       }
       insert_collection_block: {
-        Args: {
-          p_profile_id: string
-          p_collection_id: string
-        }
+        Args: { p_profile_id: string; p_collection_id: string }
         Returns: undefined
       }
       insert_image_block: {
@@ -1330,85 +1319,16 @@ export type Database = {
         }[]
       }
       insert_link_block: {
-        Args: {
-          p_profile_id: string
-          p_link_id: string
-        }
+        Args: { p_profile_id: string; p_link_id: string }
         Returns: undefined
       }
       insert_profile_page: {
-        Args: {
-          page_name: string
-          page_slug: string
-        }
+        Args: { page_name: string; page_slug: string }
         Returns: string
       }
-      insert_rcmd:
-        | {
-            Args: {
-              p_title: string
-              p_description: string
-              p_type: string
-              p_visibility: string
-              p_featured_image: string
-            }
-            Returns: {
-              id: string
-              created_at: string
-              title: string
-              description: string
-              type: Database["public"]["Enums"]["rcmd_type"]
-              visibility: Database["public"]["Enums"]["rcmd_visibility"]
-              owner_id: string
-              featured_image: string
-            }[]
-          }
-        | {
-            Args: {
-              p_title: string
-              p_description: string
-              p_type: string
-              p_visibility: string
-              p_featured_image?: string
-              p_tags?: string[]
-            }
-            Returns: {
-              id: string
-              created_at: string
-              title: string
-              description: string
-              type: Database["public"]["Enums"]["rcmd_type"]
-              visibility: Database["public"]["Enums"]["rcmd_visibility"]
-              owner_id: string
-              featured_image: string
-              tags: string[]
-            }[]
-          }
-        | {
-            Args: {
-              p_title: string
-              p_description: string
-              p_type: string
-              p_visibility: string
-              p_featured_image?: string
-              p_tags?: string[]
-              p_url?: string
-            }
-            Returns: {
-              id: string
-              created_at: string
-              title: string
-              description: string
-              type: Database["public"]["Enums"]["rcmd_type"]
-              visibility: Database["public"]["Enums"]["rcmd_visibility"]
-              owner_id: string
-              featured_image: string
-              tags: string[]
-              url: string
-            }[]
-          }
-        | {
-            Args: {
+      insert_rcmd: {
+        Args:
+          | {
               p_title: string
               p_description: string
               p_type: string
@@ -1418,25 +1338,46 @@ export type Database = {
               p_url?: string
               p_location?: Json
             }
-            Returns: {
-              id: string
-              created_at: string
-              title: string
-              description: string
-              type: Database["public"]["Enums"]["rcmd_type"]
-              visibility: Database["public"]["Enums"]["rcmd_visibility"]
-              owner_id: string
-              featured_image: string
-              tags: string[]
-              url: string
-              location: Json
-            }[]
-          }
+          | {
+              p_title: string
+              p_description: string
+              p_type: string
+              p_visibility: string
+              p_featured_image?: string
+              p_tags?: string[]
+            }
+          | {
+              p_title: string
+              p_description: string
+              p_type: string
+              p_visibility: string
+              p_featured_image?: string
+              p_tags?: string[]
+              p_url?: string
+            }
+          | {
+              p_title: string
+              p_description: string
+              p_type: string
+              p_visibility: string
+              p_featured_image: string
+            }
+        Returns: {
+          id: string
+          created_at: string
+          title: string
+          description: string
+          type: Database["public"]["Enums"]["rcmd_type"]
+          visibility: Database["public"]["Enums"]["rcmd_visibility"]
+          owner_id: string
+          featured_image: string
+          tags: string[]
+          url: string
+          location: Json
+        }[]
+      }
       insert_rcmd_block: {
-        Args: {
-          p_profile_id: string
-          p_rcmd_id: string
-        }
+        Args: { p_profile_id: string; p_rcmd_id: string }
         Returns: {
           auth_user_id: string
           created_at: string | null
@@ -1449,10 +1390,7 @@ export type Database = {
         }
       }
       insert_text_block: {
-        Args: {
-          p_profile_id: string
-          p_text: string
-        }
+        Args: { p_profile_id: string; p_text: string }
         Returns: {
           auth_user_id: string
           created_at: string | null
@@ -1465,23 +1403,15 @@ export type Database = {
         }
       }
       next_block_order: {
-        Args: {
-          p_profile_id: string
-        }
+        Args: { p_profile_id: string }
         Returns: number
       }
       reorder_profile_blocks: {
-        Args: {
-          p_profile_id: string
-          p_block_id: string
-          p_new_order: number
-        }
+        Args: { p_profile_id: string; p_block_id: string; p_new_order: number }
         Returns: boolean
       }
       toggle_rcmd_like: {
-        Args: {
-          rcmd_id: string
-        }
+        Args: { rcmd_id: string }
         Returns: boolean
       }
     }
@@ -1513,27 +1443,29 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -1541,20 +1473,22 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -1562,20 +1496,22 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -1583,21 +1519,23 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
@@ -1606,6 +1544,35 @@ export type CompositeTypes<
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      business_status: ["pending", "active", "suspended", "closed"],
+      business_type: [
+        "retail",
+        "restaurant",
+        "service",
+        "entertainment",
+        "accommodation",
+        "other",
+      ],
+      rcmd_status: ["draft", "active", "archived", "flagged", "deleted"],
+      rcmd_type: ["product", "service", "place", "experience", "other"],
+      rcmd_visibility: ["public", "private", "followers"],
+      social_platform_type: [
+        "instagram",
+        "twitter",
+        "youtube",
+        "tiktok",
+        "linkedin",
+        "facebook",
+      ],
+      text_alignment: ["left", "center", "right"],
+      verification_status: ["unverified", "pending", "verified", "rejected"],
+    },
+  },
+} as const

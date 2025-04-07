@@ -9,6 +9,9 @@ import { TagInput } from "@/components/common/forms";
 import LinkInput from "@/components/ui/link-input";
 import { Spinner } from "@/components/ui/spinner";
 import Script from "next/script";
+import { RCMDType, RCMDVisibility } from "@/types";
+import { toast } from "sonner";
+import { imageLoader } from "@/utils/image";
 
 // Fix TypeScript declarations for Google Maps
 declare global {
@@ -55,14 +58,15 @@ type GoogleMapsAutocomplete = {
 };
 
 export default function RCMDModal() {
-  const { isRCMDModalOpen, setIsRCMDModalOpen, onModalSuccess } =
-    useModalStore();
-
   const {
-    insertRCMD,
-    isLoading: isSavingRCMD,
-    error: rcmdError,
-  } = useRCMDStore();
+    isRCMDModalOpen,
+    setIsRCMDModalOpen,
+    onModalSuccess,
+    isRCMDEditMode,
+    rcmdToEdit,
+  } = useModalStore();
+
+  const { insertRCMD, updateRCMD, isLoading: isSavingRCMD } = useRCMDStore();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -71,33 +75,26 @@ export default function RCMDModal() {
   const [isSaving, setIsSaving] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [imageDimensions, setImageDimensions] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [url, setUrl] = useState("");
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false);
   const [metadataImageUrl, setMetadataImageUrl] = useState<string | null>(null);
   const [location, setLocation] = useState<{
-    placeId: string;
-    address: string;
+    place_id: string;
+    description: string;
     lat?: number;
     lng?: number;
   } | null>(null);
   const [locationInput, setLocationInput] = useState("");
-  const locationInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<GoogleMapsAutocomplete | null>(null);
+  const [metadataError, setMetadataError] = useState<string | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
 
-  // Add modal focus trap reference
+  // Refs
+  const locationInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<GoogleMapsAutocomplete | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const initialFocusRef = useRef<HTMLInputElement>(null);
-  // Add URL input ref
   const urlInputRef = useRef<HTMLInputElement>(null);
-
-  // Add state for metadata error messages
-  const [metadataError, setMetadataError] = useState<string | null>(null);
 
   // Define resetForm function
   const resetForm = useCallback(() => {
@@ -107,7 +104,6 @@ export default function RCMDModal() {
     setVisibility("private");
     setFile(null);
     setUploadError(null);
-    setImageDimensions(null);
     setTags([]);
     setUrl("");
     setLocation(null);
@@ -122,35 +118,53 @@ export default function RCMDModal() {
     setIsRCMDModalOpen(false);
   }, [resetForm, setIsRCMDModalOpen]);
 
-  // Add keyboard event handling for the modal
+  // Populate form with existing RCMD data when in edit mode
   useEffect(() => {
+    // Reset form when modal opens
     if (!isRCMDModalOpen) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Close on ESC key
-      if (e.key === "Escape") {
-        handleClose();
+    // If in edit mode and we have data, populate the form
+    if (isRCMDEditMode && rcmdToEdit) {
+      setTitle(rcmdToEdit.title || "");
+      setDescription(rcmdToEdit.description || "");
+      setType(rcmdToEdit.type || "other");
+      setVisibility(rcmdToEdit.visibility || "private");
+      setTags(rcmdToEdit.tags || []);
+      setUrl(rcmdToEdit.url || "");
+
+      // Handle location data
+      if (rcmdToEdit.location) {
+        let locationData;
+        if (typeof rcmdToEdit.location === "string") {
+          try {
+            locationData = JSON.parse(rcmdToEdit.location);
+          } catch {
+            locationData = { address: rcmdToEdit.location };
+          }
+        } else {
+          locationData = rcmdToEdit.location;
+        }
+
+        if (locationData.address) {
+          setLocationInput(locationData.address);
+          setLocation({
+            place_id: locationData.placeId || "",
+            description: locationData.address,
+            lat: locationData.coordinates?.lat,
+            lng: locationData.coordinates?.lng,
+          });
+        }
       }
-    };
 
-    // Focus the URL input when modal opens
-    if (urlInputRef.current) {
-      // Use requestAnimationFrame to sync with browser rendering
-      const focusInput = () => {
-        requestAnimationFrame(() => {
-          urlInputRef.current?.focus();
-        });
-      };
-
-      // Wait for modal to be fully rendered
-      setTimeout(focusInput, 150);
+      // Handle image
+      if (rcmdToEdit.featured_image) {
+        setMetadataImageUrl(rcmdToEdit.featured_image);
+      }
+    } else {
+      // Reset all form fields for new RCMD
+      resetForm();
     }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isRCMDModalOpen, handleClose]);
+  }, [isRCMDModalOpen, isRCMDEditMode, rcmdToEdit, resetForm]);
 
   // Add effect to prevent background scrolling when modal is open
   useEffect(() => {
@@ -213,8 +227,9 @@ export default function RCMDModal() {
 
             // Set the location state with the selected place details
             setLocation({
-              placeId: place.place_id,
-              address: place.formatted_address || place.name || locationInput,
+              place_id: place.place_id,
+              description:
+                place.formatted_address || place.name || locationInput,
               ...(lat !== undefined && { lat }),
               ...(lng !== undefined && { lng }),
             });
@@ -290,59 +305,48 @@ export default function RCMDModal() {
       } else {
         console.log("Received valid metadata from website:", metadata);
 
-        // Set title and description if they're not already set by user
-        if ((!title || title.trim() === "") && metadata.title) {
-          console.log(`Setting title to: "${metadata.title}"`);
-          setTitle(metadata.title);
-        }
+        // Only set title and description if they're not already set by user
+        // or if we're not in edit mode
+        if (!isRCMDEditMode) {
+          if ((!title || title.trim() === "") && metadata.title) {
+            console.log(`Setting title to: "${metadata.title}"`);
+            setTitle(metadata.title);
+          }
 
-        if (
-          (!description || description.trim() === "") &&
-          metadata.description
-        ) {
-          console.log(
-            `Setting description to: "${metadata.description?.substring(0, 30)}..."`
-          );
-          setDescription(metadata.description);
-        }
-
-        // Detect content type if possible
-        if (metadata.type) {
-          const detectedType = metadata.type.toLowerCase();
           if (
-            ["article", "video", "podcast", "product"].includes(detectedType)
+            (!description || description.trim() === "") &&
+            metadata.description
           ) {
-            setType(detectedType);
+            console.log(
+              `Setting description to: "${metadata.description?.substring(0, 30)}..."`
+            );
+            setDescription(metadata.description);
+          }
+
+          // Detect content type if possible
+          if (metadata.type) {
+            const detectedType = metadata.type.toLowerCase();
+            if (
+              ["article", "video", "podcast", "product"].includes(detectedType)
+            ) {
+              setType(detectedType);
+            }
           }
         }
       }
 
-      // Store image URL directly rather than trying to fetch it
-      if (metadata.image && metadata.image.startsWith("http")) {
-        console.log("Found image URL in metadata:", metadata.image);
-
-        // Set a flag to indicate we're using an external image
+      // Only stage a new image if:
+      // 1. The URL has changed (not just a metadata refresh)
+      // 2. We have a valid image URL
+      // 3. We're not in edit mode OR no image is currently set
+      if (
+        metadata.image &&
+        metadata.image.startsWith("http") &&
+        metadata.url !== rcmdToEdit?.url &&
+        (!isRCMDEditMode || (!file && !metadataImageUrl))
+      ) {
+        console.log("Found new image URL in metadata:", metadata.image);
         setMetadataImageUrl(metadata.image);
-
-        // Create a dummy File object for UI purposes
-        setFile({
-          name: "og-image.jpg",
-          size: 0,
-          type: "image/jpeg",
-          lastModified: Date.now(),
-          // These properties are needed to satisfy TypeScript
-          slice: () => new Blob(),
-          stream: () => new ReadableStream(),
-          text: () => Promise.resolve(""),
-          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-          webkitRelativePath: "",
-        } as File);
-
-        // Set placeholder dimensions
-        setImageDimensions({
-          width: 1200,
-          height: 630,
-        });
       }
 
       // Log why we're not using an image
@@ -360,23 +364,6 @@ export default function RCMDModal() {
     }
   };
 
-  const getImageDimensions = (
-    file: File
-  ): Promise<{ width: number; height: number }> => {
-    return new Promise((resolve, reject) => {
-      const img = document.createElement("img");
-      img.src = URL.createObjectURL(file);
-      img.onload = () => {
-        resolve({ width: img.width, height: img.height });
-        URL.revokeObjectURL(img.src);
-      };
-      img.onerror = () => {
-        reject(new Error("Failed to load image dimensions"));
-        URL.revokeObjectURL(img.src);
-      };
-    });
-  };
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
@@ -389,14 +376,12 @@ export default function RCMDModal() {
         return;
       }
       try {
-        const dimensions = await getImageDimensions(selectedFile);
-        setImageDimensions(dimensions);
         setFile(selectedFile);
         // Clear metadata image URL if it was previously set
         setMetadataImageUrl(null);
         setUploadError(null);
       } catch {
-        setUploadError("Failed to load image dimensions");
+        setUploadError("Failed to load image");
       }
     }
   };
@@ -405,7 +390,6 @@ export default function RCMDModal() {
   const handleImageClear = () => {
     setFile(null);
     setMetadataImageUrl(null);
-    setImageDimensions(null);
     setUploadError(null);
   };
 
@@ -414,25 +398,6 @@ export default function RCMDModal() {
     title?: string;
     description?: string;
   }>({});
-
-  // Validate form before submission
-  const validateForm = (): boolean => {
-    const errors: {
-      title?: string;
-      description?: string;
-    } = {};
-
-    if (!title.trim()) {
-      errors.title = "Title is required";
-    }
-
-    if (!description.trim()) {
-      errors.description = "Description is required";
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
 
   // Add URL validation and normalization function
   const normalizeUrl = (url: string): string => {
@@ -457,94 +422,89 @@ export default function RCMDModal() {
   };
 
   // Update handleSubmit to use validation
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSaving || isSavingRCMD) return;
-
-    // Validate form first
-    if (!validateForm()) {
-      return;
-    }
+    setIsSaving(true);
 
     try {
-      setIsSaving(true);
-      let imageUrl: string | undefined;
+      // Normalize URL if present
+      const normalizedUrl = url ? normalizeUrl(url) : undefined;
 
-      // Normalize URL format before submission
-      const normalizedUrl = url ? normalizeUrl(url) : "";
-
-      // Validate URL if provided
-      if (normalizedUrl) {
-        try {
-          // Test if URL is valid by creating a URL object
-          new URL(normalizedUrl);
-        } catch {
-          setUploadError(
-            "Invalid URL format. Please enter a valid URL or leave it empty."
-          );
-          setIsSaving(false);
-          return;
-        }
+      // Handle image upload or metadata image
+      let featuredImage: string | undefined = undefined;
+      if (file) {
+        // If we have a file upload, use that
+        featuredImage = await uploadContentImage(file, "rcmds");
+      } else if (metadataImageUrl) {
+        // If we have a metadata image URL, use that directly
+        featuredImage = metadataImageUrl;
+      } else if (isRCMDEditMode && rcmdToEdit?.featured_image) {
+        // Keep existing image in edit mode
+        featuredImage = rcmdToEdit.featured_image;
       }
 
-      // If we have a metadata image URL, fetch and upload it
-      if (metadataImageUrl) {
-        const uploadedUrl = await fetchAndUploadExternalImage(metadataImageUrl);
-        imageUrl = uploadedUrl || undefined;
-      }
-      // Otherwise if we have a local file, upload it
-      else if (file && !metadataImageUrl) {
-        try {
-          imageUrl = await uploadContentImage(file, "rcmds");
-        } catch (error) {
-          console.error("Error uploading file:", error);
-          setUploadError("Failed to upload image. Please try again.");
-          setIsSaving(false);
-          return;
-        }
-      }
-
-      // Format location data for submission
-      const locationData = location
-        ? {
-            placeId: location.placeId,
-            address: location.address,
-            coordinates: {
-              lat: location.lat,
-              lng: location.lng,
-            },
-          }
-        : undefined;
-
-      const newRCMD = await insertRCMD(
+      // Prepare the RCMD data
+      const rcmdData = {
         title,
         description,
-        type,
-        visibility,
-        imageUrl,
+        type: type as RCMDType,
+        visibility: visibility as RCMDVisibility,
+        featured_image: featuredImage,
+        url: normalizedUrl,
+        location: location
+          ? {
+              placeId: location.place_id,
+              address: location.description,
+              coordinates: {
+                lat: location.lat,
+                lng: location.lng,
+              },
+            }
+          : undefined,
         tags,
-        normalizedUrl, // Use normalized URL
-        locationData
-      );
+      };
 
-      if (newRCMD) {
-        handleClose();
-        onModalSuccess?.();
+      if (isRCMDEditMode && rcmdToEdit) {
+        // Update existing RCMD
+        await updateRCMD(rcmdToEdit.id, rcmdData);
+        toast.success("RCMD updated successfully!");
       } else {
-        throw new Error(rcmdError || "Failed to create new RCMD");
+        // Create new RCMD
+        const result = await insertRCMD(
+          title,
+          description,
+          type,
+          visibility,
+          featuredImage,
+          tags,
+          normalizedUrl,
+          location
+            ? {
+                placeId: location.place_id,
+                address: location.description,
+                coordinates: {
+                  lat: location.lat,
+                  lng: location.lng,
+                },
+              }
+            : undefined
+        );
+        if (result) {
+          toast.success("RCMD created successfully!");
+        }
       }
+
+      // Reset form and close modal
+      resetForm();
+      setIsRCMDModalOpen(false);
+      if (onModalSuccess) onModalSuccess();
     } catch (error) {
-      console.error("Error saving RCMD:", error);
-      // Check if it's a URL-related error
-      if (error instanceof Error && error.message.includes("URL")) {
-        setUploadError(
-          "Invalid URL format. Please enter a valid URL or leave it empty."
-        );
-      } else {
-        setUploadError(
-          error instanceof Error ? error.message : "Error saving RCMD"
-        );
-      }
+      console.error("Error submitting RCMD:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "An error occurred while saving the RCMD";
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -560,7 +520,6 @@ export default function RCMDModal() {
     // Always clear file and metadata image URL when URL is cleared
     setFile(null);
     setMetadataImageUrl(null);
-    setImageDimensions(null);
 
     // Only clear these if they were likely set from metadata
     // and if we don't have any user-entered content
@@ -616,59 +575,35 @@ export default function RCMDModal() {
     };
   }, []);
 
-  // Improved image preview function with memoization pattern
-  const getImagePreviewUrl = (file: File | null): string => {
-    if (!file) return "";
+  // Add keyboard event handling for the modal
+  useEffect(() => {
+    if (!isRCMDModalOpen) return;
 
-    // Skip the try/catch for the type check, which is unnecessary
-    if (!(file instanceof Blob)) return "";
-
-    try {
-      return URL.createObjectURL(file);
-    } catch (error) {
-      console.error("Error creating object URL:", error);
-      return "";
-    }
-  };
-
-  // Add this new helper function to fetch and upload the external image
-  const fetchAndUploadExternalImage = async (
-    imageUrl: string
-  ): Promise<string | null> => {
-    try {
-      console.log("Fetching external image:", imageUrl);
-      // Use the fetch API to get the image
-      const response = await fetch("/api/proxy-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to proxy image: ${response.statusText}`);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Close on ESC key
+      if (e.key === "Escape") {
+        handleClose();
       }
+    };
 
-      // Get the image as a blob
-      const blob = await response.blob();
+    // Focus the URL input when modal opens
+    if (urlInputRef.current) {
+      // Use requestAnimationFrame to sync with browser rendering
+      const focusInput = () => {
+        requestAnimationFrame(() => {
+          urlInputRef.current?.focus();
+        });
+      };
 
-      // Create a File object from the blob
-      const file = new File([blob], "og-image.jpg", {
-        type: blob.type || "image/jpeg",
-      });
-
-      // Upload the file to Supabase storage
-      const uploadedUrl = await uploadContentImage(file, "rcmds");
-      console.log("Image uploaded successfully:", uploadedUrl);
-
-      return uploadedUrl;
-    } catch (error) {
-      console.error("Error fetching/uploading external image:", error);
-      setUploadError(
-        "Failed to load image from website. Using default image instead."
-      );
-      return null;
+      // Wait for modal to be fully rendered
+      setTimeout(focusInput, 150);
     }
-  };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isRCMDModalOpen, handleClose]);
 
   if (!isRCMDModalOpen) return null;
 
@@ -702,7 +637,7 @@ export default function RCMDModal() {
             id="modal-heading"
             className="text-lg font-semibold p-6 pb-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] z-10"
           >
-            New RCMD
+            {isRCMDEditMode ? "Edit RCMD" : "New RCMD"}
           </h2>
 
           <form
@@ -965,7 +900,7 @@ export default function RCMDModal() {
                   {/* Selected Location Preview */}
                   {location && (
                     <div className="mt-2 text-sm text-gray-500">
-                      Selected: {location.address}
+                      Selected: {location.description}
                       {location.lat && location.lng && (
                         <div className="text-xs text-gray-400">
                           Coordinates: {location.lat.toFixed(5)},{" "}
@@ -994,15 +929,17 @@ export default function RCMDModal() {
                     >
                       {file || metadataImageUrl ? "Replace" : "Choose file"}
                     </label>
-                    {(file || metadataImageUrl) && (
-                      <button
-                        type="button"
-                        onClick={handleImageClear}
-                        className="py-2 px-4 text-sm font-semibold rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                      >
-                        Remove
-                      </button>
-                    )}
+                    {(file && file instanceof Blob) ||
+                      metadataImageUrl ||
+                      (rcmdToEdit?.featured_image && (
+                        <button
+                          type="button"
+                          onClick={handleImageClear}
+                          className="py-2 px-4 text-sm font-semibold rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                        >
+                          Remove
+                        </button>
+                      ))}
                     {file && !metadataImageUrl && (
                       <span className="text-sm text-gray-500">
                         {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
@@ -1020,73 +957,26 @@ export default function RCMDModal() {
                       </span>
                     )}
                   </div>
-                  {(file || metadataImageUrl) && (
-                    <div className="mt-2">
-                      {metadataImageUrl ? (
-                        // For remote image from metadata
-                        <div className="relative w-full h-40">
-                          <Image
-                            src={metadataImageUrl}
-                            alt="Preview from website"
-                            fill
-                            className="object-contain"
-                            sizes="(max-width: 768px) 100vw, 400px"
-                            priority
-                            onError={() => {
-                              console.error("Error loading metadata image");
-                              setUploadError("Failed to load image preview");
-                              setMetadataImageUrl(null); // Clear the invalid URL
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        // For local user uploaded file
-                        file && (
-                          <div className="image-preview-container">
-                            {getImagePreviewUrl(file) ? (
-                              <Image
-                                src={getImagePreviewUrl(file)}
-                                alt="Image preview"
-                                width={200}
-                                height={200}
-                                className="max-h-40 object-contain"
-                                onError={() => {
-                                  setUploadError(
-                                    "Error displaying image preview"
-                                  );
-                                  setFile(null); // Clear the problematic file
-                                }}
-                              />
-                            ) : (
-                              <div className="p-4 border border-gray-200 rounded text-gray-500 text-sm">
-                                Preview not available
-                              </div>
-                            )}
-                          </div>
-                        )
-                      )}
-
-                      {/* Image details information */}
-                      <div className="text-sm text-gray-500 mt-1">
-                        {!metadataImageUrl && file && (
-                          <div>
-                            <span className="sr-only">File size:</span>
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                          </div>
+                  {((file && file instanceof Blob) ||
+                    metadataImageUrl ||
+                    rcmdToEdit?.featured_image) && (
+                    <div className="relative w-full h-48 mb-4 rounded-md overflow-hidden">
+                      <Image
+                        src={
+                          file instanceof Blob
+                            ? URL.createObjectURL(file)
+                            : metadataImageUrl ||
+                              rcmdToEdit?.featured_image ||
+                              ""
+                        }
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                        loader={imageLoader}
+                        unoptimized={Boolean(
+                          metadataImageUrl || rcmdToEdit?.featured_image
                         )}
-                        {imageDimensions && (
-                          <div>
-                            <span className="sr-only">Image dimensions:</span>
-                            {metadataImageUrl ? "Estimated " : ""}
-                            {imageDimensions.width}x{imageDimensions.height}px
-                          </div>
-                        )}
-                        {metadataImageUrl && (
-                          <div className="text-blue-500" aria-live="polite">
-                            Using image from website metadata
-                          </div>
-                        )}
-                      </div>
+                      />
                     </div>
                   )}
                   {uploadError && (

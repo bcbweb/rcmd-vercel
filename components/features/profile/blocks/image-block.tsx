@@ -1,8 +1,10 @@
+import React from "react";
 import Image from "next/image";
 import { useState } from "react";
 import { type ImageBlockType } from "@/types";
 import { BlockActions, blockStyles } from "@/components/common";
 import { ImageEditor, type ImageEditorResult } from "@/components/common/media";
+import { imageLoader } from "@/utils/image";
 
 interface Props {
   imageBlock: ImageBlockType;
@@ -44,20 +46,21 @@ export default function ImageBlock({ imageBlock, onDelete, onSave }: Props) {
         />
       </div>
 
-      <figure>
+      <div className="relative w-full h-64 rounded-md overflow-hidden">
         <Image
           src={imageBlock.image_url}
-          alt={imageBlock.caption || ""}
-          className="w-full h-auto rounded"
-          width={imageBlock.width || 200}
-          height={imageBlock.height || 200}
+          alt={imageBlock.caption || "Image"}
+          fill
+          className="object-cover"
+          loader={imageLoader}
         />
-        {imageBlock.caption && (
-          <figcaption className="mt-2 text-center text-gray-600 dark:text-gray-300">
-            {imageBlock.caption}
-          </figcaption>
-        )}
-      </figure>
+      </div>
+
+      {imageBlock.caption && (
+        <figcaption className="mt-2 text-center text-gray-600 dark:text-gray-300">
+          {imageBlock.caption}
+        </figcaption>
+      )}
     </div>
   );
 }

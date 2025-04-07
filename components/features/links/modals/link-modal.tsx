@@ -8,9 +8,15 @@ import LinkInput from "@/components/ui/link-input";
 import { LinkMetadata } from "@/types";
 
 export default function LinkModal() {
-  const { isLinkModalOpen, setIsLinkModalOpen, onModalSuccess } =
-    useModalStore();
-  const { insertLink, isLoading } = useLinkStore();
+  const {
+    isLinkModalOpen,
+    setIsLinkModalOpen,
+    onModalSuccess,
+    isLinkEditMode,
+    linkToEdit,
+  } = useModalStore();
+
+  const { insertLink, updateLink, isLoading } = useLinkStore();
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
@@ -24,6 +30,17 @@ export default function LinkModal() {
 
   // Create a ref for the URL input to focus it
   const urlInputRef = useRef<HTMLInputElement>(null);
+
+  // Populate form with existing Link data when in edit mode
+  useEffect(() => {
+    if (isLinkEditMode && linkToEdit) {
+      setTitle(linkToEdit.title || "");
+      setDescription(linkToEdit.description || "");
+      setType(linkToEdit.type || "other");
+      setVisibility(linkToEdit.visibility || "private");
+      setUrl(linkToEdit.url || "");
+    }
+  }, [isLinkEditMode, linkToEdit, isLinkModalOpen]);
 
   // Focus the URL field when the modal opens
   useEffect(() => {
@@ -60,12 +77,32 @@ export default function LinkModal() {
     e.preventDefault();
     if (isLoading) return;
 
-    const link = await insertLink(title, url, description, type, visibility);
+    try {
+      let result;
+      if (isLinkEditMode && linkToEdit) {
+        // Update existing Link
+        result = await updateLink(linkToEdit.id, {
+          title,
+          url,
+          description,
+          type,
+          visibility,
+        });
+      } else {
+        // Create new Link
+        result = await insertLink(title, url, description, type, visibility);
+      }
 
-    if (link) {
-      onModalSuccess?.();
-      resetForm();
-      handleClose();
+      if (result) {
+        onModalSuccess?.();
+        resetForm();
+        handleClose();
+      }
+    } catch (error) {
+      console.error(
+        `Error ${isLinkEditMode ? "updating" : "creating"} link:`,
+        error
+      );
     }
   };
 
@@ -238,7 +275,7 @@ export default function LinkModal() {
         onClick={(e) => e.stopPropagation()} // Prevent clicks inside the modal from closing it
       >
         <h2 className="text-lg font-semibold p-6 pb-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] z-10">
-          New Link
+          {isLinkEditMode ? "Edit Link" : "New Link"}
         </h2>
 
         <form onSubmit={handleFormSubmit}>

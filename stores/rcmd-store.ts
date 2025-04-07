@@ -152,6 +152,7 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
+      // First update the local state optimistically
       set((state) => ({
         rcmds: state.rcmds.map((rcmd) =>
           rcmd.id === id
@@ -160,7 +161,8 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         ),
       }));
 
-      const { error } = await supabase
+      // Then make the API call
+      const { data, error } = await supabase
         .from("rcmds")
         .update({
           ...updates,
@@ -171,26 +173,37 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
 
       if (error) throw error;
 
+      // Update was successful
       set({ isLoading: false });
     } catch (error) {
+      console.error("Error updating RCMD:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Failed to update RCMD";
 
-      const { data } = await supabase
-        .from("rcmds")
-        .select("*")
-        .eq("id", id)
-        .single();
+      // Revert the optimistic update by fetching the current state
+      try {
+        const { data } = await supabase
+          .from("rcmds")
+          .select("*")
+          .eq("id", id)
+          .single();
 
-      if (data) {
-        set((state) => ({
-          error: errorMessage,
-          isLoading: false,
-          rcmds: state.rcmds.map((rcmd) =>
-            rcmd.id === id ? (data as RCMD) : rcmd
-          ),
-        }));
-      } else {
+        if (data) {
+          set((state) => ({
+            error: errorMessage,
+            isLoading: false,
+            rcmds: state.rcmds.map((rcmd) =>
+              rcmd.id === id ? (data as RCMD) : rcmd
+            ),
+          }));
+        } else {
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+        }
+      } catch (revertError) {
+        // If we can't revert, at least set the error state
         set({
           error: errorMessage,
           isLoading: false,

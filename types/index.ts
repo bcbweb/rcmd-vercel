@@ -18,6 +18,11 @@ export type LinkBlockType = Tables["link_blocks"]["Row"];
 export type RCMDBlockType = Tables["rcmd_blocks"]["Row"];
 export type CollectionBlockType = Tables["collection_blocks"]["Row"];
 
+// Custom composite types
+export type CollectionBlockWithCollection = CollectionBlockType & {
+  collection: Collection;
+};
+
 // You can also create custom composite types
 export type BusinessWithOwner = Business & {
   owner: Profile;

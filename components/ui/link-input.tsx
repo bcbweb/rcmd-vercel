@@ -232,9 +232,29 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
           }
         } catch (fetchError: unknown) {
           console.error("Fetch error:", fetchError);
-          setError(
-            `Could not fetch information: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`
-          );
+
+          // User-friendly error messages
+          let userMessage =
+            "Unable to load website information. Please check the URL and try again.";
+
+          if (fetchError instanceof Error) {
+            // Log technical error to console
+            console.error("Technical details:", fetchError.message);
+
+            // Map specific technical errors to user-friendly messages
+            if (fetchError.message.includes("aborted")) {
+              userMessage =
+                "This website isn't responding. Try a different URL or check if the website is accessible.";
+            } else if (fetchError.message.includes("Server error: 404")) {
+              userMessage = "Website not found. Please check the URL.";
+            } else if (fetchError.message.includes("Server error: 403")) {
+              userMessage = "This website is not accessible.";
+            } else if (fetchError.message.includes("Invalid response format")) {
+              userMessage = "Unable to read website information.";
+            }
+          }
+
+          setError(userMessage);
           clearTimeout(fetchTimeoutId);
 
           // Also notify parent of the failure to clear previous metadata
@@ -248,7 +268,7 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
         }
       } catch (error) {
         console.error("Error in metadata processing:", error);
-        setError("Could not process URL information");
+        setError("Unable to process website information. Please try again.");
 
         // Also notify parent of the failure
         if (onMetadataFetch) {

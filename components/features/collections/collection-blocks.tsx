@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { CollectionBlock } from "@/components/features/profile/blocks";
-import type { CollectionBlockType } from "@/types";
+import type { CollectionBlockType, CollectionWithItems } from "@/types";
+import { createClient } from "@/utils/supabase/client";
 
 interface Props {
   initialCollectionBlocks?: CollectionBlockType[];
@@ -19,22 +20,60 @@ export default function CollectionBlocks({
     CollectionBlockType[]
   >(initialCollectionBlocks);
 
+  const [collections, setCollections] = useState<{
+    [key: string]: CollectionWithItems;
+  }>({});
+
   useEffect(() => {
     setCollectionBlocks(initialCollectionBlocks);
   }, [initialCollectionBlocks]);
+
+  useEffect(() => {
+    const fetchCollections = async () => {
+      const supabase = createClient();
+      const collectionIds = collectionBlocks
+        .map((block) => block.collection_id)
+        .filter((id): id is string => id !== null);
+
+      if (collectionIds.length === 0) return;
+
+      const { data, error } = await supabase
+        .from("collections")
+        .select(`*, collection_items(*)`)
+        .in("id", collectionIds);
+
+      if (error) {
+        console.error("Error fetching collections:", error);
+        return;
+      }
+
+      const collectionsMap = (data || []).reduce<{
+        [key: string]: CollectionWithItems;
+      }>((acc, collection) => {
+        acc[collection.id] = collection as CollectionWithItems;
+        return acc;
+      }, {});
+
+      setCollections(collectionsMap);
+    };
+
+    fetchCollections();
+  }, [collectionBlocks]);
 
   return (
     <div className="space-y-4">
       {collectionBlocks.map((block) => (
         <CollectionBlock
           key={block.id}
-          collection={block}
+          collection={
+            block.collection_id ? collections[block.collection_id] : undefined
+          }
           onDelete={
             onDelete && block.collection_id
               ? () => onDelete(block.collection_id!)
               : undefined
           }
-          onSave={onSave}
+          onSave={onSave ? () => onSave(block) : undefined}
         />
       ))}
 

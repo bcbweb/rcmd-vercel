@@ -1,195 +1,149 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import React, { useState, useCallback } from "react";
+import type { Link, LinkBlockType } from "@/types";
+import { Link2 } from "lucide-react";
+import { formatDistance } from "date-fns";
+import { useModalStore } from "@/stores/modal-store";
+import { BlockActions } from "@/components/common";
 import { createClient } from "@/utils/supabase/client";
-import { useState, useEffect } from "react";
-import type { LinkBlockType, Link } from "@/types";
-import {
-  BlockActions,
-  blockStyles,
-  BlockStats,
-  BlockSkeleton,
-} from "@/components/common";
+import { useLinkStore } from "@/stores/link-store";
 
 interface LinkBlockProps {
-  linkBlock: LinkBlockType;
+  linkBlock?: LinkBlockType;
   onDelete?: () => void;
   onSave?: (block: Partial<LinkBlockType>) => void;
+  canEdit?: boolean;
 }
 
 export default function LinkBlock({
   linkBlock,
   onDelete,
   onSave,
+  canEdit = false,
 }: LinkBlockProps) {
-  const supabase = createClient();
-  const [link, setLink] = useState<Link | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editedLink, setEditedLink] = useState<Link | null>(null);
+  const {
+    setIsLinkModalOpen,
+    setOnModalSuccess,
+    setIsLinkEditMode,
+    setLinkToEdit,
+  } = useModalStore();
+  const { deleteLink } = useLinkStore();
+  const [isDeleted, setIsDeleted] = useState(false);
+  const [currentLinkBlock] = useState<LinkBlockType | undefined>(linkBlock);
+  const [currentLink, setCurrentLink] = useState<Link | undefined>();
 
-  useEffect(() => {
-    const fetchLink = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("links")
-          .select("*")
-          .eq("id", linkBlock.link_id)
-          .single();
+  const fetchLink = useCallback(async () => {
+    if (!linkBlock?.link_id) return;
 
-        if (error) throw error;
-        setLink(data);
-        setEditedLink(data);
-      } catch (err) {
-        console.error("Error fetching link:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("links")
+      .select("*")
+      .eq("id", linkBlock.link_id)
+      .single();
 
+    if (error) {
+      console.error("Error fetching link:", error);
+      return;
+    }
+
+    if (data) {
+      setCurrentLink(data);
+    }
+  }, [linkBlock?.link_id]);
+
+  // Fetch the link data when the component mounts or linkBlock changes
+  React.useEffect(() => {
     fetchLink();
-  }, [linkBlock.link_id, supabase]);
+  }, [fetchLink]);
 
-  const handleLinkClick = async () => {
-    if (!link) return;
+  const handleEdit = () => {
+    if (!currentLink) return;
+
+    // Set up success callback
+    setOnModalSuccess(() => {
+      fetchLink();
+      if (onSave && currentLinkBlock) onSave(currentLinkBlock);
+    });
+
+    // Set edit mode and data in store
+    setIsLinkEditMode(true);
+    setLinkToEdit(currentLink);
+    setIsLinkModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!currentLinkBlock?.id) return;
 
     try {
-      await supabase.rpc("increment_link_click_count", { link_id: link.id });
-      setLink((prev) =>
-        prev ? { ...prev, click_count: (prev.click_count || 0) + 1 } : null
-      );
+      await deleteLink(currentLinkBlock.id);
+      setIsDeleted(true);
+      if (onDelete) onDelete();
     } catch (error) {
-      console.error("Error incrementing click count:", error);
+      console.error("Error deleting link:", error);
     }
   };
 
-  const handleSave = async () => {
-    if (!editedLink) return;
+  if (isDeleted) return null;
 
+  if (!currentLink || !currentLinkBlock) return null;
+
+  const formatTime = (date: string) => {
+    return formatDistance(new Date(date), new Date(), { addSuffix: true });
+  };
+
+  // Format the URL for display
+  const formatUrl = (url: string) => {
     try {
-      const { error } = await supabase
-        .from("links")
-        .update(editedLink)
-        .eq("id", linkBlock.link_id);
-
-      if (error) throw error;
-
-      setLink(editedLink);
-      setIsEditMode(false);
-      onSave?.(linkBlock);
-    } catch (err) {
-      console.error("Error updating link:", err);
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch {
+      return url;
     }
   };
-
-  if (isLoading) {
-    return <BlockSkeleton lines={1} className="p-2" />;
-  }
-
-  if (!link || !editedLink) return null;
 
   return (
-    <div className={blockStyles.container}>
-      <div className="flex items-start justify-between gap-2">
-        {isEditMode ? (
-          <input
-            title="Edit title"
-            type="text"
-            value={editedLink.title}
-            onChange={(e) =>
-              setEditedLink({ ...editedLink, title: e.target.value })
-            }
-            className={blockStyles.inputField}
-          />
-        ) : (
-          <h3 className={blockStyles.title}>{link.title}</h3>
-        )}
-
-        <div className="flex items-center gap-2">
-          {!isEditMode && (
+    <div className="p-4 rounded-md shadow-sm border dark:border-gray-800 mb-4 bg-white dark:bg-gray-900">
+      <div className="flex justify-between items-start">
+        <div className="flex items-start space-x-3 w-full">
+          <div className="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            <div className="text-gray-400 text-lg">
+              <Link2 size={20} />
+            </div>
+          </div>
+          <div className="flex-grow">
+            <h3 className="font-medium text-gray-900 dark:text-white">
+              {currentLink.title}
+            </h3>
             <a
-              href={link.url}
+              href={currentLink.url}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={handleLinkClick}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 
-                  dark:hover:text-gray-300"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate block"
             >
-              <ExternalLink className="w-4 h-4" />
+              {formatUrl(currentLink.url)}
             </a>
-          )}
-          <BlockActions
-            isEditMode={isEditMode}
-            onEdit={() => setIsEditMode(true)}
-            onDelete={onDelete}
-            onSave={handleSave}
-            onCancel={() => setIsEditMode(false)}
-          />
-        </div>
-      </div>
-
-      {isEditMode ? (
-        <>
-          <input
-            title="Edit URL"
-            type="url"
-            value={editedLink.url}
-            onChange={(e) =>
-              setEditedLink({ ...editedLink, url: e.target.value })
-            }
-            className={`${blockStyles.inputField} mt-2`}
-          />
-          <textarea
-            title="Edit description"
-            value={editedLink.description || ""}
-            onChange={(e) =>
-              setEditedLink({ ...editedLink, description: e.target.value })
-            }
-            className={`${blockStyles.inputField} mt-2`}
-            rows={2}
-          />
-        </>
-      ) : (
-        link.description && (
-          <p className={blockStyles.description}>{link.description}</p>
-        )
-      )}
-
-      <div className="flex items-center gap-2 mt-2">
-        {isEditMode ? (
-          <select
-            value={editedLink.visibility}
-            onChange={(e) =>
-              setEditedLink({ ...editedLink, visibility: e.target.value })
-            }
-            className={blockStyles.inputField}
-          >
-            <option value="public">Public</option>
-            <option value="private">Private</option>
-            <option value="followers">Followers</option>
-          </select>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className={blockStyles.tag}>{link.type}</span>
-            <span className={blockStyles.tag}>{link.visibility}</span>
-            <span className={blockStyles.metaText}>
-              {formatDistanceToNow(new Date(linkBlock.created_at), {
-                addSuffix: true,
-              })}
-            </span>
+            {currentLink.description && (
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                {currentLink.description}
+              </p>
+            )}
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {currentLinkBlock.created_at && (
+                <span>{formatTime(currentLinkBlock.created_at)}</span>
+              )}
+            </div>
           </div>
+        </div>
+        {canEdit && (
+          <BlockActions
+            isEditMode={false}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         )}
       </div>
-
-      <BlockStats
-        stats={[
-          { value: link.view_count, label: "views" },
-          { value: link.click_count, label: "clicks" },
-          { value: link.share_count, label: "shares" },
-          { value: link.save_count, label: "saves" },
-        ]}
-      />
     </div>
   );
 }
