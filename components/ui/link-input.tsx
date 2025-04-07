@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  forwardRef,
-} from "react";
+import React, { useState, useEffect, useCallback, forwardRef } from "react";
 import Image from "next/image";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -41,7 +35,7 @@ function getDomainFromUrl(url: string): string {
     const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
     const urlObj = new URL(normalizedUrl);
     return urlObj.hostname;
-  } catch (error) {
+  } catch {
     // Silent error handling - just return something safe
     return url.split("/")[0].split("?")[0].trim() || "unknown";
   }
@@ -109,12 +103,6 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
     // Add a timeout ref to prevent infinite operations
     const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-    // Use useMemo for the regex
-    const urlRegex = useMemo(
-      () => /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/,
-      []
-    );
-
     // Completely rewrite normalizeUrl for maximum stability - super simplified
     const normalizeUrl = useCallback((url: string): string => {
       if (!url) return "";
@@ -129,7 +117,7 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
           .split("?")[0]
           .toLowerCase();
         return domain;
-      } catch (e) {
+      } catch {
         // Return a safe fallback
         return url.substring(0, 30).toLowerCase();
       }
@@ -165,6 +153,9 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
       try {
         // Start fetching with proper state tracking
         setIsFetching(true);
+
+        // Force reset metadata when URL changes to avoid stale images/data
+        setMetadata(null);
 
         // Check for complex URLs with lots of parameters - mark as potentially problematic
         if (value.includes("?") && value.length > 100) {
@@ -208,7 +199,7 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
 
           try {
             data = JSON.parse(text);
-          } catch (e) {
+          } catch {
             throw new Error("Invalid response format");
           }
 
@@ -220,9 +211,11 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
             title: data?.title || domain,
             description: data?.description || `Content from ${domain}`,
             url: data?.url || value,
-            // Skip images for URLs that are very complex
+            // Skip images for URLs that are very complex, but preserve if it exists
             image:
-              value.includes("?") && value.length > 100 ? null : data?.image,
+              value.includes("?") && value.length > 100
+                ? null
+                : data?.image || null,
             favicon: data?.favicon,
             type: data?.type || "website",
             _timestamp: Date.now(),
@@ -243,10 +236,28 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
             `Could not fetch information: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`
           );
           clearTimeout(fetchTimeoutId);
+
+          // Also notify parent of the failure to clear previous metadata
+          if (onMetadataFetch) {
+            onMetadataFetch({
+              url: value,
+              title: normalizeUrl(value) || "Unknown site",
+              _timestamp: Date.now(),
+            });
+          }
         }
       } catch (error) {
         console.error("Error in metadata processing:", error);
         setError("Could not process URL information");
+
+        // Also notify parent of the failure
+        if (onMetadataFetch) {
+          onMetadataFetch({
+            url: value,
+            title: normalizeUrl(value) || "Unknown site",
+            _timestamp: Date.now(),
+          });
+        }
       } finally {
         // Always clean up timeout and state
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -282,10 +293,12 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
       try {
         const normalizedUrl = normalizeUrl(value);
         if (normalizedUrl !== lastFetchedUrl) {
+          // Reset metadata for URL changes to prevent stale data
+          setMetadata(null);
           setShouldFetch(true);
         }
-      } catch (e) {
-        console.error("Error in validate:", e);
+      } catch {
+        console.error("Error in validate:");
       }
     }, [value, isFetching, lastFetchedUrl, normalizeUrl, isProblemURL]);
 
@@ -370,10 +383,16 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
       // Reset fetch state for URL changes
       try {
         if (normalizeUrl(url) !== lastFetchedUrl) {
+          // Clear metadata when URL changes
+          setMetadata(null);
           setShouldFetch(false);
+          // Notify parent that metadata is being cleared
+          if (onMetadataFetch) {
+            onMetadataFetch({ url: url, _timestamp: Date.now() });
+          }
         }
-      } catch (e) {
-        console.error("Error in handleChange:", e);
+      } catch {
+        console.error("Error in handleChange");
         setShouldFetch(false);
       }
 
@@ -495,19 +514,21 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
             </div>
           }
         >
+          {/* Force remount of preview container when metadata changes */}
           <div
             className={`mt-4 overflow-hidden transition-all duration-300 ease-in-out ${
               !hidePreview && metadata && !isProblemURL
                 ? "max-h-96 opacity-100"
                 : "max-h-0 opacity-0"
             }`}
+            key={`container-${metadata?._timestamp || Date.now()}`}
           >
             {metadata && !isProblemURL && (
               <div
                 className={`border rounded-lg p-4 dark:border-gray-600 ${
                   isFetching ? "opacity-60" : "opacity-100"
                 } transition-opacity duration-200`}
-                key={`preview-${lastFetchedUrl || metadata.url || Date.now()}`}
+                key={`preview-${metadata._timestamp || Date.now()}`}
                 data-testid="metadata-preview"
               >
                 <div className="flex items-start space-x-4">
@@ -535,10 +556,37 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
                   {/* Only render image if it exists and we're not dealing with a problem URL */}
                   {metadata.image && !isProblemURL && (
                     <div className="flex-shrink-0 relative">
-                      <div className="w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                        <div className="text-2xl font-bold text-gray-300">
-                          {metadata.title?.[0]?.toUpperCase() || "?"}
-                        </div>
+                      <div
+                        className="w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                        key={`img-container-${metadata._timestamp || Date.now()}`}
+                      >
+                        {/* Use Next.js Image component for better performance */}
+                        {metadata.image ? (
+                          <div className="relative w-full h-full">
+                            <Image
+                              src={metadata.image}
+                              alt={metadata.title || "Preview"}
+                              fill
+                              sizes="80px"
+                              className="object-cover"
+                              onError={() => {
+                                // When image fails to load, show a fallback
+                                const container = document.getElementById(
+                                  `img-container-${metadata._timestamp || Date.now()}`
+                                );
+                                if (container) {
+                                  container.innerHTML = `<div class="text-2xl font-bold text-gray-300">
+                                    ${metadata.title?.[0]?.toUpperCase() || "?"}
+                                  </div>`;
+                                }
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="text-2xl font-bold text-gray-300">
+                            {metadata.title?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

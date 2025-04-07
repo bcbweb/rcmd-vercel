@@ -318,7 +318,7 @@ export default function RCMDModal() {
       }
 
       // Store image URL directly rather than trying to fetch it
-      if (!file && metadata.image && metadata.image.startsWith("http")) {
+      if (metadata.image && metadata.image.startsWith("http")) {
         console.log("Found image URL in metadata:", metadata.image);
 
         // Set a flag to indicate we're using an external image
@@ -346,7 +346,6 @@ export default function RCMDModal() {
       }
 
       // Log why we're not using an image
-      if (file) console.log("Not using metadata image: File already exists");
       if (!metadata.image)
         console.log("Not using metadata image: No image URL in metadata");
       if (metadata.image && !metadata.image.startsWith("http"))
@@ -558,20 +557,16 @@ export default function RCMDModal() {
     setUrl("");
     setMetadataError(null);
 
+    // Always clear file and metadata image URL when URL is cleared
+    setFile(null);
+    setMetadataImageUrl(null);
+    setImageDimensions(null);
+
     // Only clear these if they were likely set from metadata
     // and if we don't have any user-entered content
     if (title && description && !tags.length) {
       setTitle("");
       setDescription("");
-    }
-
-    // Always clear file and metadata image URL when URL is cleared
-    if (file) {
-      setFile(null);
-      setImageDimensions(null);
-    }
-    if (metadataImageUrl) {
-      setMetadataImageUrl(null);
     }
 
     console.log("RCMD Modal: URL clear completed");
