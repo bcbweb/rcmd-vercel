@@ -67,9 +67,9 @@ export function MainNav({ items, authButtons }: MainNavProps) {
         </NavigationMenuList>
       </NavigationMenu>
 
-      {/* Mobile Menu Button - moved to end for right alignment */}
+      {/* Mobile Menu Button - aligned to the right of user menu */}
       <button
-        className="md:hidden p-2 ml-auto"
+        className="md:hidden p-2"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Toggle menu"
       >

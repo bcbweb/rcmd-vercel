@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Heart, Bookmark, Share2 } from "lucide-react";
+import { Heart, Bookmark, Share2, MapPin } from "lucide-react";
 
 import type { RCMD, RCMDType } from "@/types";
 import { formatDistanceToNow } from "date-fns";
@@ -75,21 +75,33 @@ export default function RCMDCard({
           {rcmd.title}
         </h3>
 
+        {/* Location - Displayed below title */}
+        {rcmd.location && (
+          <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3 h-3" />{" "}
+              {String(rcmd.location).includes("address")
+                ? JSON.parse(String(rcmd.location)).address
+                : String(rcmd.location)}
+            </span>
+          </div>
+        )}
+
         {rcmd.description && (
           <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">
             {rcmd.description}
           </p>
         )}
 
-        {/* Tags */}
+        {/* Tags - Improved visibility */}
         {rcmd.tags && rcmd.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3 mt-auto">
             {rcmd.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full text-xs text-gray-600 dark:text-gray-300"
+                className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium"
               >
-                {tag}
+                #{tag}
               </span>
             ))}
             {rcmd.tags.length > 3 && (

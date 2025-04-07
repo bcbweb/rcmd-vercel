@@ -93,6 +93,11 @@ export default function RCMDModal() {
   // Add modal focus trap reference
   const modalRef = useRef<HTMLDivElement>(null);
   const initialFocusRef = useRef<HTMLInputElement>(null);
+  // Add URL input ref
+  const urlInputRef = useRef<HTMLInputElement>(null);
+
+  // Add state for metadata error messages
+  const [metadataError, setMetadataError] = useState<string | null>(null);
 
   // Define resetForm function
   const resetForm = useCallback(() => {
@@ -108,6 +113,7 @@ export default function RCMDModal() {
     setLocation(null);
     setLocationInput("");
     setMetadataImageUrl(null);
+    setMetadataError(null);
   }, []);
 
   // Define handleClose function
@@ -127,9 +133,17 @@ export default function RCMDModal() {
       }
     };
 
-    // Focus the first input when modal opens
-    if (initialFocusRef.current) {
-      initialFocusRef.current.focus();
+    // Focus the URL input when modal opens
+    if (urlInputRef.current) {
+      // Use requestAnimationFrame to sync with browser rendering
+      const focusInput = () => {
+        requestAnimationFrame(() => {
+          urlInputRef.current?.focus();
+        });
+      };
+
+      // Wait for modal to be fully rendered
+      setTimeout(focusInput, 150);
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -241,13 +255,67 @@ export default function RCMDModal() {
     type?: string;
     url?: string;
   }) => {
-    console.log("Received metadata:", metadata); // Debug log
+    console.log("RCMD Modal received metadata:", metadata); // Debug log
     try {
       setIsLoadingMetadata(true);
-      // Set title and description if they're not already set
-      if (!title && metadata.title) setTitle(metadata.title);
-      if (!description && metadata.description)
-        setDescription(metadata.description);
+      setMetadataError(null);
+
+      // Check if the received metadata contains actual website data
+      // or just fallbacks based on domain name
+      const urlString = metadata.url || "";
+      const domain = urlString.split("//")[1]?.split("/")[0] || "";
+
+      // Enhanced check for fallback metadata
+      const isLikelyFallback =
+        // Check if title is just the domain
+        (metadata.title === domain || metadata.title?.includes(domain)) &&
+        // Check if description is the generic content message
+        metadata.description === `Content from ${domain}` &&
+        // Check if the domain looks incomplete (no real TLD or very short)
+        (domain.length < 6 || // Very short domain names are suspicious
+          !/\.(com|org|net|edu|gov|io|co|world|app|dev|me|info|biz)$/i.test(
+            domain
+          ) || // No common TLD
+          /\.w{1,2}$/i.test(domain)); // Incomplete TLD like .w or .wo
+
+      if (isLikelyFallback) {
+        console.warn(
+          "Received what appears to be fallback metadata or incomplete URL:",
+          metadata
+        );
+        setMetadataError(
+          "Could not retrieve website information. Please enter a complete URL."
+        );
+        return; // Don't proceed with setting metadata from fallbacks
+      } else {
+        console.log("Received valid metadata from website:", metadata);
+
+        // Set title and description if they're not already set by user
+        if ((!title || title.trim() === "") && metadata.title) {
+          console.log(`Setting title to: "${metadata.title}"`);
+          setTitle(metadata.title);
+        }
+
+        if (
+          (!description || description.trim() === "") &&
+          metadata.description
+        ) {
+          console.log(
+            `Setting description to: "${metadata.description?.substring(0, 30)}..."`
+          );
+          setDescription(metadata.description);
+        }
+
+        // Detect content type if possible
+        if (metadata.type) {
+          const detectedType = metadata.type.toLowerCase();
+          if (
+            ["article", "video", "podcast", "product"].includes(detectedType)
+          ) {
+            setType(detectedType);
+          }
+        }
+      }
 
       // Store image URL directly rather than trying to fetch it
       if (!file && metadata.image && metadata.image.startsWith("http")) {
@@ -367,6 +435,28 @@ export default function RCMDModal() {
     return Object.keys(errors).length === 0;
   };
 
+  // Add URL validation and normalization function
+  const normalizeUrl = (url: string): string => {
+    if (!url) return "";
+
+    // Trim whitespace
+    let normalizedUrl = url.trim();
+
+    // Add https:// if missing
+    if (!/^https?:\/\//i.test(normalizedUrl)) {
+      normalizedUrl = `https://${normalizedUrl}`;
+    }
+
+    // Try to create a URL object to validate it
+    try {
+      const urlObj = new URL(normalizedUrl);
+      return urlObj.toString();
+    } catch (error) {
+      console.error("Invalid URL format:", error);
+      return normalizedUrl; // Return the normalized URL even if invalid
+    }
+  };
+
   // Update handleSubmit to use validation
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -380,6 +470,23 @@ export default function RCMDModal() {
     try {
       setIsSaving(true);
       let imageUrl: string | undefined;
+
+      // Normalize URL format before submission
+      const normalizedUrl = url ? normalizeUrl(url) : "";
+
+      // Validate URL if provided
+      if (normalizedUrl) {
+        try {
+          // Test if URL is valid by creating a URL object
+          new URL(normalizedUrl);
+        } catch {
+          setUploadError(
+            "Invalid URL format. Please enter a valid URL or leave it empty."
+          );
+          setIsSaving(false);
+          return;
+        }
+      }
 
       // If we have a metadata image URL, fetch and upload it
       if (metadataImageUrl) {
@@ -417,7 +524,7 @@ export default function RCMDModal() {
         visibility,
         imageUrl,
         tags,
-        url,
+        normalizedUrl, // Use normalized URL
         locationData
       );
 
@@ -429,9 +536,16 @@ export default function RCMDModal() {
       }
     } catch (error) {
       console.error("Error saving RCMD:", error);
-      setUploadError(
-        error instanceof Error ? error.message : "Error saving RCMD"
-      );
+      // Check if it's a URL-related error
+      if (error instanceof Error && error.message.includes("URL")) {
+        setUploadError(
+          "Invalid URL format. Please enter a valid URL or leave it empty."
+        );
+      } else {
+        setUploadError(
+          error instanceof Error ? error.message : "Error saving RCMD"
+        );
+      }
     } finally {
       setIsSaving(false);
     }
@@ -441,6 +555,7 @@ export default function RCMDModal() {
   const handleUrlClear = () => {
     // First set URL to empty to prevent further fetch attempts
     setUrl("");
+    setMetadataError(null);
 
     // Only clear these if they were likely set from metadata
     // and if we don't have any user-entered content
@@ -556,6 +671,11 @@ export default function RCMDModal() {
 
   if (!isRCMDModalOpen) return null;
 
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    handleSubmit(e);
+  };
+
   return (
     <>
       <Script
@@ -569,23 +689,30 @@ export default function RCMDModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-heading"
+        onClick={handleClose}
       >
         <div
           ref={modalRef}
-          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-auto"
-          tabIndex={-1} // For focus capturing
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col"
+          tabIndex={-1}
+          onClick={(e) => e.stopPropagation()}
         >
-          <h2 id="modal-heading" className="text-lg font-semibold mb-4">
+          <h2
+            id="modal-heading"
+            className="text-lg font-semibold p-6 pb-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] z-10"
+          >
             New RCMD
           </h2>
 
           <form
-            onSubmit={handleSubmit}
+            onSubmit={handleFormSubmit}
             aria-label="Create new recommendation"
             noValidate
+            className="flex flex-col h-full"
           >
             <div
-              className="space-y-4"
+              className="overflow-y-auto px-6 flex-grow"
+              style={{ maxHeight: "calc(90vh - 150px)" }}
               role="group"
               aria-labelledby="rcmd-form-heading"
             >
@@ -593,364 +720,385 @@ export default function RCMDModal() {
                 Recommendation details
               </h3>
 
-              <div>
-                <label
-                  htmlFor="rcmd-url"
-                  className="block text-sm font-medium mb-1"
-                >
-                  URL
-                </label>
-                <div id="rcmd-url">
-                  <LinkInput
-                    value={url}
-                    onChange={setUrl}
-                    onMetadataFetch={handleLinkMetadata}
-                    onClear={handleUrlClear}
-                    disabled={isSaving}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="rcmd-title"
-                  className="block text-sm font-medium mb-1"
-                >
-                  Title
-                  {formErrors.title && (
-                    <span className="text-red-500 ml-1" aria-hidden="true">
-                      *
-                    </span>
-                  )}
-                </label>
-                <input
-                  id="rcmd-title"
-                  type="text"
-                  value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    if (e.target.value.trim()) {
-                      setFormErrors((prev) => ({ ...prev, title: undefined }));
-                    }
-                  }}
-                  className={`w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 ${
-                    formErrors.title ? "border-red-500" : ""
-                  }`}
-                  required
-                  aria-required="true"
-                  aria-invalid={!!formErrors.title}
-                  aria-describedby={
-                    formErrors.title ? "title-error" : undefined
-                  }
-                  ref={initialFocusRef}
-                />
-                {formErrors.title && (
-                  <div id="title-error" className="text-red-500 text-sm mt-1">
-                    {formErrors.title}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="rcmd-description"
-                  className="block text-sm font-medium mb-1"
-                >
-                  Description
-                  {formErrors.description && (
-                    <span className="text-red-500 ml-1" aria-hidden="true">
-                      *
-                    </span>
-                  )}
-                </label>
-                <textarea
-                  id="rcmd-description"
-                  value={description}
-                  onChange={(e) => {
-                    setDescription(e.target.value);
-                    if (e.target.value.trim()) {
-                      setFormErrors((prev) => ({
-                        ...prev,
-                        description: undefined,
-                      }));
-                    }
-                  }}
-                  className={`w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 ${
-                    formErrors.description ? "border-red-500" : ""
-                  }`}
-                  rows={4}
-                  required
-                  aria-required="true"
-                  aria-invalid={!!formErrors.description}
-                  aria-describedby={
-                    formErrors.description ? "description-error" : undefined
-                  }
-                />
-                {formErrors.description && (
-                  <div
-                    id="description-error"
-                    className="text-red-500 text-sm mt-1"
-                  >
-                    {formErrors.description}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label
-                  htmlFor="rcmd-type"
-                  className="block text-sm font-medium mb-1"
-                >
-                  Type
-                </label>
-                <select
-                  id="rcmd-type"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
-                  aria-required="true"
-                >
-                  <option value="other">Other</option>
-                  <option value="product">Product</option>
-                  <option value="service">Service</option>
-                  <option value="place">Place</option>
-                  <option value="experience">Experience</option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="rcmd-visibility"
-                  className="block text-sm font-medium mb-1"
-                >
-                  Visibility
-                </label>
-                <select
-                  id="rcmd-visibility"
-                  value={visibility}
-                  onChange={(e) => setVisibility(e.target.value)}
-                  className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
-                  aria-required="true"
-                >
-                  <option value="private">Private</option>
-                  <option value="public">Public</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Tags</label>
-                <TagInput
-                  tags={tags}
-                  onChange={setTags}
-                  placeholder="Type a tag and press Enter"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Press Enter or comma to add a tag
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Location
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={locationInput}
-                    onChange={handleLocationInputChange}
-                    placeholder="Search for a location..."
-                    className="w-full p-2 pl-10 border rounded-md dark:bg-gray-700 dark:border-gray-600"
-                    ref={locationInputRef}
-                    aria-label="Location search"
-                    autoComplete="off"
-                  />
-
-                  {/* Location Icon */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-
-                  {/* Clear Button */}
-                  {locationInput && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleLocationClear();
-                      }}
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                      aria-label="Clear location"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        className="h-4 w-4"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-
-                {/* Selected Location Preview */}
-                {location && (
-                  <div className="mt-2 text-sm text-gray-500">
-                    Selected: {location.address}
-                    {location.lat && location.lng && (
-                      <div className="text-xs text-gray-400">
-                        Coordinates: {location.lat.toFixed(5)},{" "}
-                        {location.lng.toFixed(5)}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Featured Image
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="featured-image-input"
-                  />
+              <div className="space-y-4 pb-6 pt-2">
+                <div>
                   <label
-                    htmlFor="featured-image-input"
-                    className="cursor-pointer py-2 px-4 text-sm font-semibold rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-gray-700 dark:text-gray-200"
+                    htmlFor="rcmd-url"
+                    className="block text-sm font-medium mb-1"
                   >
-                    {file || metadataImageUrl ? "Replace" : "Choose file"}
+                    URL
                   </label>
-                  {(file || metadataImageUrl) && (
-                    <button
-                      type="button"
-                      onClick={handleImageClear}
-                      className="py-2 px-4 text-sm font-semibold rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                    >
-                      Remove
-                    </button>
-                  )}
-                  {file && !metadataImageUrl && (
-                    <span className="text-sm text-gray-500">
-                      {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                    </span>
-                  )}
-                  {metadataImageUrl && (
-                    <span className="text-sm text-blue-500">
-                      Image from website metadata
-                    </span>
-                  )}
+                  <div id="rcmd-url">
+                    <LinkInput
+                      value={url}
+                      onChange={setUrl}
+                      onMetadataFetch={handleLinkMetadata}
+                      onClear={handleUrlClear}
+                      disabled={isSaving}
+                      ref={urlInputRef}
+                    />
+                  </div>
                   {isLoadingMetadata && (
-                    <span className="text-sm text-blue-500 flex items-center">
-                      <Spinner className="h-4 w-4 mr-2" />
+                    <div className="mt-1 text-sm text-blue-500 flex items-center">
+                      <Spinner className="h-3 w-3 mr-2" />
                       Loading metadata...
-                    </span>
+                    </div>
+                  )}
+                  {metadataError && (
+                    <div className="mt-1 text-sm text-red-500">
+                      {metadataError}
+                    </div>
                   )}
                 </div>
-                {(file || metadataImageUrl) && (
-                  <div className="mt-2">
-                    {metadataImageUrl ? (
-                      // For remote image from metadata
-                      <div className="relative w-full h-40">
-                        <Image
-                          src={metadataImageUrl}
-                          alt="Preview from website"
-                          fill
-                          className="object-contain"
-                          sizes="(max-width: 768px) 100vw, 400px"
-                          priority
-                          onError={() => {
-                            console.error("Error loading metadata image");
-                            setUploadError("Failed to load image preview");
-                            setMetadataImageUrl(null); // Clear the invalid URL
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      // For local user uploaded file
-                      file && (
-                        <div className="image-preview-container">
-                          {getImagePreviewUrl(file) ? (
-                            <Image
-                              src={getImagePreviewUrl(file)}
-                              alt="Image preview"
-                              width={200}
-                              height={200}
-                              className="max-h-40 object-contain"
-                              onError={() => {
-                                setUploadError(
-                                  "Error displaying image preview"
-                                );
-                                setFile(null); // Clear the problematic file
-                              }}
-                            />
-                          ) : (
-                            <div className="p-4 border border-gray-200 rounded text-gray-500 text-sm">
-                              Preview not available
-                            </div>
-                          )}
-                        </div>
-                      )
-                    )}
 
-                    {/* Image details information */}
-                    <div className="text-sm text-gray-500 mt-1">
-                      {!metadataImageUrl && file && (
-                        <div>
-                          <span className="sr-only">File size:</span>
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </div>
-                      )}
-                      {imageDimensions && (
-                        <div>
-                          <span className="sr-only">Image dimensions:</span>
-                          {metadataImageUrl ? "Estimated " : ""}
-                          {imageDimensions.width}x{imageDimensions.height}px
-                        </div>
-                      )}
-                      {metadataImageUrl && (
-                        <div className="text-blue-500" aria-live="polite">
-                          Using image from website metadata
+                <div>
+                  <label
+                    htmlFor="rcmd-title"
+                    className="block text-sm font-medium mb-1"
+                  >
+                    Title
+                    {formErrors.title && (
+                      <span className="text-red-500 ml-1" aria-hidden="true">
+                        *
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    id="rcmd-title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      if (e.target.value.trim()) {
+                        setFormErrors((prev) => ({
+                          ...prev,
+                          title: undefined,
+                        }));
+                      }
+                    }}
+                    className={`w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 ${
+                      formErrors.title ? "border-red-500" : ""
+                    }`}
+                    required
+                    aria-required="true"
+                    aria-invalid={!!formErrors.title}
+                    aria-describedby={
+                      formErrors.title ? "title-error" : undefined
+                    }
+                    ref={initialFocusRef}
+                  />
+                  {formErrors.title && (
+                    <div id="title-error" className="text-red-500 text-sm mt-1">
+                      {formErrors.title}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="rcmd-description"
+                    className="block text-sm font-medium mb-1"
+                  >
+                    Description
+                    {formErrors.description && (
+                      <span className="text-red-500 ml-1" aria-hidden="true">
+                        *
+                      </span>
+                    )}
+                  </label>
+                  <textarea
+                    id="rcmd-description"
+                    value={description}
+                    onChange={(e) => {
+                      setDescription(e.target.value);
+                      if (e.target.value.trim()) {
+                        setFormErrors((prev) => ({
+                          ...prev,
+                          description: undefined,
+                        }));
+                      }
+                    }}
+                    className={`w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 ${
+                      formErrors.description ? "border-red-500" : ""
+                    }`}
+                    rows={4}
+                    required
+                    aria-required="true"
+                    aria-invalid={!!formErrors.description}
+                    aria-describedby={
+                      formErrors.description ? "description-error" : undefined
+                    }
+                  />
+                  {formErrors.description && (
+                    <div
+                      id="description-error"
+                      className="text-red-500 text-sm mt-1"
+                    >
+                      {formErrors.description}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="rcmd-type"
+                    className="block text-sm font-medium mb-1"
+                  >
+                    Type
+                  </label>
+                  <select
+                    id="rcmd-type"
+                    value={type}
+                    onChange={(e) => setType(e.target.value)}
+                    className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                    aria-required="true"
+                  >
+                    <option value="other">Other</option>
+                    <option value="product">Product</option>
+                    <option value="service">Service</option>
+                    <option value="place">Place</option>
+                    <option value="experience">Experience</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="rcmd-visibility"
+                    className="block text-sm font-medium mb-1"
+                  >
+                    Visibility
+                  </label>
+                  <select
+                    id="rcmd-visibility"
+                    value={visibility}
+                    onChange={(e) => setVisibility(e.target.value)}
+                    className="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                    aria-required="true"
+                  >
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Tags</label>
+                  <TagInput
+                    tags={tags}
+                    onChange={setTags}
+                    placeholder="Type a tag and press Enter"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Press Enter or comma to add a tag
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Location
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={locationInput}
+                      onChange={handleLocationInputChange}
+                      placeholder="Search for a location..."
+                      className="w-full p-2 pl-10 border rounded-md dark:bg-gray-700 dark:border-gray-600"
+                      ref={locationInputRef}
+                      aria-label="Location search"
+                      autoComplete="off"
+                    />
+
+                    {/* Location Icon */}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+
+                    {/* Clear Button */}
+                    {locationInput && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLocationClear();
+                        }}
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        aria-label="Clear location"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Selected Location Preview */}
+                  {location && (
+                    <div className="mt-2 text-sm text-gray-500">
+                      Selected: {location.address}
+                      {location.lat && location.lng && (
+                        <div className="text-xs text-gray-400">
+                          Coordinates: {location.lat.toFixed(5)},{" "}
+                          {location.lng.toFixed(5)}
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
-                {uploadError && (
-                  <div className="text-red-500 text-sm mt-1">{uploadError}</div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              <div className="flex justify-end gap-3 mt-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Featured Image
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="featured-image-input"
+                    />
+                    <label
+                      htmlFor="featured-image-input"
+                      className="cursor-pointer py-2 px-4 text-sm font-semibold rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-gray-700 dark:text-gray-200"
+                    >
+                      {file || metadataImageUrl ? "Replace" : "Choose file"}
+                    </label>
+                    {(file || metadataImageUrl) && (
+                      <button
+                        type="button"
+                        onClick={handleImageClear}
+                        className="py-2 px-4 text-sm font-semibold rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                      >
+                        Remove
+                      </button>
+                    )}
+                    {file && !metadataImageUrl && (
+                      <span className="text-sm text-gray-500">
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    )}
+                    {metadataImageUrl && (
+                      <span className="text-sm text-blue-500">
+                        Image from website metadata
+                      </span>
+                    )}
+                    {isLoadingMetadata && (
+                      <span className="text-sm text-blue-500 flex items-center">
+                        <Spinner className="h-4 w-4 mr-2" />
+                        Loading metadata...
+                      </span>
+                    )}
+                  </div>
+                  {(file || metadataImageUrl) && (
+                    <div className="mt-2">
+                      {metadataImageUrl ? (
+                        // For remote image from metadata
+                        <div className="relative w-full h-40">
+                          <Image
+                            src={metadataImageUrl}
+                            alt="Preview from website"
+                            fill
+                            className="object-contain"
+                            sizes="(max-width: 768px) 100vw, 400px"
+                            priority
+                            onError={() => {
+                              console.error("Error loading metadata image");
+                              setUploadError("Failed to load image preview");
+                              setMetadataImageUrl(null); // Clear the invalid URL
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        // For local user uploaded file
+                        file && (
+                          <div className="image-preview-container">
+                            {getImagePreviewUrl(file) ? (
+                              <Image
+                                src={getImagePreviewUrl(file)}
+                                alt="Image preview"
+                                width={200}
+                                height={200}
+                                className="max-h-40 object-contain"
+                                onError={() => {
+                                  setUploadError(
+                                    "Error displaying image preview"
+                                  );
+                                  setFile(null); // Clear the problematic file
+                                }}
+                              />
+                            ) : (
+                              <div className="p-4 border border-gray-200 rounded text-gray-500 text-sm">
+                                Preview not available
+                              </div>
+                            )}
+                          </div>
+                        )
+                      )}
+
+                      {/* Image details information */}
+                      <div className="text-sm text-gray-500 mt-1">
+                        {!metadataImageUrl && file && (
+                          <div>
+                            <span className="sr-only">File size:</span>
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </div>
+                        )}
+                        {imageDimensions && (
+                          <div>
+                            <span className="sr-only">Image dimensions:</span>
+                            {metadataImageUrl ? "Estimated " : ""}
+                            {imageDimensions.width}x{imageDimensions.height}px
+                          </div>
+                        )}
+                        {metadataImageUrl && (
+                          <div className="text-blue-500" aria-live="polite">
+                            Using image from website metadata
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {uploadError && (
+                    <div className="text-red-500 text-sm mt-1">
+                      {uploadError}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 pt-4 border-t border-gray-200 dark:border-gray-700 mt-auto bg-white dark:bg-gray-800 sticky bottom-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.3)] z-10">
+              <div className="flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={handleClose}
@@ -975,18 +1123,18 @@ export default function RCMDModal() {
                   {isSaving || isSavingRCMD ? "Saving..." : "Save"}
                 </button>
               </div>
-
-              {/* General form error message area - visible on API errors */}
-              {uploadError && !formErrors.title && !formErrors.description && (
-                <div
-                  className="text-red-500 text-sm mt-3 p-2 bg-red-50 rounded"
-                  role="alert"
-                  aria-live="assertive"
-                >
-                  {uploadError}
-                </div>
-              )}
             </div>
+
+            {/* General form error message area - visible on API errors */}
+            {uploadError && !formErrors.title && !formErrors.description && (
+              <div
+                className="text-red-500 text-sm mx-6 mb-4 p-2 bg-red-50 rounded"
+                role="alert"
+                aria-live="assertive"
+              >
+                {uploadError}
+              </div>
+            )}
           </form>
         </div>
       </div>

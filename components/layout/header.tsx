@@ -12,7 +12,7 @@ export default function Header() {
   const { userId, isInitialized } = useAuthStore();
 
   return (
-    <header className="border-b relative z-50">
+    <header className="sticky top-0 border-b relative z-50 bg-white dark:bg-gray-900 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center">
         {/* Logo and Desktop Nav (left side) */}
         <div className="flex items-center gap-8">
@@ -31,7 +31,10 @@ export default function Header() {
 
         {/* Mobile Navigation Button + User Menu (right side) */}
         <div className="flex items-center">
-          {/* Mobile Only Navigation */}
+          {/* User Menu (with desktop auth buttons inside) */}
+          <UserMenu />
+
+          {/* Mobile Only Navigation - moved to the end */}
           <div className="md:hidden">
             <MainNav
               items={mainNavItems}
@@ -42,9 +45,6 @@ export default function Header() {
               }
             />
           </div>
-
-          {/* User Menu (with desktop auth buttons inside) */}
-          <UserMenu />
         </div>
       </div>
     </header>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProfileHeader } from "@/components/features/profile/header";
 import { useAuthStore } from "@/stores/auth-store";
@@ -13,11 +13,20 @@ export default function ProfileLayout({
 }) {
   const router = useRouter();
   const userId = useAuthStore((state) => state.userId);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
   const { profile, socialLinks, isLoading, fetchProfile } = useProfileStore();
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   useEffect(() => {
+    if (!isInitialized) {
+      return;
+    }
+
     const initializeProfile = async () => {
-      if (!userId) return;
+      if (!userId) {
+        setIsPageLoading(false);
+        return;
+      }
 
       try {
         const result = await fetchProfile(userId);
@@ -26,13 +35,15 @@ export default function ProfileLayout({
         }
       } catch (error) {
         console.error("Failed to initialize profile:", error);
+      } finally {
+        setIsPageLoading(false);
       }
     };
 
     initializeProfile();
-  }, [userId, fetchProfile, router]);
+  }, [userId, fetchProfile, router, isInitialized]);
 
-  if (isLoading || !profile) {
+  if (isPageLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         Loading...
@@ -44,6 +55,14 @@ export default function ProfileLayout({
     return (
       <div className="flex justify-center items-center min-h-screen">
         Authentication error or user not found.
+      </div>
+    );
+  }
+
+  if (isLoading || !profile) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        Loading profile...
       </div>
     );
   }
