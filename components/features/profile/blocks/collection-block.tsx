@@ -1,26 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { CollectionWithItems } from "@/types";
 import { formatDistance } from "date-fns";
 import { useModalStore } from "@/stores/modal-store";
-import { BlockActions } from "@/components/common";
+import { BlockActions, blockStyles } from "@/components/common";
 import { createClient } from "@/utils/supabase/client";
 import { useCollectionStore } from "@/stores/collection-store";
 import { GenericCarousel, RCMDCard } from "@/components/common/carousel";
 
 interface CollectionBlockProps {
-  collection?: CollectionWithItems;
+  collection: CollectionWithItems;
   onDelete?: () => void;
   onSave?: () => void;
-  canEdit?: boolean;
 }
 
 export default function CollectionBlock({
   collection,
   onDelete,
   onSave,
-  canEdit = false,
 }: CollectionBlockProps) {
   const {
     setIsCollectionModalOpen,
@@ -29,50 +27,61 @@ export default function CollectionBlock({
     setCollectionToEdit,
   } = useModalStore();
   const { deleteCollection } = useCollectionStore();
-  const [isDeleted, setIsDeleted] = useState(false);
-  const [currentCollection, setCurrentCollection] = useState<
-    CollectionWithItems | undefined
-  >(collection);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentCollection, setCurrentCollection] =
+    useState<CollectionWithItems>(collection);
 
-  const fetchCollection = async () => {
+  const fetchCollection = useCallback(async () => {
     if (!collection?.id) return;
 
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("collections")
-      .select(
+    try {
+      setIsLoading(true);
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("collections")
+        .select(
+          `
+          *,
+          collection_items(
+            *,
+            rcmd:rcmd_id(*)
+          )
         `
-        *,
-        collection_items(
-          rcmds(*)
         )
-      `
-      )
-      .eq("id", collection.id)
-      .single();
+        .eq("id", collection.id)
+        .single();
 
-    if (error) {
-      console.error("Error fetching collection:", error);
-      return;
-    }
+      if (error) throw error;
 
-    if (data) {
-      setCurrentCollection(data);
+      if (data) {
+        setCurrentCollection(data);
+      }
+    } catch (err) {
+      console.error("Error fetching collection:", err);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [collection?.id]);
+
+  useEffect(() => {
+    fetchCollection();
+  }, [fetchCollection]);
 
   const handleEdit = () => {
     if (!currentCollection) return;
 
-    // Set up success callback
+    // Set up modal success callback
     setOnModalSuccess(() => {
+      // Refetch the Collection to get updated data
       fetchCollection();
       if (onSave) onSave();
     });
 
-    // Set edit mode and data in store
+    // Set the edit mode and data to edit
     setIsCollectionEditMode(true);
     setCollectionToEdit(currentCollection);
+
+    // Open the Collection modal in edit mode
     setIsCollectionModalOpen(true);
   };
 
@@ -81,72 +90,73 @@ export default function CollectionBlock({
 
     try {
       await deleteCollection(currentCollection.id);
-      setIsDeleted(true);
       if (onDelete) onDelete();
     } catch (error) {
       console.error("Error deleting collection:", error);
     }
   };
 
-  if (isDeleted) return null;
+  if (isLoading) {
+    return (
+      <div
+        className={`${blockStyles.container} ${blockStyles.card} animate-pulse`}
+      >
+        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+      </div>
+    );
+  }
 
   if (!currentCollection) return null;
-
-  const formatTime = (date: string) => {
-    return formatDistance(new Date(date), new Date(), { addSuffix: true });
-  };
 
   // Create RCMD cards for the carousel
   const rcmdCards =
     currentCollection.collection_items
-      ?.filter((item) => item.rcmds && item.item_type === "rcmd")
-      .map((item) => <RCMDCard key={item.rcmds!.id} rcmd={item.rcmds!} />) ||
-    [];
+      ?.filter((item) => item.rcmd && item.item_type === "rcmd")
+      .map((item) => <RCMDCard key={item.rcmd!.id} rcmd={item.rcmd!} />) || [];
 
   return (
-    <div className="rounded-md shadow-sm border dark:border-gray-800 mb-4 bg-white dark:bg-gray-900">
-      <div className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="w-full">
-            <h3 className="font-medium text-gray-900 dark:text-white">
-              {currentCollection.name}
-            </h3>
-            {currentCollection.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                {currentCollection.description}
-              </p>
+    <div
+      className={`${blockStyles.container} ${blockStyles.card} relative pt-12`}
+    >
+      <div className="absolute top-2 right-2 z-10">
+        <BlockActions
+          isEditMode={false}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      </div>
+
+      <h3 className={blockStyles.title}>{currentCollection.name}</h3>
+
+      {currentCollection.description && (
+        <p className={blockStyles.description}>
+          {currentCollection.description}
+        </p>
+      )}
+
+      <div className="flex items-center gap-2 mt-2 mb-4">
+        <span className={blockStyles.metaText}>
+          {currentCollection.collection_items?.length || 0} item
+          {currentCollection.collection_items?.length !== 1 ? "s" : ""}
+        </span>
+        {currentCollection.created_at && (
+          <span className={blockStyles.metaText}>
+            {formatDistance(
+              new Date(currentCollection.created_at),
+              new Date(),
+              { addSuffix: true }
             )}
-
-            {currentCollection.collection_items &&
-              currentCollection.collection_items.length > 0 && (
-                <div className="mt-3">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {currentCollection.collection_items.length} item
-                    {currentCollection.collection_items.length !== 1 ? "s" : ""}
-                  </p>
-                </div>
-              )}
-
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {currentCollection.created_at && (
-                <span>{formatTime(currentCollection.created_at)}</span>
-              )}
-            </div>
-          </div>
-
-          {canEdit && (
-            <BlockActions
-              isEditMode={false}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          )}
-        </div>
+          </span>
+        )}
       </div>
 
       {/* RCMD Carousel */}
       {rcmdCards.length > 0 && (
-        <div className="-mx-4">
+        <div className="-mx-4 mt-4">
           <GenericCarousel items={rcmdCards} cardsPerView={3} />
         </div>
       )}

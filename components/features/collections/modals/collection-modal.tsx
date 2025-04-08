@@ -121,8 +121,8 @@ export default function CollectionModal() {
       // If collection has items, populate the rcmdIds
       if (collectionToEdit.collection_items) {
         const ids = collectionToEdit.collection_items
-          .filter((item) => item.rcmd_id)
-          .map((item) => item.rcmd_id?.id)
+          .filter((item) => item.rcmd_id || item.rcmd)
+          .map((item) => item.rcmd?.id || item.rcmd_id?.id)
           .filter((id): id is string => id !== undefined);
         setRcmdIds(ids);
       }

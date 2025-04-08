@@ -1,27 +1,28 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import type { Link, LinkBlockType } from "@/types";
 import { Link2 } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { useModalStore } from "@/stores/modal-store";
-import { BlockActions } from "@/components/common";
+import { BlockActions, blockStyles } from "@/components/common";
 import { createClient } from "@/utils/supabase/client";
 import { useLinkStore } from "@/stores/link-store";
 
 interface LinkBlockProps {
-  linkBlock?: LinkBlockType;
+  linkBlock: LinkBlockType;
   onDelete?: () => void;
   onSave?: (block: Partial<LinkBlockType>) => void;
-  canEdit?: boolean;
 }
 
 export default function LinkBlock({
   linkBlock,
   onDelete,
   onSave,
-  canEdit = false,
 }: LinkBlockProps) {
+  const supabase = createClient();
+  const [link, setLink] = useState<Link | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const {
     setIsLinkModalOpen,
     setOnModalSuccess,
@@ -29,68 +30,58 @@ export default function LinkBlock({
     setLinkToEdit,
   } = useModalStore();
   const { deleteLink } = useLinkStore();
-  const [isDeleted, setIsDeleted] = useState(false);
-  const [currentLinkBlock] = useState<LinkBlockType | undefined>(linkBlock);
-  const [currentLink, setCurrentLink] = useState<Link | undefined>();
 
   const fetchLink = useCallback(async () => {
-    if (!linkBlock?.link_id) return;
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("links")
+        .select("*")
+        .eq("id", linkBlock.link_id)
+        .single();
 
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from("links")
-      .select("*")
-      .eq("id", linkBlock.link_id)
-      .single();
-
-    if (error) {
-      console.error("Error fetching link:", error);
-      return;
+      if (error) throw error;
+      setLink(data);
+    } catch (err) {
+      console.error("Error fetching link:", err);
+    } finally {
+      setIsLoading(false);
     }
+  }, [linkBlock.link_id, supabase]);
 
-    if (data) {
-      setCurrentLink(data);
-    }
-  }, [linkBlock?.link_id]);
-
-  // Fetch the link data when the component mounts or linkBlock changes
-  React.useEffect(() => {
+  useEffect(() => {
     fetchLink();
   }, [fetchLink]);
 
   const handleEdit = () => {
-    if (!currentLink) return;
+    if (!link) return;
 
-    // Set up success callback
+    // Set up modal success callback
     setOnModalSuccess(() => {
+      // Refetch the Link to get updated data
       fetchLink();
-      if (onSave && currentLinkBlock) onSave(currentLinkBlock);
+      if (onSave) {
+        onSave(linkBlock);
+      }
     });
 
-    // Set edit mode and data in store
+    // Set the edit mode and data to edit
     setIsLinkEditMode(true);
-    setLinkToEdit(currentLink);
+    setLinkToEdit(link);
+
+    // Open the Link modal in edit mode
     setIsLinkModalOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!currentLinkBlock?.id) return;
+    if (!linkBlock?.id) return;
 
     try {
-      await deleteLink(currentLinkBlock.id);
-      setIsDeleted(true);
+      await deleteLink(linkBlock.id);
       if (onDelete) onDelete();
     } catch (error) {
       console.error("Error deleting link:", error);
     }
-  };
-
-  if (isDeleted) return null;
-
-  if (!currentLink || !currentLinkBlock) return null;
-
-  const formatTime = (date: string) => {
-    return formatDistance(new Date(date), new Date(), { addSuffix: true });
   };
 
   // Format the URL for display
@@ -103,46 +94,62 @@ export default function LinkBlock({
     }
   };
 
+  if (isLoading) {
+    return (
+      <div
+        className={`${blockStyles.container} ${blockStyles.card} animate-pulse`}
+      >
+        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+      </div>
+    );
+  }
+
+  if (!link) return null;
+
   return (
-    <div className="p-4 rounded-md shadow-sm border dark:border-gray-800 mb-4 bg-white dark:bg-gray-900">
-      <div className="flex justify-between items-start">
-        <div className="flex items-start space-x-3 w-full">
-          <div className="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-            <div className="text-gray-400 text-lg">
-              <Link2 size={20} />
-            </div>
-          </div>
-          <div className="flex-grow">
-            <h3 className="font-medium text-gray-900 dark:text-white">
-              {currentLink.title}
-            </h3>
-            <a
-              href={currentLink.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate block"
-            >
-              {formatUrl(currentLink.url)}
-            </a>
-            {currentLink.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                {currentLink.description}
-              </p>
-            )}
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              {currentLinkBlock.created_at && (
-                <span>{formatTime(currentLinkBlock.created_at)}</span>
-              )}
-            </div>
-          </div>
+    <div
+      className={`${blockStyles.container} ${blockStyles.card} relative pt-12`}
+    >
+      <div className="absolute top-2 right-2 z-10">
+        <BlockActions
+          isEditMode={false}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onSave={() => {}}
+          onCancel={() => {}}
+        />
+      </div>
+
+      <h3 className={blockStyles.title}>{link.title}</h3>
+
+      {/* URL */}
+      <a
+        href={link.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center text-sm text-blue-600 dark:text-blue-400 mb-2 hover:underline"
+      >
+        <span className="flex items-center gap-1.5">
+          <Link2 className="w-3.5 h-3.5" />
+          {formatUrl(link.url)}
+        </span>
+      </a>
+
+      {link.description && (
+        <p className={blockStyles.description}>{link.description}</p>
+      )}
+
+      <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center gap-2">
+          <span className={blockStyles.tag}>{link.visibility}</span>
+          <span className={blockStyles.metaText}>
+            {formatDistance(new Date(linkBlock.created_at), new Date(), {
+              addSuffix: true,
+            })}
+          </span>
         </div>
-        {canEdit && (
-          <BlockActions
-            isEditMode={false}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        )}
       </div>
     </div>
   );

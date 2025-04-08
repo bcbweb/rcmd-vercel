@@ -27,6 +27,16 @@ export function MainNav({ items, authButtons }: MainNavProps) {
     e.preventDefault();
   };
 
+  // Add a function to handle all navigation actions
+  const handleNavigation = () => {
+    setIsOpen(false);
+  };
+
+  // Add effect to close menu on route change
+  React.useEffect(() => {
+    handleNavigation();
+  }, [window.location.pathname]);
+
   return (
     <>
       {/* Desktop Menu */}
@@ -46,6 +56,7 @@ export function MainNav({ items, authButtons }: MainNavProps) {
                           key={subItem.title}
                           title={subItem.title}
                           href={subItem.href}
+                          onClick={handleNavigation}
                         >
                           {subItem.description}
                         </ListItem>
@@ -57,6 +68,7 @@ export function MainNav({ items, authButtons }: MainNavProps) {
                 <Link href={item.href ?? "#"} legacyBehavior passHref>
                   <NavigationMenuLink
                     className={cn(navigationMenuTriggerStyle())}
+                    onClick={handleNavigation}
                   >
                     {item.title}
                   </NavigationMenuLink>
@@ -91,7 +103,7 @@ export function MainNav({ items, authButtons }: MainNavProps) {
                           key={subItem.title}
                           href={subItem.href ?? "#"}
                           className="block py-2 text-sm text-muted-foreground"
-                          onClick={() => setIsOpen(false)}
+                          onClick={handleNavigation}
                         >
                           {subItem.title}
                         </Link>
@@ -102,7 +114,7 @@ export function MainNav({ items, authButtons }: MainNavProps) {
                   <Link
                     href={item.href ?? "#"}
                     className="block py-2 text-sm"
-                    onClick={() => setIsOpen(false)}
+                    onClick={handleNavigation}
                   >
                     {item.title}
                   </Link>
@@ -112,7 +124,9 @@ export function MainNav({ items, authButtons }: MainNavProps) {
 
             {/* Render auth buttons in mobile menu */}
             {authButtons && (
-              <div className="py-4 border-t mt-2">{authButtons}</div>
+              <div className="py-4 border-t mt-2" onClick={handleNavigation}>
+                {authButtons}
+              </div>
             )}
           </nav>
         </div>

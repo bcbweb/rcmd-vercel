@@ -1,9 +1,9 @@
 "use client";
 
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-import { createClient } from '@/utils/supabase/client';
-import type { Collection, RCMDVisibility } from '@/types';
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+import { createClient } from "@/utils/supabase/client";
+import type { Collection, RCMDVisibility } from "@/types";
 
 interface CollectionStore {
   isLoading: boolean;
@@ -35,31 +35,34 @@ export const useCollectionStore = create<CollectionStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const { data: collection, error } = await supabase
-            .rpc('insert_collection', {
+          const { data: collection, error } = await supabase.rpc(
+            "insert_collection",
+            {
               payload: {
                 name: input.name,
                 description: input.description,
                 visibility: input.visibility,
                 linkIds: input.linkIds,
-                rcmdIds: input.rcmdIds
-              }
-            });
+                rcmdIds: input.rcmdIds,
+              },
+            }
+          );
 
           if (error) throw error;
 
           // Fetch the complete collection with items
           const { data: fullCollection, error: fetchError } = await supabase
-            .from('collections')
-            .select(`
+            .from("collections")
+            .select(
+              `
               *,
               collection_items (
-                item_type,
-                link_id (*),
-                rcmd_id (*)
+                *,
+                rcmd:rcmd_id (*)
               )
-            `)
-            .eq('id', collection.id)
+            `
+            )
+            .eq("id", collection.id)
             .single();
 
           if (fetchError) throw fetchError;
@@ -67,21 +70,21 @@ export const useCollectionStore = create<CollectionStore>()(
           set((state) => ({
             isLoading: false,
             currentCollection: fullCollection as Collection,
-            collections: [fullCollection as Collection, ...state.collections]
+            collections: [fullCollection as Collection, ...state.collections],
           }));
 
           return fullCollection as Collection;
-
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to create collection';
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Failed to create collection";
           set({
             error: errorMessage,
             isLoading: false,
-            currentCollection: null
+            currentCollection: null,
           });
-          console.error('Error creating collection:', error);
+          console.error("Error creating collection:", error);
           return null;
         }
       },
@@ -92,19 +95,20 @@ export const useCollectionStore = create<CollectionStore>()(
 
         try {
           let query = supabase
-            .from('collections')
-            .select(`
+            .from("collections")
+            .select(
+              `
               *,
               collection_items (
-                item_type,
-                link_id (*),
-                rcmd_id (*)
+                *,
+                rcmd:rcmd_id (*)
               )
-            `)
-            .order('created_at', { ascending: false });
+            `
+            )
+            .order("created_at", { ascending: false });
 
           if (userId) {
-            query = query.eq('owner_id', userId);
+            query = query.eq("owner_id", userId);
           }
 
           const { data, error } = await query;
@@ -113,18 +117,18 @@ export const useCollectionStore = create<CollectionStore>()(
 
           set({
             isLoading: false,
-            collections: data as Collection[]
+            collections: data as Collection[],
           });
-
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to fetch collections';
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Failed to fetch collections";
           set({
             error: errorMessage,
-            isLoading: false
+            isLoading: false,
           });
-          console.error('Error fetching collections:', error);
+          console.error("Error fetching collections:", error);
         }
       },
 
@@ -135,44 +139,44 @@ export const useCollectionStore = create<CollectionStore>()(
         try {
           // Optimistically update UI
           set((state) => ({
-            collections: state.collections.filter(c => c.id !== id)
+            collections: state.collections.filter((c) => c.id !== id),
           }));
 
           const { error } = await supabase
-            .from('collections')
+            .from("collections")
             .delete()
-            .eq('id', id);
+            .eq("id", id);
 
           if (error) throw error;
 
           set({ isLoading: false });
-
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to delete collection';
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Failed to delete collection";
 
           // Revert optimistic update on error
           const { data } = await supabase
-            .from('collections')
-            .select('*')
-            .eq('id', id)
+            .from("collections")
+            .select("*")
+            .eq("id", id)
             .single();
 
           if (data) {
             set((state) => ({
               error: errorMessage,
               isLoading: false,
-              collections: [...state.collections, data as Collection]
+              collections: [...state.collections, data as Collection],
             }));
           } else {
             set({
               error: errorMessage,
-              isLoading: false
+              isLoading: false,
             });
           }
 
-          console.error('Error deleting collection:', error);
+          console.error("Error deleting collection:", error);
           throw error;
         }
       },
@@ -186,41 +190,46 @@ export const useCollectionStore = create<CollectionStore>()(
           set((state) => ({
             collections: state.collections.map((collection) =>
               collection.id === id
-                ? { ...collection, ...updates, updated_at: new Date().toISOString() }
+                ? {
+                    ...collection,
+                    ...updates,
+                    updated_at: new Date().toISOString(),
+                  }
                 : collection
             ),
           }));
 
           const { error } = await supabase
-            .from('collections')
+            .from("collections")
             .update({
               ...updates,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
-            .eq('id', id)
+            .eq("id", id)
             .select();
 
           if (error) throw error;
 
           set({ isLoading: false });
-
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to update collection';
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Failed to update collection";
 
           // Revert optimistic update on error
           const { data } = await supabase
-            .from('collections')
-            .select(`
+            .from("collections")
+            .select(
+              `
               *,
               collection_items (
-                item_type,
-                link_id (*),
-                rcmd_id (*)
+                *,
+                rcmd:rcmd_id (*)
               )
-            `)
-            .eq('id', id)
+            `
+            )
+            .eq("id", id)
             .single();
 
           if (data) {
@@ -228,25 +237,23 @@ export const useCollectionStore = create<CollectionStore>()(
               error: errorMessage,
               isLoading: false,
               collections: state.collections.map((collection) =>
-                collection.id === id
-                  ? data as Collection
-                  : collection
-              )
+                collection.id === id ? (data as Collection) : collection
+              ),
             }));
           } else {
             set({
               error: errorMessage,
-              isLoading: false
+              isLoading: false,
             });
           }
 
-          console.error('Error updating collection:', error);
+          console.error("Error updating collection:", error);
           throw error;
         }
       },
     }),
     {
-      name: 'Collection Store'
+      name: "Collection Store",
     }
   )
 );

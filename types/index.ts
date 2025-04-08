@@ -61,6 +61,7 @@ export interface CollectionWithItems extends Collection {
       [key: string]: any;
     };
     rcmds?: RCMD;
+    rcmd?: RCMD;
     created_at: string;
   }>;
 }

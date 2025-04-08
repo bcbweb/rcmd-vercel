@@ -39,7 +39,7 @@ export default function CollectionBlocks({
 
       const { data, error } = await supabase
         .from("collections")
-        .select(`*, collection_items(*)`)
+        .select(`*, collection_items(*, rcmd:rcmd_id(*))`)
         .in("id", collectionIds);
 
       if (error) {
@@ -62,20 +62,18 @@ export default function CollectionBlocks({
 
   return (
     <div className="space-y-4">
-      {collectionBlocks.map((block) => (
-        <CollectionBlock
-          key={block.id}
-          collection={
-            block.collection_id ? collections[block.collection_id] : undefined
-          }
-          onDelete={
-            onDelete && block.collection_id
-              ? () => onDelete(block.collection_id!)
-              : undefined
-          }
-          onSave={onSave ? () => onSave(block) : undefined}
-        />
-      ))}
+      {collectionBlocks.map((block) =>
+        block.collection_id && collections[block.collection_id] ? (
+          <CollectionBlock
+            key={block.id}
+            collection={collections[block.collection_id]}
+            onDelete={
+              onDelete ? () => onDelete(block.collection_id!) : undefined
+            }
+            onSave={onSave ? () => onSave(block) : undefined}
+          />
+        ) : null
+      )}
 
       {collectionBlocks.length === 0 && (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
