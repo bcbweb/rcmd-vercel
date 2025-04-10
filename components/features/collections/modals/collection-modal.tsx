@@ -68,27 +68,45 @@ export default function CollectionModal() {
 
   // Handle form close
   const handleClose = useCallback(() => {
+    // Ensure we reset before closing
     resetForm();
-    setIsCollectionModalOpen(false);
+
+    // Small delay to prevent any race conditions
+    setTimeout(() => {
+      setIsCollectionModalOpen(false);
+    }, 10);
   }, [resetForm, setIsCollectionModalOpen]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🔍 CollectionModal: handleSubmit called");
+    console.log(
+      "🔍 CollectionModal: isLoading:",
+      isLoading,
+      "isFormValid:",
+      isFormValid
+    );
     if (isLoading || !isFormValid) return;
 
     try {
       let result;
       if (isCollectionEditMode && collectionToEdit) {
+        console.log(
+          "🔍 CollectionModal: Updating existing collection",
+          collectionToEdit.id
+        );
         // Update existing collection
         await updateCollection(collectionToEdit.id, {
           name,
           description,
           visibility,
         });
+        console.log("🔍 CollectionModal: Collection updated successfully");
         result = true;
       } else {
         // Create new collection
+        console.log("🔍 CollectionModal: Creating new collection");
         result = await insertCollection({
           name,
           description,
@@ -96,12 +114,57 @@ export default function CollectionModal() {
           rcmdIds,
           linkIds: [], // No links in this version
         });
+        console.log(
+          "🔍 CollectionModal: Collection created successfully",
+          result
+        );
       }
 
       if (result) {
-        onModalSuccess?.();
+        console.log(
+          "🔍 CollectionModal: About to call onModalSuccess callback"
+        );
+        console.log(
+          "🔍 CollectionModal: onModalSuccess exists:",
+          !!onModalSuccess
+        );
+
+        // Create a safe object to pass back to the callback
+        const safeUpdatedCollection = {
+          name: name,
+          description: description,
+          visibility: visibility,
+          // Create collection items from rcmdIds
+          collection_items: Array.isArray(rcmdIds)
+            ? rcmdIds.map((id) => ({
+                id: crypto.randomUUID(), // Generate a temporary ID
+                collection_id: collectionToEdit?.id || "",
+                item_type: "rcmd",
+                rcmd_id: id,
+                created_at: new Date().toISOString(),
+              }))
+            : collectionToEdit?.collection_items || [],
+        };
+
+        // First close the modal to prevent UI jank
         resetForm();
-        handleClose();
+        setIsCollectionModalOpen(false);
+
+        // Then call the callback after a short delay
+        // This prevents UI updates from competing with each other
+        setTimeout(() => {
+          // Only call onModalSuccess if it exists and pass it the safe object
+          if (typeof onModalSuccess === "function") {
+            console.log(
+              "🔍 CollectionModal: Calling onModalSuccess with:",
+              safeUpdatedCollection
+            );
+            onModalSuccess(safeUpdatedCollection);
+            console.log(
+              "🔍 CollectionModal: Called onModalSuccess callback successfully"
+            );
+          }
+        }, 50);
       }
     } catch (error) {
       console.error(
@@ -121,9 +184,21 @@ export default function CollectionModal() {
       // If collection has items, populate the rcmdIds
       if (collectionToEdit.collection_items) {
         const ids = collectionToEdit.collection_items
-          .filter((item) => item.rcmd_id || item.rcmd)
-          .map((item) => item.rcmd?.id || item.rcmd_id?.id)
-          .filter((id): id is string => id !== undefined);
+          .filter((item: any) => {
+            // Ensure item exists before checking properties
+            return item && (item.rcmd_id || item.rcmd);
+          })
+          .map((item: any) => {
+            if (!item) return undefined;
+            // Handle potential null/undefined values
+            const rcmdObj = item.rcmd || {};
+            const rcmdIdObj = item.rcmd_id || {};
+            return rcmdObj.id || (rcmdIdObj && rcmdIdObj.id);
+          })
+          .filter(
+            (id: unknown): id is string =>
+              id !== undefined && typeof id === "string"
+          );
         setRcmdIds(ids);
       }
     } else {

@@ -1,18 +1,43 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
-import { CollectionWithItems } from "@/types";
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import { CollectionWithItems, RCMDVisibility } from "@/types";
 import { formatDistance } from "date-fns";
 import { useModalStore } from "@/stores/modal-store";
 import { BlockActions, blockStyles } from "@/components/common";
 import { createClient } from "@/utils/supabase/client";
 import { useCollectionStore } from "@/stores/collection-store";
 import { GenericCarousel, RCMDCard } from "@/components/common/carousel";
+import { toast } from "sonner";
+
+// Extended block type to include _collection property
+interface ExtendedCollectionBlock {
+  collection_id?: string;
+  id?: string;
+  _collection?: {
+    rcmdIds: string[];
+    linkIds: string[];
+    collection_items?: any[];
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
 
 interface CollectionBlockProps {
   collection: CollectionWithItems;
   onDelete?: () => void;
-  onSave?: () => void;
+  onSave?: (block: ExtendedCollectionBlock) => void;
+}
+
+interface CollectionModalProps {
+  collection: CollectionWithItems;
+  onSuccess: (updatedCollection: {
+    name: string;
+    description: string;
+    visibility: RCMDVisibility;
+    collection_items?: CollectionWithItems["collection_items"];
+  }) => void;
+  onClose: () => void;
 }
 
 export default function CollectionBlock({
@@ -26,75 +51,107 @@ export default function CollectionBlock({
     setIsCollectionEditMode,
     setCollectionToEdit,
   } = useModalStore();
-  const { deleteCollection } = useCollectionStore();
+  const { updateCollection, updateCollectionItems } = useCollectionStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [currentCollection, setCurrentCollection] =
-    useState<CollectionWithItems>(collection);
 
-  const fetchCollection = useCallback(async () => {
-    if (!collection?.id) return;
-
-    try {
-      setIsLoading(true);
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("collections")
-        .select(
-          `
-          *,
-          collection_items(
-            *,
-            rcmd:rcmd_id(*)
-          )
-        `
-        )
-        .eq("id", collection.id)
-        .single();
-
-      if (error) throw error;
-
-      if (data) {
-        setCurrentCollection(data);
+  const openCollectionModal = useCallback(
+    ({ collection, onSuccess }: Omit<CollectionModalProps, "onClose">) => {
+      if (!collection) {
+        console.error("Cannot open modal: collection is undefined");
+        return;
       }
-    } catch (err) {
-      console.error("Error fetching collection:", err);
-    } finally {
-      setIsLoading(false);
+
+      console.log(
+        "🔍 openCollectionModal called with collection:",
+        collection.id || "unknown id"
+      );
+      setCollectionToEdit(collection);
+      setIsCollectionEditMode(true);
+
+      // Pass the onSuccess callback directly
+      setOnModalSuccess(onSuccess);
+      setIsCollectionModalOpen(true);
+    },
+    [
+      setCollectionToEdit,
+      setIsCollectionEditMode,
+      setOnModalSuccess,
+      setIsCollectionModalOpen,
+    ]
+  );
+
+  const handleEdit = useCallback(() => {
+    if (!collection || !collection.id) {
+      console.error("Cannot edit: collection is undefined or missing id");
+      return;
     }
-  }, [collection?.id]);
 
-  useEffect(() => {
-    fetchCollection();
-  }, [fetchCollection]);
+    console.log("🔍 handleEdit triggered for collection:", collection.id);
 
-  const handleEdit = () => {
-    if (!currentCollection) return;
+    // Pass the collection data to the modal
+    setCollectionToEdit(collection);
+    setIsCollectionEditMode(true);
 
-    // Set up modal success callback
-    setOnModalSuccess(() => {
-      // Refetch the Collection to get updated data
-      fetchCollection();
-      if (onSave) onSave();
+    // Set up a simpler success callback that just passes the updated data to the parent
+    setOnModalSuccess((updatedCollection) => {
+      console.log("Modal success callback received data:", updatedCollection);
+
+      if (!collection.id || !updatedCollection) return;
+
+      // Let the parent handle the actual update logic
+      if (onSave) {
+        const updatedBlock = {
+          collection_id: collection.id,
+          updated_at: new Date().toISOString(),
+          _collection: {
+            // Include all the essential collection data
+            name: updatedCollection.name,
+            description: updatedCollection.description,
+            visibility: updatedCollection.visibility,
+            // Extract IDs from the collection items if present
+            rcmdIds: (updatedCollection.collection_items || [])
+              .filter(
+                (item: any) => item && item.item_type === "rcmd" && item.rcmd_id
+              )
+              .map((item: any) => {
+                if (typeof item.rcmd_id === "object" && item.rcmd_id?.id) {
+                  return item.rcmd_id.id;
+                }
+                return item.rcmd_id;
+              })
+              .filter(Boolean),
+            linkIds: (updatedCollection.collection_items || [])
+              .filter(
+                (item: any) => item && item.item_type === "link" && item.link_id
+              )
+              .map((item: any) => {
+                if (typeof item.link_id === "object" && item.link_id?.id) {
+                  return item.link_id.id;
+                }
+                return item.link_id;
+              })
+              .filter(Boolean),
+          },
+        };
+
+        // Let the parent component handle the actual update - no toast here
+        onSave(updatedBlock);
+      }
     });
 
-    // Set the edit mode and data to edit
-    setIsCollectionEditMode(true);
-    setCollectionToEdit(currentCollection);
-
-    // Open the Collection modal in edit mode
+    // Open the modal
     setIsCollectionModalOpen(true);
-  };
+  }, [
+    collection,
+    setCollectionToEdit,
+    setIsCollectionEditMode,
+    setOnModalSuccess,
+    setIsCollectionModalOpen,
+    onSave,
+  ]);
 
-  const handleDelete = async () => {
-    if (!currentCollection?.id) return;
-
-    try {
-      await deleteCollection(currentCollection.id);
-      if (onDelete) onDelete();
-    } catch (error) {
-      console.error("Error deleting collection:", error);
-    }
-  };
+  // We use this function in the BlockActions component
+  const handleDeleteCollection = onDelete;
 
   if (isLoading) {
     return (
@@ -108,11 +165,11 @@ export default function CollectionBlock({
     );
   }
 
-  if (!currentCollection) return null;
+  if (!collection) return null;
 
   // Create RCMD cards for the carousel
   const rcmdCards =
-    currentCollection.collection_items
+    collection.collection_items
       ?.filter((item) => item.rcmd && item.item_type === "rcmd")
       .map((item) => <RCMDCard key={item.rcmd!.id} rcmd={item.rcmd!} />) || [];
 
@@ -124,32 +181,28 @@ export default function CollectionBlock({
         <BlockActions
           isEditMode={false}
           onEdit={handleEdit}
-          onDelete={handleDelete}
+          onDelete={handleDeleteCollection}
           onSave={() => {}}
           onCancel={() => {}}
         />
       </div>
 
-      <h3 className={blockStyles.title}>{currentCollection.name}</h3>
+      <h3 className={blockStyles.title}>{collection.name}</h3>
 
-      {currentCollection.description && (
-        <p className={blockStyles.description}>
-          {currentCollection.description}
-        </p>
+      {collection.description && (
+        <p className={blockStyles.description}>{collection.description}</p>
       )}
 
       <div className="flex items-center gap-2 mt-2 mb-4">
         <span className={blockStyles.metaText}>
-          {currentCollection.collection_items?.length || 0} item
-          {currentCollection.collection_items?.length !== 1 ? "s" : ""}
+          {collection.collection_items?.length || 0} item
+          {collection.collection_items?.length !== 1 ? "s" : ""}
         </span>
-        {currentCollection.created_at && (
+        {collection.created_at && (
           <span className={blockStyles.metaText}>
-            {formatDistance(
-              new Date(currentCollection.created_at),
-              new Date(),
-              { addSuffix: true }
-            )}
+            {formatDistance(new Date(collection.created_at), new Date(), {
+              addSuffix: true,
+            })}
           </span>
         )}
       </div>

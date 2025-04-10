@@ -34,8 +34,19 @@ export function MainNav({ items, authButtons }: MainNavProps) {
 
   // Add effect to close menu on route change
   React.useEffect(() => {
-    handleNavigation();
-  }, [window.location.pathname]);
+    // This effect only needs to run once to set up the listener
+    const handleRouteChange = () => {
+      handleNavigation();
+    };
+
+    // Add event listener
+    window.addEventListener("popstate", handleRouteChange);
+
+    // Clean up
+    return () => {
+      window.removeEventListener("popstate", handleRouteChange);
+    };
+  }, []);
 
   return (
     <>

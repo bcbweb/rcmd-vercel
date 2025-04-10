@@ -1414,6 +1414,18 @@ export type Database = {
         Args: { rcmd_id: string }
         Returns: boolean
       }
+      update_collection: {
+        Args: { p_collection_id: string; p_updates: Json }
+        Returns: Json
+      }
+      update_collection_items: {
+        Args: {
+          p_collection_id: string
+          p_rcmd_ids?: string[]
+          p_link_ids?: string[]
+        }
+        Returns: Json
+      }
     }
     Enums: {
       business_status: "pending" | "active" | "suspended" | "closed"

@@ -73,13 +73,11 @@ export default function BlockRenderer({ block, onDelete, onSave }: Props) {
                 `
 								*,
 								collection:collections (
-									id,
-									name,
-									description,
-									owner_id,
-									visibility,
-									created_at,
-									updated_at
+									*,
+									collection_items(
+										*,
+										rcmd:rcmd_id(*)
+									)
 								)
 							`
               )
@@ -242,7 +240,15 @@ export default function BlockRenderer({ block, onDelete, onSave }: Props) {
       // Fetch the updated collection data
       const { data: collectionData, error: collectionError } = await supabase
         .from("collections")
-        .select("*")
+        .select(
+          `
+          *,
+          collection_items(
+            *,
+            rcmd:rcmd_id(*)
+          )
+        `
+        )
         .eq("id", updatedBlock.collection_id ?? collectionBlock.collection_id)
         .single();
 

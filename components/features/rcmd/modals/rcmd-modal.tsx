@@ -272,7 +272,7 @@ export default function RCMDModal() {
       // Show error state to user
       setLocation(null);
     }
-  }, [isRCMDModalOpen, mapsLoaded]);
+  }, [isRCMDModalOpen, mapsLoaded, locationInput]);
 
   const handleLinkMetadata = (metadata: {
     title?: string;

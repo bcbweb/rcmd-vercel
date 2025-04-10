@@ -35,12 +35,12 @@ interface ModalStore {
   setIsCollectionModalOpen: (isOpen: boolean) => void;
   isCollectionEditMode: boolean;
   setIsCollectionEditMode: (isEdit: boolean) => void;
-  collectionToEdit: CollectionWithItems | null;
-  setCollectionToEdit: (collection: CollectionWithItems | null) => void;
+  collectionToEdit: any;
+  setCollectionToEdit: (collection: any) => void;
 
-  // Optional callback storage for refreshing data
-  onModalSuccess?: () => void;
-  setOnModalSuccess: (callback?: () => void) => void;
+  // Callback storage - update the type to be more flexible
+  onModalSuccess: ((...args: any[]) => void) | undefined;
+  setOnModalSuccess: (callback: (...args: any[]) => void) => void;
 }
 
 export const useModalStore = create<ModalStore>()(
@@ -113,8 +113,15 @@ export const useModalStore = create<ModalStore>()(
 
       // Callback storage
       onModalSuccess: undefined,
-      setOnModalSuccess: (callback) =>
-        set({ onModalSuccess: callback }, false, "setOnModalSuccess"),
+      setOnModalSuccess: (callback) => {
+        console.log(
+          "🔍 ModalStore: setOnModalSuccess called with callback:",
+          !!callback
+        );
+
+        // Store the actual function, not a function that returns the callback
+        set({ onModalSuccess: callback }, false, "setOnModalSuccess");
+      },
     }),
     {
       name: "Modal Store",
