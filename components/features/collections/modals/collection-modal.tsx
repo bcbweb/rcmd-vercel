@@ -184,15 +184,15 @@ export default function CollectionModal() {
       // If collection has items, populate the rcmdIds
       if (collectionToEdit.collection_items) {
         const ids = collectionToEdit.collection_items
-          .filter((item: any) => {
+          .filter((item: Record<string, unknown>) => {
             // Ensure item exists before checking properties
             return item && (item.rcmd_id || item.rcmd);
           })
-          .map((item: any) => {
+          .map((item: Record<string, unknown>) => {
             if (!item) return undefined;
             // Handle potential null/undefined values
-            const rcmdObj = item.rcmd || {};
-            const rcmdIdObj = item.rcmd_id || {};
+            const rcmdObj = (item.rcmd as Record<string, unknown>) || {};
+            const rcmdIdObj = (item.rcmd_id as Record<string, unknown>) || {};
             return rcmdObj.id || (rcmdIdObj && rcmdIdObj.id);
           })
           .filter(

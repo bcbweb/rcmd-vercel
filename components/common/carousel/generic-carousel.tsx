@@ -75,7 +75,7 @@ export default function GenericCarousel({
 
   return (
     <section className="w-full py-8">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
+      <div className="max-w-[1400px] mx-auto">
         {title && (
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-6 text-gray-900 dark:text-white">
             {title}

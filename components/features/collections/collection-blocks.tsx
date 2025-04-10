@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { CollectionBlock } from "@/components/features/profile/blocks";
 import type { CollectionBlockType, CollectionWithItems } from "@/types";
 import React from "react";
@@ -11,8 +11,8 @@ interface ExtendedCollectionBlock extends Partial<CollectionBlockType> {
   _collection?: {
     rcmdIds: string[];
     linkIds: string[];
-    collection_items?: any[];
-    [key: string]: any;
+    collection_items?: Record<string, unknown>[];
+    [key: string]: unknown;
   };
 }
 
@@ -49,19 +49,8 @@ export default function CollectionBlocks({
     setCollectionBlocks(initialCollectionBlocks);
   }, [initialCollectionBlocks]);
 
-  // Handle saving a collection
-  const handleSaveCollection = (block: ExtendedCollectionBlock) => {
-    if (onSave) {
-      console.log(
-        "CollectionBlocks: Handling save for collection block",
-        block
-      );
-      onSave(block);
-    }
-  };
-
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {collectionBlocks.map((block) =>
         block.collection_id && collectionsMap[block.collection_id] ? (
           <CollectionBlock
@@ -86,7 +75,7 @@ export default function CollectionBlocks({
       )}
 
       {collectionBlocks.length === 0 && (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400 col-span-full">
           No collections found
         </div>
       )}

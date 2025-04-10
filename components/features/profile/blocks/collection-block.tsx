@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import { CollectionWithItems, RCMDVisibility } from "@/types";
+import React, { useState, useCallback } from "react";
+import { CollectionWithItems } from "@/types";
 import { formatDistance } from "date-fns";
 import { useModalStore } from "@/stores/modal-store";
 import { BlockActions, blockStyles } from "@/components/common";
-import { createClient } from "@/utils/supabase/client";
-import { useCollectionStore } from "@/stores/collection-store";
 import { GenericCarousel, RCMDCard } from "@/components/common/carousel";
-import { toast } from "sonner";
 
 // Extended block type to include _collection property
 interface ExtendedCollectionBlock {
@@ -17,27 +14,16 @@ interface ExtendedCollectionBlock {
   _collection?: {
     rcmdIds: string[];
     linkIds: string[];
-    collection_items?: any[];
-    [key: string]: any;
+    collection_items?: Record<string, unknown>[];
+    [key: string]: unknown;
   };
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface CollectionBlockProps {
   collection: CollectionWithItems;
   onDelete?: () => void;
   onSave?: (block: ExtendedCollectionBlock) => void;
-}
-
-interface CollectionModalProps {
-  collection: CollectionWithItems;
-  onSuccess: (updatedCollection: {
-    name: string;
-    description: string;
-    visibility: RCMDVisibility;
-    collection_items?: CollectionWithItems["collection_items"];
-  }) => void;
-  onClose: () => void;
 }
 
 export default function CollectionBlock({
@@ -51,34 +37,7 @@ export default function CollectionBlock({
     setIsCollectionEditMode,
     setCollectionToEdit,
   } = useModalStore();
-  const { updateCollection, updateCollectionItems } = useCollectionStore();
-  const [isLoading, setIsLoading] = useState(false);
-
-  const openCollectionModal = useCallback(
-    ({ collection, onSuccess }: Omit<CollectionModalProps, "onClose">) => {
-      if (!collection) {
-        console.error("Cannot open modal: collection is undefined");
-        return;
-      }
-
-      console.log(
-        "🔍 openCollectionModal called with collection:",
-        collection.id || "unknown id"
-      );
-      setCollectionToEdit(collection);
-      setIsCollectionEditMode(true);
-
-      // Pass the onSuccess callback directly
-      setOnModalSuccess(onSuccess);
-      setIsCollectionModalOpen(true);
-    },
-    [
-      setCollectionToEdit,
-      setIsCollectionEditMode,
-      setOnModalSuccess,
-      setIsCollectionModalOpen,
-    ]
-  );
+  const [isLoading] = useState(false);
 
   const handleEdit = useCallback(() => {
     if (!collection || !collection.id) {
@@ -114,22 +73,32 @@ export default function CollectionBlock({
             // Extract IDs from the collection items if present
             rcmdIds: (updatedCollection.collection_items || [])
               .filter(
-                (item: any) => item && item.item_type === "rcmd" && item.rcmd_id
+                (item: Record<string, unknown>) =>
+                  item && item.item_type === "rcmd" && item.rcmd_id
               )
-              .map((item: any) => {
-                if (typeof item.rcmd_id === "object" && item.rcmd_id?.id) {
-                  return item.rcmd_id.id;
+              .map((item: Record<string, unknown>) => {
+                if (
+                  typeof item.rcmd_id === "object" &&
+                  item.rcmd_id &&
+                  "id" in item.rcmd_id
+                ) {
+                  return (item.rcmd_id as { id: string }).id;
                 }
                 return item.rcmd_id;
               })
               .filter(Boolean),
             linkIds: (updatedCollection.collection_items || [])
               .filter(
-                (item: any) => item && item.item_type === "link" && item.link_id
+                (item: Record<string, unknown>) =>
+                  item && item.item_type === "link" && item.link_id
               )
-              .map((item: any) => {
-                if (typeof item.link_id === "object" && item.link_id?.id) {
-                  return item.link_id.id;
+              .map((item: Record<string, unknown>) => {
+                if (
+                  typeof item.link_id === "object" &&
+                  item.link_id &&
+                  "id" in item.link_id
+                ) {
+                  return (item.link_id as { id: string }).id;
                 }
                 return item.link_id;
               })
@@ -178,7 +147,7 @@ export default function CollectionBlock({
 
   return (
     <div
-      className={`${blockStyles.container} ${blockStyles.card} relative pt-12`}
+      className={`${blockStyles.container} ${blockStyles.card} relative h-full flex flex-col pt-10`}
     >
       <div className="absolute top-2 right-2 z-10">
         <BlockActions
@@ -190,13 +159,15 @@ export default function CollectionBlock({
         />
       </div>
 
-      <h3 className={blockStyles.title}>{collection.name}</h3>
+      <h3 className={`${blockStyles.title} line-clamp-1`}>{collection.name}</h3>
 
       {collection.description && (
-        <p className={blockStyles.description}>{collection.description}</p>
+        <p className={`${blockStyles.description} line-clamp-2 mb-2`}>
+          {collection.description}
+        </p>
       )}
 
-      <div className="flex items-center gap-2 mt-2 mb-4">
+      <div className="flex items-center gap-2 mt-auto mb-3 text-sm">
         <span className={blockStyles.metaText}>
           {collection.collection_items?.length || 0} item
           {collection.collection_items?.length !== 1 ? "s" : ""}
@@ -212,8 +183,8 @@ export default function CollectionBlock({
 
       {/* RCMD Carousel */}
       {rcmdCards.length > 0 && (
-        <div className="-mx-4 mt-4">
-          <GenericCarousel items={rcmdCards} cardsPerView={3} />
+        <div className="-mx-1 mt-1 mb-1">
+          <GenericCarousel items={rcmdCards} cardsPerView={2} />
         </div>
       )}
     </div>

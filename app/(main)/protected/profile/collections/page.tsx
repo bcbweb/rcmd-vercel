@@ -9,22 +9,16 @@ import {
   AddCollectionButton,
   CollectionBlocks,
 } from "@/components/features/collections";
-import type {
-  Collection,
-  CollectionBlockType,
-  CollectionItem,
-  CollectionWithItems,
-} from "@/types";
+import type { Collection, CollectionBlockType } from "@/types";
 import { toast } from "sonner";
-import { createClient } from "@/utils/supabase/client";
 
 // Create an extended type for the collection block that includes the _collection property
 interface ExtendedCollectionBlock extends Partial<CollectionBlockType> {
   _collection?: {
     rcmdIds: string[];
     linkIds: string[];
-    collection_items?: any[];
-    [key: string]: any;
+    collection_items?: Record<string, unknown>[];
+    [key: string]: unknown;
   };
 }
 
@@ -34,7 +28,7 @@ export default function CollectionsPage() {
   >([]);
   const [isCollectionSaving, setIsCollectionSaving] = useState(false);
   const userId = useAuthStore((state) => state.userId);
-  const { collections, fetchCollections, deleteCollection, updateCollection } =
+  const { collections, fetchCollections, deleteCollection } =
     useCollectionStore();
 
   // Use a ref to track if a fetch is in progress to prevent duplicate fetches
@@ -169,15 +163,20 @@ export default function CollectionsPage() {
 
       // Add collection details if present
       if (block._collection.name !== undefined) {
-        batchUpdatePayload.details.name = block._collection.name;
+        batchUpdatePayload.details.name = block._collection.name as string;
       }
 
       if (block._collection.description !== undefined) {
-        batchUpdatePayload.details.description = block._collection.description;
+        batchUpdatePayload.details.description = block._collection
+          .description as string;
       }
 
       if (block._collection.visibility !== undefined) {
-        batchUpdatePayload.details.visibility = block._collection.visibility;
+        batchUpdatePayload.details.visibility = block._collection.visibility as
+          | "public"
+          | "private"
+          | "followers"
+          | null;
       }
 
       // Add collection items if present
@@ -213,39 +212,6 @@ export default function CollectionsPage() {
       updatingCollectionRef.current = null;
       setIsCollectionSaving(false);
     }
-  };
-
-  // Helper functions for extracting IDs
-  const extractRcmdIds = (collectionData: any) => {
-    return (collectionData?.collection_items || [])
-      .filter(
-        (item: CollectionItem) =>
-          item && item.item_type === "rcmd" && item.rcmd_id !== null
-      )
-      .map((item: CollectionItem) => {
-        const isRcmdObject = (val: unknown): val is { id: string } =>
-          typeof val === "object" && val !== null && "id" in val;
-        return isRcmdObject(item.rcmd_id)
-          ? item.rcmd_id.id
-          : (item.rcmd_id as string);
-      })
-      .filter(Boolean);
-  };
-
-  const extractLinkIds = (collectionData: any) => {
-    return (collectionData?.collection_items || [])
-      .filter(
-        (item: CollectionItem) =>
-          item && item.item_type === "link" && item.link_id !== null
-      )
-      .map((item: CollectionItem) => {
-        const isLinkObject = (val: unknown): val is { id: string } =>
-          typeof val === "object" && val !== null && "id" in val;
-        return isLinkObject(item.link_id)
-          ? item.link_id.id
-          : (item.link_id as string);
-      })
-      .filter(Boolean);
   };
 
   return (

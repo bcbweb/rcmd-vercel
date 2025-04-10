@@ -54,27 +54,33 @@ export default async function Index() {
       <Hero />
 
       {profileCards.length > 0 && (
-        <GenericCarousel
-          items={profileCards}
-          title="Top Profiles"
-          cardsPerView={4}
-        />
+        <div className="px-4 sm:px-6">
+          <GenericCarousel
+            items={profileCards}
+            title="Top Profiles"
+            cardsPerView={4}
+          />
+        </div>
       )}
 
       {rcmdCards.length > 0 && (
-        <GenericCarousel
-          items={rcmdCards}
-          title="Recommended For You"
-          cardsPerView={3}
-        />
+        <div className="px-4 sm:px-6">
+          <GenericCarousel
+            items={rcmdCards}
+            title="Recommended For You"
+            cardsPerView={3}
+          />
+        </div>
       )}
 
       {businessCards.length > 0 && (
-        <GenericCarousel
-          items={businessCards}
-          title="Top Businesses"
-          cardsPerView={4}
-        />
+        <div className="px-4 sm:px-6">
+          <GenericCarousel
+            items={businessCards}
+            title="Top Businesses"
+            cardsPerView={4}
+          />
+        </div>
       )}
 
       <div className="w-full p-[1px] bg-gradient-to-r from-transparent via-foreground/10 to-transparent my-8" />
