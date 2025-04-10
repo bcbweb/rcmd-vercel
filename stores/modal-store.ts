@@ -37,6 +37,7 @@ interface ModalStore {
   setIsCollectionEditMode: (isEdit: boolean) => void;
   collectionToEdit: any;
   setCollectionToEdit: (collection: any) => void;
+  resetCollectionModal: () => void;
 
   // Callback storage - update the type to be more flexible
   onModalSuccess: ((...args: any[]) => void) | undefined;
@@ -98,18 +99,40 @@ export const useModalStore = create<ModalStore>()(
 
       // Collection Modal
       isCollectionModalOpen: false,
-      setIsCollectionModalOpen: (isOpen) =>
-        set(
-          { isCollectionModalOpen: isOpen },
-          false,
-          "setIsCollectionModalOpen"
-        ),
+      setIsCollectionModalOpen: (isOpen) => {
+        if (!isOpen) {
+          set(
+            {
+              isCollectionModalOpen: false,
+              collectionToEdit: null,
+              isCollectionEditMode: false,
+            },
+            false,
+            "setIsCollectionModalOpen/close"
+          );
+        } else {
+          set(
+            { isCollectionModalOpen: true },
+            false,
+            "setIsCollectionModalOpen/open"
+          );
+        }
+      },
       isCollectionEditMode: false,
       setIsCollectionEditMode: (isEdit) =>
         set({ isCollectionEditMode: isEdit }, false, "setIsCollectionEditMode"),
       collectionToEdit: null,
       setCollectionToEdit: (collection) =>
         set({ collectionToEdit: collection }, false, "setCollectionToEdit"),
+      resetCollectionModal: () =>
+        set(
+          {
+            collectionToEdit: null,
+            isCollectionEditMode: false,
+          },
+          false,
+          "resetCollectionModal"
+        ),
 
       // Callback storage
       onModalSuccess: undefined,

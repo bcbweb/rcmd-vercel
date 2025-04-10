@@ -88,7 +88,10 @@ export default function CollectionBlock({
 
     console.log("🔍 handleEdit triggered for collection:", collection.id);
 
-    // Pass the collection data to the modal
+    // First, reset any previous modal state
+    useModalStore.getState().resetCollectionModal();
+
+    // Then set up for editing this collection
     setCollectionToEdit(collection);
     setIsCollectionEditMode(true);
 

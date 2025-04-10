@@ -1,8 +1,8 @@
 "use client";
 
-import { PlusCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useModalStore } from '@/stores/modal-store';
+import { PlusCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useModalStore } from "@/stores/modal-store";
 
 export default function AddCollectionButton() {
   const router = useRouter();
@@ -12,14 +12,16 @@ export default function AddCollectionButton() {
       useModalStore.setState(
         {
           isCollectionModalOpen: true,
-          onModalSuccess: () => router.push('/protected/profile/collections')
+          isCollectionEditMode: false,
+          collectionToEdit: null,
+          onModalSuccess: () => router.push("/protected/profile/collections"),
         },
         false,
-        'modal/handleCollectionClick'
+        "modal/handleCollectionClick"
       );
     } catch (error) {
       console.error("Error in handleCollectionClick:", error);
-      useModalStore.setState({}, false, 'modal/handleCollectionClick/error');
+      useModalStore.setState({}, false, "modal/handleCollectionClick/error");
     }
   };
 
@@ -30,7 +32,8 @@ export default function AddCollectionButton() {
         rounded-lg p-4 hover:border-gray-300 dark:hover:border-gray-600 
         transition-colors group"
     >
-      <div className="flex items-center justify-center gap-2 text-gray-500 
+      <div
+        className="flex items-center justify-center gap-2 text-gray-500 
         dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
       >
         <PlusCircle className="w-5 h-5" />
