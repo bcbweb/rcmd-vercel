@@ -16,9 +16,14 @@ type SanityImageSource = {
   };
 };
 
+// Use fallback values from the sanity.config.js if environment variables are not available
+// This ensures the build process can still access Sanity even if env vars aren't set
+const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "ce6vefd3";
+const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || "production";
+
 export const client = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
-  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
+  projectId,
+  dataset,
   apiVersion: "2023-10-10",
   useCdn: process.env.NODE_ENV === "production",
 });

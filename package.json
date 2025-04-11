@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "bun run update-types",
+    "prebuild": "bun run update-types && echo 'Checking Sanity connection...'",
     "build": "NODE_OPTIONS=--no-deprecation next build",
     "build-only": "next build",
     "build:nodeprecation": "NODE_OPTIONS=--no-deprecation next build",

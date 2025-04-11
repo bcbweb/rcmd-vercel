@@ -1,0 +1,10 @@
+{
+  "buildCommand": "bun run build",
+  "installCommand": "bun install",
+  "framework": "nextjs",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_SANITY_PROJECT_ID": "ce6vefd3",
+    "NEXT_PUBLIC_SANITY_DATASET": "production"
+  }
+}
