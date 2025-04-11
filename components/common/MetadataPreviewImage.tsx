@@ -79,13 +79,13 @@ export default function MetadataPreviewImage({
   if (shouldUseImgTag()) {
     return (
       <div
-        className={`relative overflow-hidden ${className}`}
+        className={`relative overflow-hidden h-full ${className}`}
         style={{ aspectRatio: fill ? "auto" : `${width}/${height}` }}
       >
         <img
           src={imageSrc}
           alt={alt}
-          className={`${fill ? "absolute inset-0 w-full h-full" : "w-full h-auto"} object-cover`}
+          className={`${fill ? "absolute inset-0 w-full h-full" : "w-full h-full"} object-cover`}
           onError={() => setError(true)}
         />
       </div>
@@ -94,7 +94,7 @@ export default function MetadataPreviewImage({
 
   // Use Next.js Image for our own domains or proxied images
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden h-full ${className}`}>
       <Image
         src={imageSrc}
         alt={alt}
