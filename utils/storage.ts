@@ -83,6 +83,135 @@ export function uploadContentImage(
   return uploadFile({ userId, file, bucket: "content", subfolder });
 }
 
+/**
+ * Fetches an image from a remote URL and uploads it to Supabase storage
+ * This is useful for storing external images permanently
+ */
+export async function uploadRemoteImage(
+  imageUrl: string,
+  subfolder: string = "rcmds",
+  userId?: string
+): Promise<string> {
+  if (!imageUrl) {
+    throw new Error("No image URL provided");
+  }
+
+  try {
+    console.log(`[Storage] Downloading remote image from: ${imageUrl}`);
+
+    // Always use the proxy for external images to avoid CORS issues
+    let fetchUrl = imageUrl;
+
+    // If the URL is not already a Supabase URL (which we know works)
+    if (
+      !imageUrl.includes("supabase.co") &&
+      !imageUrl.includes("supabase.in")
+    ) {
+      // Always proxy external images to avoid CORS issues
+      fetchUrl = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+      console.log(`[Storage] Using proxy for this URL: ${fetchUrl}`);
+    }
+
+    // First fetch the image, with a timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15-second timeout
+
+    try {
+      // Fetch the image using our proxy API
+      const response = await fetch(fetchUrl, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; RCMDBot/1.0; +https://rcmd.world)",
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.error(
+          `[Storage] Failed to fetch image: ${response.status} ${response.statusText}`
+        );
+        throw new Error(
+          `Failed to fetch image: ${response.status} ${response.statusText}`
+        );
+      }
+
+      // Get content type and validate it
+      const contentType = response.headers.get("content-type");
+      console.log(`[Storage] Image content type: ${contentType}`);
+
+      // Use a default content type if none is provided
+      const effectiveContentType =
+        contentType && contentType.startsWith("image/")
+          ? contentType
+          : "image/jpeg"; // Default to JPEG if we can't determine
+
+      // Get the file extension from content type
+      let fileExt = effectiveContentType.split("/")[1].split(";")[0];
+
+      // Normalize some common content types
+      if (fileExt === "jpeg") fileExt = "jpg";
+      if (fileExt === "svg+xml") fileExt = "svg";
+
+      // If we get an unsupported extension, default to jpg
+      if (
+        !ALLOWED_EXTENSIONS.includes(
+          fileExt as (typeof ALLOWED_EXTENSIONS)[number]
+        )
+      ) {
+        console.warn(
+          `[Storage] Unsupported image format: ${fileExt}, using jpg instead`
+        );
+        fileExt = "jpg";
+      }
+
+      // Convert the response to a blob
+      const blob = await response.blob();
+      console.log(
+        `[Storage] Downloaded image size: ${(blob.size / 1024).toFixed(2)}KB`
+      );
+
+      // Check file size
+      if (blob.size > MAX_FILE_SIZE) {
+        console.error(
+          `[Storage] Remote image too large: ${(blob.size / 1024 / 1024).toFixed(2)}MB`
+        );
+        throw new Error("Remote image is too large (over 5MB)");
+      }
+
+      // If the blob size is suspiciously small (< 100 bytes), it might not be a valid image
+      if (blob.size < 100) {
+        console.error(
+          `[Storage] Suspiciously small image size (${blob.size} bytes), might be an error response`
+        );
+        throw new Error("Image data appears to be invalid (too small)");
+      }
+
+      // Create a File object from the blob
+      const fileName = `remote_${Date.now()}.${fileExt}`;
+      const file = new File([blob], fileName, { type: effectiveContentType });
+
+      // Upload the file using our existing function
+      const publicUrl = await uploadContentImage(file, subfolder, userId);
+      console.log(
+        `[Storage] Successfully uploaded remote image to: ${publicUrl}`
+      );
+
+      return publicUrl;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === "AbortError") {
+        throw new Error("Request timed out fetching remote image");
+      }
+      throw fetchError;
+    }
+  } catch (error) {
+    console.error("[Storage] Error uploading remote image:", error);
+    throw error;
+  }
+}
+
 export async function deleteFile(bucket: Bucket, path: string) {
   const supabase = createClient();
   const { error } = await supabase.storage.from(bucket).remove([path]);

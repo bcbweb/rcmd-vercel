@@ -2,27 +2,6 @@ import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 import punycode from "punycode";
 
-// Helper function to proxy image URLs
-function proxyImageUrl(imageUrl: string | undefined): string | undefined {
-  if (!imageUrl) return undefined;
-
-  // Ensure imageUrl is a proper URL string
-  try {
-    new URL(imageUrl); // This will throw an error if the URL is invalid
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (_) {
-    return undefined; // Return undefined if the URL is invalid
-  }
-
-  // In development, return the original URL since we've configured Next.js to allow all domains
-  if (process.env.NODE_ENV === "development") {
-    return imageUrl;
-  }
-
-  // In production, return a proxied URL
-  return `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
-}
-
 // Helper to ensure URLs are absolute
 function ensureAbsoluteUrl(
   url: string | undefined,
@@ -215,8 +194,8 @@ async function fetchMetadata(url: string) {
     const metadata = {
       title,
       description,
-      image: proxyImageUrl(imageUrl),
-      favicon: proxyImageUrl(faviconUrl),
+      image: imageUrl, // Return raw URL, we'll handle processing on the client side
+      favicon: faviconUrl,
       type,
       url: urlObj.toString(), // Include the normalized URL
     };

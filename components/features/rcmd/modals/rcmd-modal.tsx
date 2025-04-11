@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { uploadContentImage } from "@/utils/storage";
+import { uploadContentImage, uploadRemoteImage } from "@/utils/storage";
 import Image from "next/image";
 import { useModalStore } from "@/stores/modal-store";
 import { useRCMDStore } from "@/stores/rcmd-store";
@@ -56,6 +56,12 @@ type GoogleMapsAutocomplete = {
       types: string[];
     }>;
   };
+};
+
+// Helper to check if an image URL is from our Supabase storage
+const isSupabaseUrl = (url: string | null | undefined): boolean => {
+  if (!url) return false;
+  return url.includes("supabase.co") || url.includes("supabase.in");
 };
 
 export default function RCMDModal() {
@@ -159,6 +165,13 @@ export default function RCMDModal() {
 
       // Handle image
       if (rcmdToEdit.featured_image) {
+        // Check if the existing image needs migration (not a Supabase URL)
+        if (!isSupabaseUrl(rcmdToEdit.featured_image)) {
+          console.log(
+            "Detected external image URL in edit mode, will migrate on save:",
+            rcmdToEdit.featured_image
+          );
+        }
         setMetadataImageUrl(rcmdToEdit.featured_image);
       }
     } else {
@@ -451,12 +464,39 @@ export default function RCMDModal() {
 
       // Handle image upload or metadata image
       let featuredImage: string | undefined = undefined;
+
       if (file) {
         // If we have a file upload, use that
         featuredImage = await uploadContentImage(file, "rcmds");
       } else if (metadataImageUrl) {
-        // If we have a metadata image URL, use that directly
-        featuredImage = metadataImageUrl;
+        try {
+          // Check if this is an external URL that needs migration
+          if (!isSupabaseUrl(metadataImageUrl)) {
+            // For metadata images, download and upload to Supabase for permanence
+            console.log(
+              "Uploading remote metadata image to Supabase:",
+              metadataImageUrl
+            );
+            featuredImage = await uploadRemoteImage(metadataImageUrl, "rcmds");
+            console.log("Remote image uploaded successfully:", featuredImage);
+          } else {
+            // Already a Supabase URL, use as is
+            featuredImage = metadataImageUrl;
+          }
+        } catch (error) {
+          console.error("Failed to upload remote image:", error);
+
+          // Add a toast notification for the user
+          toast.error(
+            "Could not save the image from the website. You may need to upload it manually."
+          );
+
+          // Don't set a featured image at all rather than using a potentially problematic URL
+          featuredImage = undefined;
+
+          // Clear the metadata image URL to prevent future errors
+          setMetadataImageUrl(null);
+        }
       } else if (isRCMDEditMode && rcmdToEdit?.featured_image) {
         // Keep existing image in edit mode
         featuredImage = rcmdToEdit.featured_image;
@@ -628,6 +668,69 @@ export default function RCMDModal() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isRCMDModalOpen, handleClose]);
+
+  // Migrate external images when editing an existing RCMD
+  useEffect(() => {
+    // Only run this when in edit mode and we have a RCMD with an external image
+    if (
+      isRCMDEditMode &&
+      rcmdToEdit?.featured_image &&
+      !isSupabaseUrl(rcmdToEdit.featured_image) &&
+      metadataImageUrl === rcmdToEdit.featured_image
+    ) {
+      // Don't block the UI, run this in the background
+      const migrateImage = async () => {
+        try {
+          console.log(
+            "Migrating external image to Supabase:",
+            rcmdToEdit.featured_image
+          );
+
+          // We know featured_image is not null here because of the condition above
+          const imageUrl = rcmdToEdit.featured_image as string;
+          const newImageUrl = await uploadRemoteImage(imageUrl, "rcmds");
+
+          console.log("Image migrated successfully:", newImageUrl);
+
+          // Update the state with the new URL
+          setMetadataImageUrl(newImageUrl);
+
+          // Update the RCMD in the database with the new image URL
+          await updateRCMD(rcmdToEdit.id, {
+            ...rcmdToEdit,
+            featured_image: newImageUrl,
+          });
+
+          console.log("RCMD updated with migrated image");
+        } catch (error) {
+          console.error("Failed to migrate image:", error);
+
+          // Don't show an error toast since this happens in the background
+          // But still clear the problematic URL to prevent future errors
+          if (rcmdToEdit?.id) {
+            try {
+              // Silently remove the problematic image URL from the database
+              await updateRCMD(rcmdToEdit.id, {
+                ...rcmdToEdit,
+                featured_image: undefined,
+              });
+              console.log("Removed problematic image URL from RCMD");
+
+              // Also clear it from the form state
+              setMetadataImageUrl(null);
+            } catch (updateError) {
+              console.error(
+                "Failed to remove problematic image URL:",
+                updateError
+              );
+            }
+          }
+        }
+      };
+
+      migrateImage();
+    }
+  }, [isRCMDEditMode, rcmdToEdit, updateRCMD, metadataImageUrl]);
 
   if (!isRCMDModalOpen) return null;
 
