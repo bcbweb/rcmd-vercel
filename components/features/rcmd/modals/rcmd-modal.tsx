@@ -12,6 +12,7 @@ import Script from "next/script";
 import { RCMDType, RCMDVisibility } from "@/types";
 import { toast } from "sonner";
 import { imageLoader } from "@/utils/image";
+import MetadataPreviewImage from "@/components/common/MetadataPreviewImage";
 
 // Fix TypeScript declarations for Google Maps
 declare global {
@@ -986,28 +987,26 @@ export default function RCMDModal() {
                       </span>
                     )}
                   </div>
-                  {((file && file instanceof Blob) ||
-                    metadataImageUrl ||
-                    rcmdToEdit?.featured_image) && (
-                    <div className="relative w-full h-48 mb-4 rounded-md overflow-hidden">
+                  <div className="relative w-full h-48 mb-4 rounded-md overflow-hidden">
+                    {file instanceof Blob ? (
                       <Image
-                        src={
-                          file instanceof Blob
-                            ? URL.createObjectURL(file)
-                            : metadataImageUrl ||
-                              rcmdToEdit?.featured_image ||
-                              ""
-                        }
+                        src={URL.createObjectURL(file)}
                         alt="Preview"
                         fill
                         className="object-cover"
                         loader={imageLoader}
-                        unoptimized={Boolean(
-                          metadataImageUrl || rcmdToEdit?.featured_image
-                        )}
                       />
-                    </div>
-                  )}
+                    ) : (
+                      <MetadataPreviewImage
+                        src={
+                          metadataImageUrl || rcmdToEdit?.featured_image || ""
+                        }
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
                   {uploadError && (
                     <div className="text-red-500 text-sm mt-1">
                       {uploadError}
