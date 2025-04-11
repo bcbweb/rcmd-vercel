@@ -1,0 +1,318 @@
+[
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "description": "Title for the homepage (for internal use)",
+        "name": "title",
+        "type": "string",
+        "title": "Page Title"
+      },
+      {
+        "fields": [
+          {
+            "name": "heading",
+            "type": "string"
+          },
+          {
+            "name": "subheading",
+            "type": "text"
+          },
+          {
+            "options": {
+              "hotspot": true
+            },
+            "name": "backgroundImage",
+            "type": "image"
+          },
+          {
+            "fields": [
+              {
+                "name": "text",
+                "type": "string",
+                "title": "Button Text"
+              },
+              {
+                "name": "link",
+                "type": "string",
+                "title": "Button Link"
+              }
+            ],
+            "name": "cta",
+            "type": "object",
+            "title": "Call to Action"
+          }
+        ],
+        "name": "hero",
+        "type": "object",
+        "title": "Hero Section"
+      },
+      {
+        "of": [
+          {
+            "fields": [
+              {
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "description": "Unique identifier for this section (e.g., 'trending-rcmds', 'staff-picks')",
+                "name": "sectionId",
+                "type": "string",
+                "title": "Section ID"
+              },
+              {
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "name": "title",
+                "type": "string",
+                "title": "Section Title"
+              },
+              {
+                "name": "description",
+                "type": "text",
+                "title": "Section Description"
+              },
+              {
+                "options": {
+                  "list": [
+                    {
+                      "title": "Featured Links",
+                      "value": "links"
+                    },
+                    {
+                      "title": "Custom Content",
+                      "value": "custom"
+                    }
+                  ]
+                },
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "valid",
+                        "constraint": [
+                          "links",
+                          "custom"
+                        ]
+                      },
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "name": "contentType",
+                "type": "string"
+              },
+              {
+                "options": {
+                  "list": [
+                    {
+                      "title": "Grid",
+                      "value": "grid"
+                    },
+                    {
+                      "title": "Carousel",
+                      "value": "carousel"
+                    },
+                    {
+                      "title": "Featured",
+                      "value": "featured"
+                    },
+                    {
+                      "title": "List",
+                      "value": "list"
+                    }
+                  ]
+                },
+                "initialValue": "carousel",
+                "name": "layout",
+                "type": "string",
+                "title": "Layout Style"
+              },
+              {
+                "initialValue": 3,
+                "options": {
+                  "list": [
+                    {
+                      "title": "1",
+                      "value": 1
+                    },
+                    {
+                      "title": "2",
+                      "value": 2
+                    },
+                    {
+                      "title": "3",
+                      "value": 3
+                    },
+                    {
+                      "title": "4",
+                      "value": 4
+                    }
+                  ]
+                },
+                "hidden": "conditional",
+                "name": "cardsPerView",
+                "type": "number",
+                "title": "Cards Per View (for carousel)"
+              },
+              {
+                "initialValue": 10,
+                "name": "limit",
+                "type": "number",
+                "title": "Number of Items to Show"
+              },
+              {
+                "description": "For custom curated sections, select specific items",
+                "of": [
+                  {
+                    "fields": [
+                      {
+                        "validation": [
+                          {
+                            "rules": [
+                              {
+                                "flag": "presence",
+                                "constraint": "required"
+                              }
+                            ],
+                            "level": "error"
+                          }
+                        ],
+                        "name": "title",
+                        "type": "string"
+                      },
+                      {
+                        "name": "description",
+                        "type": "text"
+                      },
+                      {
+                        "options": {
+                          "hotspot": true
+                        },
+                        "name": "image",
+                        "type": "image"
+                      },
+                      {
+                        "validation": [
+                          {
+                            "rules": [
+                              {
+                                "flag": "uri",
+                                "constraint": {
+                                  "options": {
+                                    "scheme": [
+                                      "/^http$/",
+                                      "/^https$/"
+                                    ],
+                                    "allowRelative": false,
+                                    "relativeOnly": false,
+                                    "allowCredentials": false
+                                  }
+                                }
+                              }
+                            ],
+                            "level": "error"
+                          }
+                        ],
+                        "name": "link",
+                        "type": "url"
+                      }
+                    ],
+                    "type": "object",
+                    "name": "customItem"
+                  }
+                ],
+                "hidden": "conditional",
+                "name": "featuredItems",
+                "type": "array"
+              },
+              {
+                "description": "CSS color value (e.g., #f3f4f6)",
+                "name": "backgroundColor",
+                "type": "string"
+              },
+              {
+                "initialValue": true,
+                "name": "showMoreLink",
+                "type": "boolean",
+                "title": "Show 'See More' Link"
+              },
+              {
+                "description": "URL for the 'See More' link",
+                "hidden": "conditional",
+                "name": "moreLink",
+                "type": "string",
+                "title": "'See More' Link"
+              },
+              {
+                "initialValue": 10,
+                "description": "Order of appearance on the homepage (lower = earlier)",
+                "name": "priority",
+                "type": "number",
+                "title": "Display Priority"
+              }
+            ],
+            "type": "object",
+            "title": "Content Section"
+          }
+        ],
+        "name": "featuredSections",
+        "type": "array",
+        "title": "Featured Content Sections"
+      },
+      {
+        "fields": [
+          {
+            "name": "metaTitle",
+            "type": "string"
+          },
+          {
+            "name": "metaDescription",
+            "type": "text"
+          },
+          {
+            "name": "shareImage",
+            "type": "image",
+            "title": "Social Sharing Image"
+          }
+        ],
+        "name": "seo",
+        "type": "object",
+        "title": "SEO Settings"
+      }
+    ],
+    "name": "homepage",
+    "type": "document"
+  }
+]

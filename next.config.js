@@ -152,6 +152,7 @@ const nextConfig = {
       },
     ],
   },
+  // CORS headers removed - using hosted Sanity Studio instead of embedded
 };
 
 module.exports = nextConfig;

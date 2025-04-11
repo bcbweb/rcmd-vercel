@@ -4,7 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
 import { createClient } from "@/utils/supabase/server";
 import { RootAuthInitializer } from "@/components/features/auth";
-import { ThemeSwitcher } from "@/components/common/theme-switcher";
+import { Footer } from "@/components/layout/footer";
 import "../globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -43,10 +43,7 @@ export default async function RootLayout({
           <Header />
           <div className="flex-1 mx-auto w-full">{children}</div>
           <GlobalModals />
-          <footer className="px-6 py-2 flex justify-between items-center text-xs text-gray-500 relative w-full border-t">
-            <div>© {new Date().getFullYear()} RCMD</div>
-            <ThemeSwitcher />
-          </footer>
+          <Footer />
           <RootAuthInitializer initialSession={{ userId: user?.id || null }} />
         </ThemeProvider>
       </body>

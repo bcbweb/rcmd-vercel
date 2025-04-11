@@ -8,6 +8,9 @@ The purpose is to allow users to curate an inventory of recommendations, links t
 RCMDs have their own public shareable pages.
 Users can also add additional shareable pages to their profile and populate them with blocks, assigning one of them to be the default.
 
+Important: please use bun for package management (never npm or yarn)
+
 When carrying out tasks related to the following platforms, please always try using an MCP function before other approaches:
 - Vercel
 - Supabase
+- Sanity
