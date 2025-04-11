@@ -16,6 +16,23 @@ type SanityImageSource = {
   };
 };
 
+// Extended type to include other possible Sanity image formats
+type ExtendedSanityImageSource =
+  | SanityImageSource
+  | {
+      _ref?: string;
+      url?: string;
+      [key: string]: any;
+    };
+
+// Source type that can be passed to urlFor function
+type SanityImageValue =
+  | ExtendedSanityImageSource
+  | string
+  | Record<string, unknown>
+  | null
+  | undefined;
+
 // Use fallback values from the sanity.config.js if environment variables are not available
 // This ensures the build process can still access Sanity even if env vars aren't set
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "ce6vefd3";
@@ -31,10 +48,127 @@ export const client = createClient({
 // Helper function for generating image URLs
 const builder = imageUrlBuilder(client);
 
-// We disable the no-explicit-any rule for this specific case as the image-url library accepts various input types
+// Helper function to check if an object has a specific property
+function hasProperty<K extends string>(
+  obj: unknown,
+  prop: K
+): obj is Record<K, unknown> {
+  return obj !== null && typeof obj === "object" && prop in obj;
+}
+
+/**
+ * Enhanced function for handling Sanity image URLs
+ * Adds better error handling and direct URL generation for any Sanity image
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function urlFor(source: SanityImageSource | Record<string, any>) {
-  return builder.image(source);
+export function urlFor(source: SanityImageValue) {
+  // Return empty string if source is null or undefined
+  if (!source) return "";
+
+  try {
+    // Use Sanity's built-in image URL builder
+    return builder.image(source).auto("format");
+  } catch (error) {
+    console.error("Error creating Sanity image URL:", error);
+
+    // Attempt to extract direct URL as fallback
+    try {
+      // Handle different possible source formats
+      if (typeof source === "string") {
+        // If already a direct URL to Sanity CDN
+        if (source.includes("cdn.sanity.io")) {
+          return source;
+        }
+        // Could be a direct ref
+        if (source.startsWith("image-")) {
+          return extractSanityImageUrl(source);
+        }
+        // Return as is - might be a regular URL
+        return source;
+      }
+
+      // Type guards for property access
+      if (typeof source === "object" && source !== null) {
+        // Handle asset reference format (most common)
+        if (
+          hasProperty(source, "asset") &&
+          hasProperty(source.asset, "_ref") &&
+          typeof source.asset._ref === "string"
+        ) {
+          return extractSanityImageUrl(source.asset._ref);
+        }
+
+        // Handle direct _ref format
+        if (hasProperty(source, "_ref") && typeof source._ref === "string") {
+          return extractSanityImageUrl(source._ref);
+        }
+
+        // Handle URL field if present
+        if (hasProperty(source, "url") && typeof source.url === "string") {
+          return source.url;
+        }
+      }
+    } catch (fallbackError) {
+      console.error("Fallback URL creation failed:", fallbackError);
+    }
+
+    // Return empty string if all attempts fail
+    return "";
+  }
+}
+
+/**
+ * Extract a direct Sanity CDN URL from an asset reference
+ */
+function extractSanityImageUrl(ref: string): string {
+  if (!ref) return "";
+
+  try {
+    // Handle different reference formats
+    // Format: image-{id}-{dimensions}.{ext}
+    const refParts = ref.split("-");
+
+    // Basic validation
+    if (refParts.length < 2 || !ref.includes("image-")) {
+      return "";
+    }
+
+    // Extract the ID (everything between 'image-' and the last dash)
+    const id = refParts.slice(1, -1).join("-");
+
+    // Get the dimension and extension part (last section of the reference)
+    const dimensionAndExtPart = refParts[refParts.length - 1];
+
+    // Split by dot to separate dimensions from extension
+    const [dimensions, fileExtTemp] = dimensionAndExtPart.split(".");
+
+    // Determine file extension
+    const fileExt = fileExtTemp || getImageExtension(ref);
+
+    // Construct direct URL to Sanity CDN
+    return `https://cdn.sanity.io/images/${projectId}/${dataset}/${id}-${dimensions}.${fileExt}`;
+  } catch (error) {
+    console.error("Error extracting Sanity image URL:", error);
+    return "";
+  }
+}
+
+/**
+ * Helper function to determine image extension from asset reference
+ */
+function getImageExtension(ref: string): string {
+  // Default to png if we can't determine
+  if (!ref) return "png";
+
+  // Check for known extensions in the reference
+  if (ref.includes("png")) return "png";
+  if (ref.includes("jpg") || ref.includes("jpeg")) return "jpg";
+  if (ref.includes("webp")) return "webp";
+  if (ref.includes("gif")) return "gif";
+  if (ref.includes("svg")) return "svg";
+
+  // Default fallback
+  return "png";
 }
 
 // Helper functions for fetching data

@@ -7,9 +7,9 @@ import {
   BusinessCard,
 } from "@/components/common/carousel";
 import { Business, Profile, RCMD } from "@/types";
-import { getHomepage, urlFor } from "@/lib/sanity";
-import Image from "next/image";
+import { getHomepage } from "@/lib/sanity";
 import Link from "next/link";
+import SanityImage from "@/components/common/SanityImage";
 
 // Define types for Sanity data
 interface SanityImage {
@@ -119,12 +119,13 @@ export default async function Index() {
         <div className="relative w-full py-12 md:py-24 lg:py-32 overflow-hidden">
           {homepageData.hero.backgroundImage && (
             <div className="absolute inset-0 z-0">
-              <Image
-                src={urlFor(homepageData.hero.backgroundImage).url()}
+              <SanityImage
+                image={homepageData.hero.backgroundImage}
                 alt="Background"
                 fill
                 className="object-cover opacity-60"
                 priority
+                fallbackUrl="/images/default-hero-bg.jpg"
               />
               {/* Add a subtle gradient overlay for better text contrast */}
               <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/20 to-background/30"></div>
@@ -264,11 +265,12 @@ export default async function Index() {
                             >
                               {item.image && (
                                 <div className="aspect-video relative">
-                                  <Image
-                                    src={urlFor(item.image).width(600).url()}
+                                  <SanityImage
+                                    image={item.image}
                                     alt={item.title || "Featured item"}
                                     fill
                                     className="object-cover"
+                                    fallbackUrl="/images/default-item.jpg"
                                   />
                                 </div>
                               )}
