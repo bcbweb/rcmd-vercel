@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import RCMDBlock from "../profile/blocks/rcmd-block";
-import type { RCMDBlockType } from '@/types';
+import type { RCMDBlockType } from "@/types";
 
 interface Props {
   initialRCMDBlocks?: RCMDBlockType[];
@@ -13,9 +13,10 @@ interface Props {
 export default function RCMDBlocks({
   initialRCMDBlocks = [],
   onDelete,
-  onSave
+  onSave,
 }: Props) {
-  const [rcmdBlocks, setRCMDBlocks] = useState<RCMDBlockType[]>(initialRCMDBlocks);
+  const [rcmdBlocks, setRCMDBlocks] =
+    useState<RCMDBlockType[]>(initialRCMDBlocks);
 
   useEffect(() => {
     setRCMDBlocks(initialRCMDBlocks);

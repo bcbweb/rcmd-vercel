@@ -110,17 +110,22 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         } = await supabase.auth.getUser();
         if (userError) throw userError;
         if (!user) throw new Error("No user found");
+
         query = query.eq("owner_id", user.id);
       }
+
+      console.log("Fetching RCMDs for user:", userId || "current user");
 
       const { data, error } = await query;
 
       if (error) throw error;
 
+      console.log(`Found ${data?.length || 0} RCMDs`);
       set({ rcmds: data || [], isLoading: false });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to fetch RCMDs";
+      console.error("Error in fetchRCMDs:", errorMessage);
       set({ error: errorMessage, isLoading: false });
     }
   },

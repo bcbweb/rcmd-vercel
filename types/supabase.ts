@@ -1261,6 +1261,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      debug_profile_pages: {
+        Args: { p_profile_id: string }
+        Returns: Json
+      }
       delete_profile_page: {
         Args: { page_id: string }
         Returns: undefined
@@ -1377,17 +1381,10 @@ export type Database = {
         }[]
       }
       insert_rcmd_block: {
-        Args: { p_profile_id: string; p_rcmd_id: string }
-        Returns: {
-          auth_user_id: string
-          created_at: string | null
-          display_order: number
-          id: string
-          page_id: string
-          profile_id: string | null
-          type: string
-          updated_at: string | null
-        }
+        Args:
+          | { p_profile_id: string; p_rcmd_id: string }
+          | { p_profile_id: string; p_rcmd_id: string }
+        Returns: Json
       }
       insert_text_block: {
         Args: { p_profile_id: string; p_text: string }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreVertical, Pencil, Trash, Star } from "lucide-react";
+import { PlusCircle, MoreVertical, Pencil, Trash, Home } from "lucide-react";
 import AddPageModal from "../modals/add-page-modal";
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { RenamePageModal } from "../modals/rename-page-modal";
 import { DeletePageModal } from "../modals/delete-page-modal";
 
@@ -52,6 +53,7 @@ export function ProfileTabs({
 }: ProfileTabsProps) {
   const [renamingPage, setRenamingPage] = useState<CustomPage | null>(null);
   const [deletingPage, setDeletingPage] = useState<CustomPage | null>(null);
+  const pathname = usePathname();
 
   const sortedCustomPages = [...customPages].sort((a, b) => {
     if (a.id === defaultPageId) return -1;
@@ -82,64 +84,71 @@ export function ProfileTabs({
           );
         })}
 
-        {sortedCustomPages.map((page) => (
-          <div key={page.id} className="flex items-center group relative">
-            <Link
-              href={`/protected/profile/pages/${page.slug}`}
-              className={`
-      relative inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm
-      ${
-        currentPath === `/protected/profile/pages/${page.slug}`
-          ? "border-blue-500 text-blue-600 dark:text-blue-400"
-          : page.id === defaultPageId
-            ? "border-green-500 text-green-600 dark:text-green-400 hover:border-green-300"
-            : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300"
-      }
-    `}
-            >
-              <span className="inline-flex items-center">
-                {page.name}
-                {page.id === defaultPageId && (
-                  <span className="ml-1 text-xs text-green-600 dark:text-green-400">
-                    (Default)
-                  </span>
-                )}
-              </span>
-            </Link>
+        {sortedCustomPages.map((page) => {
+          const pageUrl = `/protected/profile/pages/${page.slug}`;
+          const isActive = pathname === pageUrl;
+          const isDefault = page.id === defaultPageId;
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild className="ml-1 -mr-1.5">
-                <button
-                  className="inline-flex items-center justify-center rounded-full p-1
+          return (
+            <div key={page.id} className="flex items-center group relative">
+              <Link
+                href={pageUrl}
+                className={`
+                  relative inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm
+                  ${
+                    isActive
+                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300"
+                  }
+                `}
+              >
+                <span className="inline-flex items-center">
+                  {page.name}
+                  {isDefault && (
+                    <span
+                      className="inline-flex ml-1.5"
+                      aria-label="Default page"
+                    >
+                      <Home className="h-3.5 w-3.5 text-amber-500" />
+                    </span>
+                  )}
+                </span>
+              </Link>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild className="ml-1 -mr-1.5">
+                  <button
+                    className="inline-flex items-center justify-center rounded-full p-1
           text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200
           hover:bg-gray-100 dark:hover:bg-gray-700
           transition-colors h-6 w-6"
-                >
-                  <MoreVertical className="h-4 w-4 relative top-[1px]" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {page.id !== defaultPageId && (
-                  <DropdownMenuItem onClick={() => onMakeDefault(page.id)}>
-                    <Star className="mr-2 h-4 w-4 text-amber-500" />
-                    Make Default
+                  >
+                    <MoreVertical className="h-4 w-4 relative top-[1px]" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {!isDefault && (
+                    <DropdownMenuItem onClick={() => onMakeDefault(page.id)}>
+                      <Home className="mr-2 h-4 w-4 text-amber-500" />
+                      Set as Default
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => setRenamingPage(page)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Rename
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={() => setRenamingPage(page)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setDeletingPage(page)}
-                  className="text-red-600 focus:text-red-700 dark:text-red-400"
-                >
-                  <Trash className="mr-2 h-4 w-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ))}
+                  <DropdownMenuItem
+                    onClick={() => setDeletingPage(page)}
+                    className="text-red-600 focus:text-red-700 dark:text-red-400"
+                  >
+                    <Trash className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        })}
 
         {customPages.length < 5 && (
           <div className="relative border-b-2 border-transparent flex items-center">

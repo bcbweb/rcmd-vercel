@@ -14,3 +14,7 @@ When carrying out tasks related to the following platforms, please always try us
 - Vercel
 - Supabase
 - Sanity
+
+Other notes:
+- Use Supabase MCP to apply migrations rather than asking me to do so.
+

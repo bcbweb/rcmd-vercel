@@ -1,23 +1,26 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { X } from 'lucide-react';
+import { X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { useRouter, usePathname } from "next/navigation";
 
 export function RenamePageModal({
   page,
   isOpen,
   onClose,
-  onSuccess
+  onSuccess,
 }: {
-  page: { id: string; name: string; } | null;
+  page: { id: string; name: string } | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }) {
   const supabase = createClient();
+  const router = useRouter();
+  const pathname = usePathname();
   const [newName, setNewName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -35,15 +38,57 @@ export function RenamePageModal({
 
     try {
       setIsSaving(true);
+
+      // Generate slug from the new name with the same logic as page creation
+      const slug = newName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+      // Update both name and slug
       const { error } = await supabase
         .from("profile_pages")
-        .update({ name: newName.trim() })
+        .update({
+          name: newName.trim(),
+          slug: slug,
+        })
         .eq("id", page.id);
 
       if (error) throw error;
 
-      toast.success("Page renamed successfully");
+      // First call the onSuccess callback to refresh pages list
       onSuccess();
+
+      // Check if we're currently on the page we just renamed
+      // Look for page pattern in the URL path
+      if (pathname.includes("/protected/profile/pages/")) {
+        // Extract current slug from pathname
+        const pathParts = pathname.split("/");
+        const currentSlug = pathParts[pathParts.length - 1];
+
+        // If we're on the page that was just renamed, update the URL
+        const { data: pageData } = await supabase
+          .from("profile_pages")
+          .select("slug")
+          .eq("id", page.id)
+          .single();
+
+        if (pageData && currentSlug !== pageData.slug) {
+          // Update browser URL without triggering a navigation
+          const newPath = pathname.replace(currentSlug, pageData.slug);
+
+          // Show an alert to inform users the page URL has changed
+          toast.info(`Page URL updated: /${pageData.slug}`, {
+            description:
+              "We've updated your browser address to match the new page name.",
+            duration: 5000,
+          });
+
+          router.replace(newPath);
+        }
+      }
+
+      toast.success("Page renamed successfully");
       onClose();
     } catch (error) {
       console.error(error);
@@ -115,7 +160,7 @@ export function RenamePageModal({
                   <span>Saving...</span>
                 </>
               ) : (
-                'Save Changes'
+                "Save Changes"
               )}
             </button>
           </div>

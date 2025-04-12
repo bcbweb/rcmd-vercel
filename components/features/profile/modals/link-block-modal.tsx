@@ -95,15 +95,61 @@ export default function LinkBlockModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Select Link</h2>
+        <div className="flex justify-between items-center mb-6">
+          <button
+            onClick={handleClose}
+            className="p-2 -ml-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 
+              dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700 
+              rounded-full transition-colors"
+            aria-label="Back"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-arrow-left"
+            >
+              <path d="m12 19-7-7 7-7" />
+              <path d="M19 12H5" />
+            </svg>
+          </button>
+          <h2 className="text-xl font-semibold flex-1 text-center">
+            Select Link
+          </h2>
+          <div className="w-8"></div> {/* Empty spacer for balance */}
+        </div>
+
+        <div className="flex justify-end mb-4">
           <button
             onClick={handleAddNewClick}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 
-              transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg
+              hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50 
+              disabled:cursor-not-allowed"
             disabled={isLoading || isSaving}
           >
-            Add New Link
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-plus-circle"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v8" />
+              <path d="M8 12h8" />
+            </svg>
+            <span>New Link</span>
           </button>
         </div>
 

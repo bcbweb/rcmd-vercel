@@ -10,11 +10,13 @@ import { toast } from "sonner";
 
 interface RCMDBlockModalProps {
   profileId: string;
+  pageId?: string;
   onSuccess?: () => void;
 }
 
 export default function RCMDBlockModal({
   profileId,
+  pageId,
   onSuccess,
 }: RCMDBlockModalProps) {
   const { saveRCMDBlock, isLoading: isSaving, error } = useBlockStore();
@@ -40,13 +42,20 @@ export default function RCMDBlockModal({
         return;
       }
 
+      console.log("Fetching RCMDs in modal for user:", user.id);
+
       const { data, error } = await supabase
         .from("rcmds")
         .select("*")
-        .eq("creator_id", user.id)
+        .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error fetching RCMDs:", error);
+        throw error;
+      }
+
+      console.log(`Found ${data?.length || 0} RCMDs in modal`);
       setRCMDs(data || []);
     } catch (error) {
       console.error("Error fetching RCMDs:", error);
@@ -56,25 +65,63 @@ export default function RCMDBlockModal({
   }, [supabase]);
 
   useEffect(() => {
+    console.log("RcmdBlockModal mounted, fetching RCMDs...");
     fetchRCMDs();
   }, [fetchRCMDs]);
 
   const handleSave = async () => {
-    if (!selectedRCMDId) return;
+    if (!selectedRCMDId) {
+      toast.error("Please select an RCMD first");
+      return;
+    }
 
     try {
-      const success = await saveRCMDBlock(profileId, selectedRCMDId);
+      console.log("Attempting to save RCMD block with:", {
+        profileId,
+        rcmdId: selectedRCMDId,
+        pageId: pageId || "not provided",
+      });
+
+      const success = await saveRCMDBlock(profileId, selectedRCMDId, pageId);
+
       if (success) {
+        toast.success("RCMD block added successfully");
         onSuccess?.();
         setIsRCMDBlockModalOpen(false);
+      } else if (error) {
+        console.error("Block store reported error:", error);
+        throw new Error(error);
       } else {
-        throw new Error(error || "Failed to save RCMD block");
+        throw new Error("Failed to save RCMD block (unknown error)");
       }
-    } catch (error) {
-      console.error("Error saving RCMD block:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to save RCMD block"
-      );
+    } catch (err) {
+      console.error("Error in handleSave:", err);
+
+      // More helpful error message based on the error
+      let errorMessage = "Failed to save RCMD block";
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+
+        // Custom handling for common errors
+        if (errorMessage.includes("page") && errorMessage.includes("first")) {
+          errorMessage =
+            "You need to create a page before adding blocks. Please go to your profile settings to create a page.";
+        } else if (
+          errorMessage.includes("not-null constraint") ||
+          errorMessage.includes("null value")
+        ) {
+          errorMessage =
+            "Missing required information. Please make sure you have at least one profile page.";
+        } else if (errorMessage.includes("found")) {
+          errorMessage =
+            "The RPC function is not available. Please make sure to apply the SQL migration.";
+        }
+      }
+
+      toast.error(errorMessage, {
+        duration: 5000,
+      });
     }
   };
 
@@ -96,15 +143,61 @@ export default function RCMDBlockModal({
     <>
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full mx-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Select RCMD</h2>
+          <div className="flex justify-between items-center mb-6">
+            <button
+              onClick={handleClose}
+              className="p-2 -ml-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 
+                dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-700 
+                rounded-full transition-colors"
+              aria-label="Back"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-arrow-left"
+              >
+                <path d="m12 19-7-7 7-7" />
+                <path d="M19 12H5" />
+              </svg>
+            </button>
+            <h2 className="text-xl font-semibold flex-1 text-center">
+              Select RCMD
+            </h2>
+            <div className="w-8"></div> {/* Empty spacer for balance */}
+          </div>
+
+          <div className="flex justify-end mb-4">
             <button
               onClick={handleAddNewClick}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 
-                transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg
+                hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50 
+                disabled:cursor-not-allowed"
               disabled={isLoading || isSaving}
             >
-              Add New RCMD
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-plus-circle"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v8" />
+                <path d="M8 12h8" />
+              </svg>
+              <span>New RCMD</span>
             </button>
           </div>
 
