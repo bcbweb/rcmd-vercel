@@ -8,27 +8,27 @@ import { useModalStore } from "@/stores/modal-store";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 
-interface RCMDBlockModalProps {
+interface RcmdBlockModalProps {
   profileId: string;
   pageId?: string;
   onSuccess?: () => void;
 }
 
-export default function RCMDBlockModal({
+export default function RcmdBlockModal({
   profileId,
   pageId,
   onSuccess,
-}: RCMDBlockModalProps) {
+}: RcmdBlockModalProps) {
   const { saveRCMDBlock, isLoading: isSaving, error } = useBlockStore();
-  const [selectedRCMDId, setSelectedRCMDId] = useState("");
-  const [rcmds, setRCMDs] = useState<RCMD[]>([]);
+  const [selectedRcmdId, setSelectedRcmdId] = useState("");
+  const [rcmds, setRcmds] = useState<RCMD[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
 
   const { setIsRCMDBlockModalOpen, setIsRCMDModalOpen, setOnModalSuccess } =
     useModalStore();
 
-  const fetchRCMDs = useCallback(async () => {
+  const fetchRcmds = useCallback(async () => {
     try {
       setIsLoading(true);
       const {
@@ -56,21 +56,21 @@ export default function RCMDBlockModal({
       }
 
       console.log(`Found ${data?.length || 0} RCMDs in modal`);
-      setRCMDs(data || []);
+      setRcmds(data || []);
     } catch (error) {
       console.error("Error fetching RCMDs:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [supabase]);
+  }, [profileId]);
 
   useEffect(() => {
     console.log("RcmdBlockModal mounted, fetching RCMDs...");
-    fetchRCMDs();
-  }, [fetchRCMDs]);
+    fetchRcmds();
+  }, [fetchRcmds]);
 
   const handleSave = async () => {
-    if (!selectedRCMDId) {
+    if (!selectedRcmdId) {
       toast.error("Please select an RCMD first");
       return;
     }
@@ -78,11 +78,11 @@ export default function RCMDBlockModal({
     try {
       console.log("Attempting to save RCMD block with:", {
         profileId,
-        rcmdId: selectedRCMDId,
+        rcmdId: selectedRcmdId,
         pageId: pageId || "not provided",
       });
 
-      const success = await saveRCMDBlock(profileId, selectedRCMDId, pageId);
+      const success = await saveRCMDBlock(profileId, selectedRcmdId, pageId);
 
       if (success) {
         toast.success("RCMD block added successfully");
@@ -132,7 +132,7 @@ export default function RCMDBlockModal({
   const handleAddNewClick = () => {
     // Set up the callback to refresh RCMDs after successful creation
     setOnModalSuccess(() => {
-      fetchRCMDs();
+      fetchRcmds();
     });
 
     // Open the RCMD creation modal
@@ -216,11 +216,11 @@ export default function RCMDBlockModal({
                   key={rcmd.id}
                   className={`p-4 border rounded-lg mb-2 cursor-pointer transition-colors
                     ${
-                      selectedRCMDId === rcmd.id
+                      selectedRcmdId === rcmd.id
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
                         : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
                     }`}
-                  onClick={() => setSelectedRCMDId(rcmd.id)}
+                  onClick={() => setSelectedRcmdId(rcmd.id)}
                 >
                   <h3 className="font-medium">{rcmd.title}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -242,7 +242,7 @@ export default function RCMDBlockModal({
             </button>
             <button
               onClick={handleSave}
-              disabled={!selectedRCMDId || isSaving || isLoading}
+              disabled={!selectedRcmdId || isSaving || isLoading}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
                 disabled:opacity-50 disabled:cursor-not-allowed transition-colors 
                 flex items-center gap-2"

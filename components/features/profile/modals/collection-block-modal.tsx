@@ -10,11 +10,13 @@ import { toast } from "sonner";
 
 interface CollectionBlockModalProps {
   profileId: string;
+  pageId?: string;
   onSuccess?: () => void;
 }
 
 export default function CollectionBlockModal({
   profileId,
+  pageId,
   onSuccess,
 }: CollectionBlockModalProps) {
   const { saveCollectionBlock, isLoading: isSaving, error } = useBlockStore();
@@ -68,7 +70,8 @@ export default function CollectionBlockModal({
     try {
       const success = await saveCollectionBlock(
         profileId,
-        selectedCollectionId
+        selectedCollectionId,
+        pageId
       );
       if (success) {
         onSuccess?.();

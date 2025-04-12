@@ -63,108 +63,30 @@ export const useBlockStore = create<BlockStore>()(
             throw new Error("RCMD ID is required");
           }
 
-          // Check if the profile exists
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("id", profileId)
-            .single();
-
-          if (profileError || !profileData) {
-            console.error("Error checking profile:", profileError);
-            throw new Error(`Profile not found with ID: ${profileId}`);
-          }
-
-          // Check if profile has any pages
-          const { data: pages, error: pagesError } = await supabase
-            .from("profile_pages")
-            .select("id")
-            .eq("profile_id", profileId)
-            .order("created_at", { ascending: true });
-
-          if (pagesError) {
-            console.error("Error checking pages:", pagesError);
-            throw new Error("Error checking profile pages");
-          }
-
-          if (!pages || pages.length === 0) {
-            throw new Error(
-              "Please create a page before adding blocks. Go to Profile Settings to create your first page."
-            );
-          }
-
-          // Try a direct SQL approach as a workaround for the RPC function overloading issue
-          console.log(
-            "Using direct SQL approach to avoid function overloading"
-          );
-
-          // Get the first page
-          const firstPage = pages[0].id;
-
-          // Get authenticated user
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (!user) throw new Error("Not authenticated");
-
-          // Get next display order
-          const { data: orderData, error: orderError } = await supabase
-            .from("profile_blocks")
-            .select("display_order")
-            .eq("profile_id", profileId)
-            .order("display_order", { ascending: false })
-            .limit(1);
-
-          const nextOrder =
-            orderData && orderData.length > 0
-              ? orderData[0].display_order + 1
-              : 1;
-
-          // Step 1: Insert profile block
-          const { data: blockData, error: blockError } = await supabase
-            .from("profile_blocks")
-            .insert({
-              profile_id: profileId,
-              type: "rcmd",
-              auth_user_id: user.id,
-              display_order: nextOrder,
-              page_id: firstPage,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .select("id")
-            .single();
-
-          if (blockError) {
-            console.error("Error creating profile block:", blockError);
-            throw blockError;
-          }
-
-          // Step 2: Insert rcmd block
-          const { data: rcmdBlockData, error: rcmdBlockError } = await supabase
-            .from("rcmd_blocks")
-            .insert({
-              profile_block_id: blockData.id,
-              rcmd_id: rcmdId,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
-
-          if (rcmdBlockError) {
-            console.error("Error creating RCMD block:", rcmdBlockError);
-            // Clean up the profile block
-            await supabase
-              .from("profile_blocks")
-              .delete()
-              .eq("id", blockData.id);
-            throw rcmdBlockError;
-          }
-
-          console.log("RCMD block created successfully:", {
-            profile_block_id: blockData.id,
+          console.log("Saving RCMD block with:", {
+            profile_id: profileId,
             rcmd_id: rcmdId,
-            page_id: firstPage,
+            page_id: pageId || "not provided (will use first page)",
           });
+
+          // Use the RPC function - it handles page ID validation internally
+          const { data, error } = await supabase.rpc("insert_rcmd_block", {
+            p_profile_id: profileId,
+            p_rcmd_id: rcmdId,
+            p_page_id: pageId || null,
+          });
+
+          if (error) {
+            console.error("RPC error details:", error);
+            throw error;
+          }
+
+          console.log("RCMD block created successfully:", data);
+
+          // Check if the RPC function returned a success: false, which indicates a logical error
+          if (data && data.success === false) {
+            throw new Error(data.message || "Failed to create RCMD block");
+          }
 
           set({ isLoading: false });
           return true;

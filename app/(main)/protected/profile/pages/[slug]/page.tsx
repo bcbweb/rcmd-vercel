@@ -338,6 +338,7 @@ export default function CustomProfilePage() {
         {isRCMDBlockModalOpen && (
           <RcmdBlockModal
             profileId={profileId}
+            pageId={pageId}
             onSuccess={handleRCMDBlockAdded}
           />
         )}
@@ -345,6 +346,7 @@ export default function CustomProfilePage() {
         {isTextBlockModalOpen && (
           <TextBlockModal
             profileId={profileId}
+            pageId={pageId}
             onSuccess={handleTextBlockAdded}
           />
         )}
@@ -352,6 +354,7 @@ export default function CustomProfilePage() {
         {isImageBlockModalOpen && (
           <ImageBlockModal
             profileId={profileId}
+            pageId={pageId}
             onSuccess={handleImageBlockAdded}
           />
         )}
@@ -359,6 +362,7 @@ export default function CustomProfilePage() {
         {isLinkBlockModalOpen && (
           <LinkBlockModal
             profileId={profileId}
+            pageId={pageId}
             onSuccess={handleLinkBlockAdded}
           />
         )}
@@ -366,6 +370,7 @@ export default function CustomProfilePage() {
         {isCollectionBlockModalOpen && (
           <CollectionBlockModal
             profileId={profileId}
+            pageId={pageId}
             onSuccess={handleCollectionBlockAdded}
           />
         )}

@@ -9,10 +9,15 @@ import { Spinner } from "@/components/ui/spinner";
 
 interface Props {
   profileId: string;
-  onSuccess: () => void;
+  pageId?: string;
+  onSuccess?: () => void;
 }
 
-export default function ImageBlockModal({ profileId, onSuccess }: Props) {
+export default function ImageBlockModal({
+  profileId,
+  pageId,
+  onSuccess,
+}: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -84,11 +89,12 @@ export default function ImageBlockModal({ profileId, onSuccess }: Props) {
         file.size,
         file.type,
         imageDimensions.width,
-        imageDimensions.height
+        imageDimensions.height,
+        pageId
       );
 
       if (success) {
-        onSuccess();
+        onSuccess?.();
         setIsImageBlockModalOpen(false);
       } else {
         setError("Failed to save image block");

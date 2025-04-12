@@ -10,11 +10,13 @@ import { toast } from "sonner";
 
 interface LinkBlockModalProps {
   profileId: string;
+  pageId?: string;
   onSuccess?: () => void;
 }
 
 export default function LinkBlockModal({
   profileId,
+  pageId,
   onSuccess,
 }: LinkBlockModalProps) {
   const { saveLinkBlock, isLoading: isSaving, error } = useBlockStore();
@@ -63,7 +65,7 @@ export default function LinkBlockModal({
     if (!selectedLinkId) return;
 
     try {
-      const success = await saveLinkBlock(profileId, selectedLinkId);
+      const success = await saveLinkBlock(profileId, selectedLinkId, pageId);
       if (success) {
         onSuccess?.();
         setIsLinkBlockModalOpen(false);

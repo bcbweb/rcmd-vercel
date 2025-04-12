@@ -1381,9 +1381,7 @@ export type Database = {
         }[]
       }
       insert_rcmd_block: {
-        Args:
-          | { p_profile_id: string; p_rcmd_id: string }
-          | { p_profile_id: string; p_rcmd_id: string }
+        Args: { p_profile_id: string; p_rcmd_id: string; p_page_id?: string }
         Returns: Json
       }
       insert_text_block: {

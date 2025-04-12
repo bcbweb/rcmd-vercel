@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 interface Props {
   profileId: string;
+  pageId?: string;
   onSuccess: () => void;
 }
 
@@ -87,7 +88,11 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
   );
 };
 
-export default function TextBlockModal({ profileId, onSuccess }: Props) {
+export default function TextBlockModal({
+  profileId,
+  pageId,
+  onSuccess,
+}: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const { setIsTextBlockModalOpen } = useModalStore();
   const { saveTextBlock } = useBlockStore();
@@ -117,7 +122,7 @@ export default function TextBlockModal({ profileId, onSuccess }: Props) {
       setIsSaving(true);
       const content = editor.getHTML();
 
-      const success = await saveTextBlock(profileId, content);
+      const success = await saveTextBlock(profileId, content, pageId);
 
       if (success) {
         onSuccess();
