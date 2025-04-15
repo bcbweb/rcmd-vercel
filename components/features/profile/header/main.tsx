@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import type { ProfilePage } from "@/types";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
@@ -12,6 +12,7 @@ import { ProfilePhoto } from "./photo";
 import { ProfileInfo } from "./info";
 import { ProfileTabs } from "./tabs";
 import { ShareModal } from "@/components/common/modals";
+import AddPageModal from "../modals/add-page-modal";
 
 interface ProfileHeaderProps {
   handle: string;
@@ -31,6 +32,9 @@ interface ProfileHeaderProps {
   showPreviewButton?: boolean;
   showShareButton?: boolean;
   onUpdate?: () => void;
+  customPages?: ProfilePage[];
+  defaultPageId?: string | null;
+  defaultPageType?: string | null;
 }
 
 export default function ProfileHeaderMain({
@@ -45,6 +49,9 @@ export default function ProfileHeaderMain({
   location = "",
   socialLinks = [],
   onUpdate,
+  customPages = [],
+  defaultPageId = null,
+  defaultPageType = null,
 }: ProfileHeaderProps) {
   const userId = useAuthStore((state) => state.userId);
   const pathname = usePathname();
@@ -63,48 +70,15 @@ export default function ProfileHeaderMain({
     useState(profilePictureUrl);
   const [newInterest, setNewInterest] = useState("");
   const [newTag, setNewTag] = useState("");
-  const [customPages, setCustomPages] = useState<ProfilePage[]>([]);
-  const [defaultPageId, setDefaultPageId] = useState<string | null>(null);
   const [isAddingPage, setIsAddingPage] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
-  // Define fetchCustomPages with useCallback
-  const fetchCustomPages = useCallback(async () => {
-    if (!userId) return;
+  // We don't need to fetch custom pages anymore as they're coming from props
 
-    try {
-      // Get profile ID first
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id, default_page_id")
-        .eq("auth_user_id", userId)
-        .single();
-
-      if (!profile) throw new Error("Profile not found");
-
-      // Now fetch pages using profile_id
-      const { data: pages, error } = await supabase
-        .from("profile_pages")
-        .select("*")
-        .eq("profile_id", profile.id)
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-
-      setCustomPages(pages || []);
-      setDefaultPageId(profile.default_page_id);
-    } catch (error) {
-      console.error("Error fetching pages:", error);
-      toast.error("Failed to load custom pages");
-    }
-  }, [supabase, userId]);
-
-  // Fetch custom pages on component mount
-  useEffect(() => {
-    fetchCustomPages();
-  }, [fetchCustomPages]);
-
-  const handleAddPage = async (pageName: string) => {
+  const handleAddPage = async (
+    pageName: string,
+    isDefault: boolean = false
+  ) => {
     if (!pageName.trim()) {
       toast.error("Page name is required");
       return false;
@@ -116,6 +90,15 @@ export default function ProfileHeaderMain({
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
 
+      // Get profile ID first to pass to the RPC function
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("auth_user_id", userId)
+        .single();
+
+      if (!profile) throw new Error("Profile not found");
+
       // Call the RPC function
       const { error } = await supabase.rpc("insert_profile_page", {
         page_name: pageName.trim(),
@@ -124,9 +107,22 @@ export default function ProfileHeaderMain({
 
       if (error) throw error;
 
+      // If this should be the default page, update that as well
+      if (isDefault) {
+        const { data: newPage } = await supabase
+          .from("profile_pages")
+          .select("id")
+          .eq("profile_id", profile.id)
+          .eq("slug", slug)
+          .single();
+
+        if (newPage) {
+          await handleMakeDefault(newPage.id);
+        }
+      }
+
       toast.success("Page created successfully");
       setIsAddingPage(false);
-      fetchCustomPages(); // Refresh the list
       return true;
     } catch (error) {
       console.error("Error creating page:", error);
@@ -136,9 +132,13 @@ export default function ProfileHeaderMain({
   };
 
   const tabs = [
-    { name: "RCMDs", href: `/protected/profile/rcmds` },
-    { name: "Links", href: `/protected/profile/links` },
-    { name: "Collections", href: `/protected/profile/collections` },
+    { name: "RCMDs", href: `/protected/profile/rcmds`, key: "rcmd" },
+    { name: "Links", href: `/protected/profile/links`, key: "link" },
+    {
+      name: "Collections",
+      href: `/protected/profile/collections`,
+      key: "collection",
+    },
   ];
 
   const handleSave = async () => {
@@ -223,6 +223,7 @@ export default function ProfileHeaderMain({
 
   const handleMakeDefault = async (pageId: string) => {
     try {
+      console.log("[DEBUG] handleMakeDefault called with pageId:", pageId);
       // Get profile ID first
       const { data: profile } = await supabase
         .from("profiles")
@@ -230,28 +231,73 @@ export default function ProfileHeaderMain({
         .eq("auth_user_id", userId)
         .single();
 
-      if (!profile) throw new Error("Profile not found");
+      if (!profile) {
+        console.log("[DEBUG] No profile found for user ID:", userId);
+        throw new Error("Profile not found");
+      }
 
-      // Update using profile ID
-      const { error } = await supabase
-        .from("profiles")
-        .update({ default_page_id: pageId })
-        .eq("id", profile.id); // Changed from auth_user_id
+      console.log("[DEBUG] Found profile:", profile.id);
 
-      if (error) throw error;
+      // Try to update with type information first
+      try {
+        console.log(
+          "[DEBUG] Updating profile with new default page settings:",
+          {
+            profile_id: profile.id,
+            default_page_id: pageId,
+            default_page_type: "custom",
+          }
+        );
 
-      // Refresh data
-      const { data: updatedProfile } = await supabase
-        .from("profiles")
-        .select("default_page_id")
-        .eq("id", profile.id)
-        .single();
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            default_page_id: pageId, // For custom pages, this is always a valid UUID
+            default_page_type: "custom",
+          })
+          .eq("id", profile.id);
 
-      setDefaultPageId(updatedProfile?.default_page_id || null);
-      fetchCustomPages();
+        if (error) {
+          console.log("[DEBUG] Error updating default page:", error);
+          if (error.message.includes("does not exist")) {
+            // If the default_page_type column doesn't exist, fall back to just updating default_page_id
+            console.log(
+              "[DEBUG] Falling back to update without default_page_type"
+            );
+            const { error: fallbackError } = await supabase
+              .from("profiles")
+              .update({ default_page_id: pageId })
+              .eq("id", profile.id);
+
+            if (fallbackError) {
+              console.log("[DEBUG] Fallback update failed:", fallbackError);
+              throw fallbackError;
+            }
+
+            console.log("[DEBUG] Fallback update succeeded");
+            // Notify the user about the schema issue
+            toast.info(
+              "Default page set with limited functionality. Please run database migrations."
+            );
+          } else {
+            throw error;
+          }
+        } else {
+          console.log("[DEBUG] Default page update succeeded");
+        }
+      } catch (error) {
+        console.error("[DEBUG] Detailed error setting default page:", error);
+        throw new Error("Failed to update default page");
+      }
+
+      // Call the onUpdate prop to refresh the parent component
+      if (onUpdate) {
+        onUpdate();
+      }
+
       toast.success("Default page updated");
     } catch (error) {
-      console.error("Error setting default page:", error);
+      console.error("[DEBUG] Error setting default page:", error);
       toast.error("Failed to update default page");
     }
   };
@@ -305,6 +351,7 @@ export default function ProfileHeaderMain({
           tabs={tabs}
           customPages={customPages}
           defaultPageId={defaultPageId}
+          defaultPageType={defaultPageType}
           currentPath={pathname}
           isAddingPage={isAddingPage}
           onAddPage={handleAddPage}
@@ -312,13 +359,18 @@ export default function ProfileHeaderMain({
             setIsAddingPage(false);
           }}
           onStartAddPage={() => setIsAddingPage(true)}
-          onPageDeleted={(deletedPageId) => {
-            if (defaultPageId === deletedPageId) {
-              setDefaultPageId(null);
+          onPageDeleted={() => {
+            // Call the onUpdate prop to refresh the parent component
+            if (onUpdate) {
+              onUpdate();
             }
-            fetchCustomPages();
           }}
-          onPageRenamed={fetchCustomPages}
+          onPageRenamed={() => {
+            // Call the onUpdate prop to refresh the parent component
+            if (onUpdate) {
+              onUpdate();
+            }
+          }}
           onMakeDefault={handleMakeDefault}
         />
       </div>
@@ -328,6 +380,12 @@ export default function ProfileHeaderMain({
           handle={handle}
         />
       )}
+      <AddPageModal
+        isOpen={isAddingPage}
+        onClose={() => setIsAddingPage(false)}
+        onAdd={handleAddPage}
+        hasDefaultPage={!!defaultPageId}
+      />
     </div>
   );
 }

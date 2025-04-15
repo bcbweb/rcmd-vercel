@@ -9,16 +9,20 @@ import { BlockActions, blockStyles } from "@/components/common";
 import { createClient } from "@/utils/supabase/client";
 import { useLinkStore } from "@/stores/link-store";
 
-interface LinkBlockProps {
+export interface LinkBlockProps {
   linkBlock: LinkBlockType;
   onDelete?: () => void;
-  onSave?: (block: Partial<LinkBlockType>) => void;
+  onSave?: (updatedBlock: Partial<LinkBlockType>) => void;
+  noBorder?: boolean;
+  hideEdit?: boolean;
 }
 
 export default function LinkBlock({
   linkBlock,
   onDelete,
   onSave,
+  noBorder = false,
+  hideEdit = false,
 }: LinkBlockProps) {
   const supabase = createClient();
   const [link, setLink] = useState<Link | null>(null);
@@ -110,12 +114,12 @@ export default function LinkBlock({
 
   return (
     <div
-      className={`${blockStyles.container} ${blockStyles.card} relative pt-12`}
+      className={`${noBorder ? "" : blockStyles.container} ${blockStyles.card} relative pt-12`}
     >
       <div className="absolute top-2 right-2 z-10">
         <BlockActions
           isEditMode={false}
-          onEdit={handleEdit}
+          onEdit={hideEdit ? undefined : handleEdit}
           onDelete={handleDelete}
           onSave={() => {}}
           onCancel={() => {}}

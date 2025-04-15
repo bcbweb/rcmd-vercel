@@ -24,12 +24,16 @@ interface CollectionBlockProps {
   collection: CollectionWithItems;
   onDelete?: () => void;
   onSave?: (block: ExtendedCollectionBlock) => void;
+  noBorder?: boolean;
+  hideEdit?: boolean;
 }
 
 export default function CollectionBlock({
   collection,
   onDelete,
   onSave,
+  noBorder = false,
+  hideEdit = false,
 }: CollectionBlockProps) {
   const {
     setIsCollectionModalOpen,
@@ -147,12 +151,12 @@ export default function CollectionBlock({
 
   return (
     <div
-      className={`${blockStyles.container} ${blockStyles.card} relative h-full flex flex-col pt-10`}
+      className={`${noBorder ? "" : blockStyles.container} ${blockStyles.card} relative h-full flex flex-col pt-10`}
     >
       <div className="absolute top-2 right-2 z-10">
         <BlockActions
           isEditMode={false}
-          onEdit={handleEdit}
+          onEdit={hideEdit ? undefined : handleEdit}
           onDelete={handleDeleteCollection}
           onSave={() => {}}
           onCancel={() => {}}

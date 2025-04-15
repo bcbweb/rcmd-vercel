@@ -1,28 +1,50 @@
-import { createClient } from "@/utils/supabase/server";
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { RCMD, RCMDBlockType } from "@/types";
 import Image from "next/image";
-import { PostgrestError } from "@supabase/supabase-js";
 import { blockStyles, BlockStats } from "@/components/common";
 import { MapPin, Link, DollarSign } from "lucide-react";
+import { imageLoader } from "@/utils/image";
 
 interface RCMDBlockProps {
   blockId: string;
 }
 
-export default async function RCMDBlock({ blockId }: RCMDBlockProps) {
-  const supabase = await createClient();
+export default function RCMDBlock({ blockId }: RCMDBlockProps) {
+  const [rcmdBlock, setRcmdBlock] = useState<
+    (RCMDBlockType & { rcmds: RCMD }) | null
+  >(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const { data: rcmdBlock, error } = (await supabase
-    .from("rcmd_blocks")
-    .select(`*, rcmds (*)`)
-    .eq("profile_block_id", blockId)
-    .single()) as {
-    data: (RCMDBlockType & { rcmds: RCMD }) | null;
-    error: PostgrestError | null;
-  };
+  useEffect(() => {
+    async function fetchRcmdBlock() {
+      try {
+        setIsLoading(true);
+        const supabase = createClient();
 
-  if (error || !rcmdBlock || !rcmdBlock.rcmds) return null;
-  const rcmd = rcmdBlock.rcmds;
+        const { data, error } = await supabase
+          .from("rcmd_blocks")
+          .select(`*, rcmds (*)`)
+          .eq("profile_block_id", blockId)
+          .single();
+
+        if (error) throw error;
+        if (!data || !data.rcmds) throw new Error("RCMD block not found");
+
+        setRcmdBlock(data as RCMDBlockType & { rcmds: RCMD });
+      } catch (err) {
+        console.error("Error fetching RCMD block:", err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchRcmdBlock();
+  }, [blockId]);
 
   const formatLocation = (location: unknown): string | null => {
     if (!location) return null;
@@ -90,6 +112,24 @@ export default async function RCMDBlock({ blockId }: RCMDBlockProps) {
     return null;
   };
 
+  if (isLoading) {
+    return (
+      <div
+        className={`${blockStyles.container} ${blockStyles.card} animate-pulse`}
+      >
+        <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-md mb-4"></div>
+        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-4 w-3/4"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-2/3"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-1/2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-3/5"></div>
+      </div>
+    );
+  }
+
+  if (error || !rcmdBlock || !rcmdBlock.rcmds) return null;
+
+  const rcmd = rcmdBlock.rcmds;
+
   const stats = [
     { value: rcmd.view_count || 0, label: "views" },
     { value: rcmd.like_count || 0, label: "likes" },
@@ -110,6 +150,7 @@ export default async function RCMDBlock({ blockId }: RCMDBlockProps) {
             alt={rcmd.title}
             fill
             className="object-cover"
+            loader={imageLoader}
           />
         </div>
       )}

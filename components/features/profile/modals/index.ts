@@ -6,3 +6,4 @@ export { default as CollectionBlockModal } from "./collection-block-modal";
 export { default as AddPageModal } from "./add-page-modal";
 export { DeletePageModal } from "./delete-page-modal";
 export { RenamePageModal } from "./rename-page-modal";
+export { PageConfigModal } from "./page-config-modal";

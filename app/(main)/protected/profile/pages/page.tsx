@@ -8,6 +8,7 @@ import {
   ImageBlockModal,
   LinkBlockModal,
   CollectionBlockModal,
+  PageConfigModal,
 } from "@/components/features/profile/modals";
 import { createClient } from "@/utils/supabase/client";
 import type { ProfileBlockType } from "@/types";
@@ -20,12 +21,18 @@ import { toast } from "sonner";
 import { useCollectionStore } from "@/stores/collection-store";
 import { useLinkStore } from "@/stores/link-store";
 import { useRCMDStore } from "@/stores/rcmd-store";
+import { Button } from "@/components/ui/button";
+import { Eye, Settings } from "lucide-react";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const supabase = createClient();
   const [blocks, setBlocks] = useState<ProfileBlockType[]>([]);
   const [isBlockSaving, setIsBlockSaving] = useState(false);
   const [profileId, setProfileId] = useState<string>("");
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isDefaultPage, setIsDefaultPage] = useState(false);
+  const [userHandle, setUserHandle] = useState<string | null>(null);
   const userId = useAuthStore((state) => state.userId);
   const {
     isRCMDBlockModalOpen,
@@ -72,22 +79,95 @@ export default function ProfilePage() {
 
   // Get profile ID
   useEffect(() => {
-    const getProfileId = async () => {
+    const getProfileData = async () => {
       if (!userId) return;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("auth_user_id", userId)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, handle, default_page_type, default_page_id")
+          .eq("auth_user_id", userId)
+          .single();
 
-      if (profile) {
-        setProfileId(profile.id);
-        refreshBlocks(profile.id);
+        let profileData = null;
+
+        if (error && error.message.includes("does not exist")) {
+          // If the columns don't exist yet, fall back to just getting id and handle
+          console.log(
+            "Default page columns not available yet, fetching basic profile data"
+          );
+          const { data: basicData, error: basicError } = await supabase
+            .from("profiles")
+            .select("id, handle")
+            .eq("auth_user_id", userId)
+            .single();
+
+          if (basicError) throw basicError;
+          profileData = {
+            ...basicData,
+            default_page_type: undefined,
+            default_page_id: undefined,
+          };
+        } else if (error) {
+          throw error;
+        } else {
+          // No error, use the data from the first query
+          profileData = data;
+        }
+
+        if (profileData) {
+          setUserHandle(profileData.handle || null);
+          setProfileId(profileData.id);
+          // Check if this is the default page only if the columns exist
+          if (profileData.default_page_type !== undefined) {
+            setIsDefaultPage(
+              profileData.default_page_type === "custom" &&
+                profileData.default_page_id === null
+            );
+          } else {
+            // Assume it's not the default page if we don't have that data
+            setIsDefaultPage(false);
+          }
+          refreshBlocks(profileData.id);
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        toast.error("Failed to fetch profile data");
       }
     };
 
-    getProfileId();
+    getProfileData();
+
+    // Set up real-time subscription to listen for profile changes
+    if (userId) {
+      const supabase = createClient();
+      const subscription = supabase
+        .channel("profile-default-changes-main")
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "profiles",
+            filter: `auth_user_id=eq.${userId}`,
+          },
+          (payload) => {
+            console.log("Profile update received in main page:", payload);
+            if (payload.new) {
+              const { default_page_type, default_page_id } = payload.new;
+              // Update the default page status
+              setIsDefaultPage(
+                default_page_type === "custom" && default_page_id === null
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }
   }, [userId, supabase, refreshBlocks]);
 
   useEffect(() => {
@@ -202,7 +282,39 @@ export default function ProfilePage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div>
+      <div className="max-w-screen-xl mx-auto relative">
+        <div className="flex justify-between items-center border-b pb-4 mb-4">
+          <h1 className="text-2xl font-bold mx-auto">Custom Pages</h1>
+          <div className="absolute right-0 flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 py-1 h-auto text-sm"
+              onClick={() => setIsConfigModalOpen(true)}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              Configure
+            </Button>
+            {userHandle && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 py-1 h-auto text-sm"
+                asChild
+              >
+                <Link
+                  href={`/${userHandle}/pages`}
+                  className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
+                  target="_blank"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Preview Page
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+
         <div className="flex gap-4 mb-4">
           <AddBlockButton />
         </div>
@@ -241,6 +353,15 @@ export default function ProfilePage() {
             onSuccess={handleBlockAdded}
           />
         )}
+
+        {/* Page config modal */}
+        <PageConfigModal
+          isOpen={isConfigModalOpen}
+          onClose={() => setIsConfigModalOpen(false)}
+          pageType="custom"
+          isDefault={isDefaultPage}
+          profileId={profileId}
+        />
       </div>
     </DndProvider>
   );

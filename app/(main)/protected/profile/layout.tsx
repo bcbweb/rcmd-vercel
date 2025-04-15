@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ProfileHeader } from "@/components/features/profile/header";
 import { useAuthStore } from "@/stores/auth-store";
@@ -14,35 +14,69 @@ export default function ProfileLayout({
   const router = useRouter();
   const userId = useAuthStore((state) => state.userId);
   const isInitialized = useAuthStore((state) => state.isInitialized);
-  const { profile, socialLinks, isLoading, fetchProfile } = useProfileStore();
+  const { profile, socialLinks, pages, isLoading, fetchProfile, fetchPages } =
+    useProfileStore();
   const [isPageLoading, setIsPageLoading] = useState(true);
 
+  // Refs to prevent infinite reloads
+  const isLoadingRef = useRef(false);
+  const lastFetchTimeRef = useRef(0);
+
   // Helper function to fetch profile data
-  const loadProfile = useCallback(async () => {
-    if (!userId) {
-      setIsPageLoading(false);
-      return;
-    }
-
-    try {
-      const result = await fetchProfile(userId);
-      if (result.needsOnboarding) {
-        router.push("/protected/onboarding");
+  const loadProfile = useCallback(
+    async (force = false) => {
+      if (!userId) {
+        setIsPageLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Failed to initialize profile:", error);
-    } finally {
-      setIsPageLoading(false);
-    }
-  }, [userId, fetchProfile, router, setIsPageLoading]);
 
-  // Initial profile load
+      // Prevent multiple simultaneous fetches
+      if (isLoadingRef.current && !force) {
+        console.log("[LAYOUT] Skipping loadProfile call, already loading");
+        return;
+      }
+
+      // Debounce - don't fetch if we just did (within the last 2 seconds)
+      const now = Date.now();
+      if (!force && now - lastFetchTimeRef.current < 2000) {
+        console.log(
+          "[LAYOUT] Debouncing loadProfile call, last fetch too recent"
+        );
+        return;
+      }
+
+      try {
+        isLoadingRef.current = true;
+        lastFetchTimeRef.current = now;
+        console.log("[LAYOUT] Loading profile data");
+
+        // Fetch both profile and pages data
+        const result = await fetchProfile(userId);
+        if (result.needsOnboarding) {
+          router.push("/protected/onboarding");
+        } else {
+          // Fetch pages only if user doesn't need onboarding
+          await fetchPages(userId);
+        }
+      } catch (error) {
+        console.error("Failed to initialize profile:", error);
+      } finally {
+        isLoadingRef.current = false;
+        setIsPageLoading(false);
+      }
+    },
+    [userId, fetchProfile, fetchPages, router, setIsPageLoading]
+  );
+
+  // Initial profile load - only load when userId or isInitialized changes
+  // Don't trigger on every render or lastFetchTimestamp change
   useEffect(() => {
     if (!isInitialized) {
       return;
     }
 
-    loadProfile();
+    console.log("[LAYOUT] Initial profile load triggered");
+    loadProfile(true); // force the initial load
   }, [userId, isInitialized, loadProfile]);
 
   // Keep monitor for stuck loading state but remove the console.log
@@ -117,6 +151,10 @@ export default function ProfileLayout({
           bio={profile.bio || ""}
           location={profile.location || ""}
           socialLinks={socialLinks}
+          customPages={pages}
+          defaultPageId={profile.default_page_id}
+          defaultPageType={profile.default_page_type}
+          onUpdate={loadProfile}
         />
         <div className="w-full p-[1px] bg-gradient-to-r from-transparent via-foreground/10 to-transparent my-8" />
         {children}

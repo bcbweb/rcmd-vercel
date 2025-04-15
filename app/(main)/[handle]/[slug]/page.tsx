@@ -2,15 +2,9 @@ import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { ProfileBlockType } from "@/types";
-import ProfileTabsWrapper from "./profile-tabs-wrapper";
+import ProfileTabsWrapper from "../profile-tabs-wrapper";
 
-type Params = Promise<{ handle: string }>;
-
-interface ProfilePage {
-  id: string;
-  name: string;
-  slug: string;
-}
+type Params = Promise<{ handle: string; slug: string }>;
 
 interface Profile {
   id: string;
@@ -28,12 +22,16 @@ interface Profile {
   default_page_id?: string;
 }
 
-export default async function ProfilePage({ params }: { params: Params }) {
+export default async function ProfilePageWithSlug({
+  params,
+}: {
+  params: Params;
+}) {
   const resolvedParams = await params;
-  const { handle } = resolvedParams;
+  const { handle, slug } = resolvedParams;
   const supabase = await createClient();
 
-  // Fetch the profile data with default page information
+  // Fetch the profile data
   const { data: profile } = (await supabase
     .from("profiles")
     .select(
@@ -68,36 +66,27 @@ export default async function ProfilePage({ params }: { params: Params }) {
     console.error("Error fetching profile pages:", pagesError);
   }
 
-  // Use the first page as default
+  // Find the requested page by slug
+  const targetPage = pages?.find((page) => page.slug === slug);
+  if (!targetPage) return notFound();
+
+  // Get the default page (first page)
   const defaultPage = pages?.length ? pages[0] : null;
-  const defaultPageId = defaultPage?.id;
 
-  // Log debug information for the default page
-  console.log("[handle]/page.tsx DEBUG:", {
-    handle,
-    profileId: profile.id,
-    defaultPageType: profile.default_page_type,
-    defaultPageId: profile.default_page_id,
-    firstPage: defaultPage
-      ? { id: defaultPage.id, name: defaultPage.name }
-      : null,
-    pagesCount: pages?.length || 0,
-  });
-
-  // Fetch blocks for the default page
-  const { data: defaultBlocks, error: blocksError } = await supabase
+  // Fetch blocks for the target page
+  const { data: pageBlocks, error: blocksError } = await supabase
     .from("profile_blocks")
     .select("*")
     .eq("profile_id", profile.id)
-    .eq("page_id", defaultPageId)
+    .eq("page_id", targetPage.id)
     .order("display_order", { ascending: true });
 
   if (blocksError) {
-    console.error("Error fetching default page blocks:", blocksError);
+    console.error("Error fetching page blocks:", blocksError);
   }
 
   // Sort blocks by order
-  const sortedBlocks = defaultBlocks || [];
+  const sortedBlocks = pageBlocks || [];
 
   return (
     <div className="w-full">
@@ -192,8 +181,9 @@ export default async function ProfilePage({ params }: { params: Params }) {
             <ProfileTabsWrapper
               profileId={profile.id}
               defaultBlocks={sortedBlocks}
+              activePage={targetPage}
               defaultPage={defaultPage}
-              activeTab={defaultPage?.id}
+              activeTab={targetPage.id}
             />
           </div>
         </div>

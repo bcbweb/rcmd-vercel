@@ -10,12 +10,14 @@ interface BlockStore {
   saveRCMDBlock: (
     profileId: string,
     rcmdId: string,
-    pageId?: string
+    pageId?: string,
+    showBorder?: boolean
   ) => Promise<boolean>;
   saveTextBlock: (
     profileId: string,
     content: string,
-    pageId?: string
+    pageId?: string,
+    showBorder?: boolean
   ) => Promise<boolean>;
   saveImageBlock: (
     profileId: string,
@@ -26,17 +28,20 @@ interface BlockStore {
     mimeType: string,
     width: number,
     height: number,
-    pageId?: string
+    pageId?: string,
+    showBorder?: boolean
   ) => Promise<boolean>;
   saveLinkBlock: (
     profileId: string,
     linkId: string,
-    pageId?: string
+    pageId?: string,
+    showBorder?: boolean
   ) => Promise<boolean>;
   saveCollectionBlock: (
     profileId: string,
     collectionId: string,
-    pageId?: string
+    pageId?: string,
+    showBorder?: boolean
   ) => Promise<boolean>;
 }
 
@@ -49,7 +54,8 @@ export const useBlockStore = create<BlockStore>()(
       saveRCMDBlock: async (
         profileId: string,
         rcmdId: string,
-        pageId?: string
+        pageId?: string,
+        showBorder: boolean = false
       ) => {
         const supabase = createClient();
         set({ isLoading: true, error: null });
@@ -67,6 +73,7 @@ export const useBlockStore = create<BlockStore>()(
             profile_id: profileId,
             rcmd_id: rcmdId,
             page_id: pageId || "not provided (will use first page)",
+            show_border: showBorder,
           });
 
           // Use the RPC function - it handles page ID validation internally
@@ -74,6 +81,7 @@ export const useBlockStore = create<BlockStore>()(
             p_profile_id: profileId,
             p_rcmd_id: rcmdId,
             p_page_id: pageId || null,
+            p_show_border: showBorder,
           });
 
           if (error) {
@@ -104,7 +112,8 @@ export const useBlockStore = create<BlockStore>()(
       saveTextBlock: async (
         profileId: string,
         content: string,
-        pageId?: string
+        pageId?: string,
+        showBorder: boolean = false
       ) => {
         const supabase = createClient();
         set({ isLoading: true, error: null });
@@ -114,6 +123,7 @@ export const useBlockStore = create<BlockStore>()(
             p_profile_id: profileId,
             p_text: content,
             p_page_id: pageId || null,
+            p_show_border: showBorder,
           });
 
           if (error) throw error;
@@ -140,7 +150,8 @@ export const useBlockStore = create<BlockStore>()(
         mimeType: string,
         width: number,
         height: number,
-        pageId?: string
+        pageId?: string,
+        showBorder: boolean = false
       ) => {
         const supabase = createClient();
         set({ isLoading: true, error: null });
@@ -156,6 +167,7 @@ export const useBlockStore = create<BlockStore>()(
             p_width: width,
             p_height: height,
             p_page_id: pageId || null,
+            p_show_border: showBorder,
           });
 
           if (error) throw error;
@@ -176,7 +188,8 @@ export const useBlockStore = create<BlockStore>()(
       saveLinkBlock: async (
         profileId: string,
         linkId: string,
-        pageId?: string
+        pageId?: string,
+        showBorder: boolean = false
       ) => {
         const supabase = createClient();
         set({ isLoading: true, error: null });
@@ -186,6 +199,7 @@ export const useBlockStore = create<BlockStore>()(
             p_profile_id: profileId,
             p_link_id: linkId,
             p_page_id: pageId || null,
+            p_show_border: showBorder,
           });
 
           if (error) throw error;
@@ -206,7 +220,8 @@ export const useBlockStore = create<BlockStore>()(
       saveCollectionBlock: async (
         profileId: string,
         collectionId: string,
-        pageId?: string
+        pageId?: string,
+        showBorder: boolean = false
       ) => {
         const supabase = createClient();
         set({ isLoading: true, error: null });
@@ -216,6 +231,7 @@ export const useBlockStore = create<BlockStore>()(
             p_profile_id: profileId,
             p_collection_id: collectionId,
             p_page_id: pageId || null,
+            p_show_border: showBorder,
           });
 
           if (error) throw error;

@@ -18,6 +18,8 @@ interface Props {
   textBlock: TextBlockType;
   onDelete?: () => void;
   onSave?: (updatedBlock: Partial<TextBlockType>) => void;
+  noBorder?: boolean;
+  hideEdit?: boolean;
 }
 
 const MenuBar = ({ editor }: { editor: Editor | null }) => {
@@ -82,7 +84,13 @@ const MenuBar = ({ editor }: { editor: Editor | null }) => {
   );
 };
 
-export default function TextBlock({ textBlock, onDelete, onSave }: Props) {
+export default function TextBlock({
+  textBlock,
+  onDelete,
+  onSave,
+  noBorder = false,
+  hideEdit = false,
+}: Props) {
   const [isEditMode, setIsEditMode] = useState(false);
 
   const editor = useEditor({
@@ -113,11 +121,11 @@ export default function TextBlock({ textBlock, onDelete, onSave }: Props) {
   };
 
   return (
-    <div className={blockStyles.container}>
+    <div className={`${noBorder ? "" : blockStyles.container}`}>
       <div className="flex justify-end mb-2 gap-2">
         <BlockActions
           isEditMode={isEditMode}
-          onEdit={() => setIsEditMode(true)}
+          onEdit={hideEdit ? undefined : () => setIsEditMode(true)}
           onDelete={onDelete}
           onSave={handleSave}
           onCancel={() => setIsEditMode(false)}

@@ -1,6 +1,7 @@
-import { X, Share2, Edit2, Save, XCircle } from "lucide-react";
+import { X, Share2, Edit2, Save, XCircle, Eye } from "lucide-react";
 import { SocialLinks } from "./social-links";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface ProfileInfoProps {
   isEditing: boolean;
@@ -220,15 +221,29 @@ export function ProfileInfo({
               </Button>
             </>
           ) : (
-            <Button
-              variant="outline"
-              onClick={onEdit}
-              className="gap-1 py-1 h-auto text-sm"
-              size="sm"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              Edit Info
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={onEdit}
+                className="gap-1 py-1 h-auto text-sm"
+                size="sm"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                Edit Info
+              </Button>
+
+              <Button
+                variant="outline"
+                className="gap-1 py-1 h-auto text-sm"
+                size="sm"
+                asChild
+              >
+                <Link href={`/${handle}`} target="_blank">
+                  <Eye className="w-3.5 h-3.5" />
+                  Preview
+                </Link>
+              </Button>
+            </>
           )
         ) : null}
 

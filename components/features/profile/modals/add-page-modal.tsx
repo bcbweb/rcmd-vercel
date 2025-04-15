@@ -1,19 +1,37 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { X } from 'lucide-react';
+import { X } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (pageName: string) => Promise<boolean>;
+  onAdd: (pageName: string, isDefault: boolean) => Promise<boolean>;
+  hasDefaultPage: boolean;
 }
 
-export default function AddPageModal({ isOpen, onClose, onAdd }: Props) {
-  const [pageName, setPageName] = useState('');
+export default function AddPageModal({
+  isOpen,
+  onClose,
+  onAdd,
+  hasDefaultPage,
+}: Props) {
+  const [pageName, setPageName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDefault, setIsDefault] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Reset state when modal opens
+      setPageName("");
+      // If there's no default page yet, set this as default by default
+      setIsDefault(!hasDefaultPage);
+    }
+  }, [isOpen, hasDefaultPage]);
 
   if (!isOpen) return null;
 
@@ -24,17 +42,18 @@ export default function AddPageModal({ isOpen, onClose, onAdd }: Props) {
 
     try {
       setIsSaving(true);
-      const success = await onAdd(pageName.trim());
+      const success = await onAdd(pageName.trim(), isDefault);
 
       if (success) {
-        setPageName('');
+        setPageName("");
+        setIsDefault(false);
         onClose();
       } else {
-        toast.error('Failed to create page');
+        toast.error("Failed to create page");
       }
     } catch (error) {
-      console.error('Error creating page:', error);
-      toast.error('Failed to create page');
+      console.error("Error creating page:", error);
+      toast.error("Failed to create page");
     } finally {
       setIsSaving(false);
     }
@@ -77,6 +96,18 @@ export default function AddPageModal({ isOpen, onClose, onAdd }: Props) {
             />
           </div>
 
+          <div className="flex items-center space-x-2 mb-4">
+            <Checkbox
+              id="isDefault"
+              checked={isDefault}
+              onCheckedChange={(checked) => setIsDefault(checked === true)}
+              disabled={isSaving}
+            />
+            <Label htmlFor="isDefault" className="cursor-pointer">
+              Set as default page
+            </Label>
+          </div>
+
           <div className="mt-4 flex justify-end gap-2">
             <button
               type="button"
@@ -100,7 +131,7 @@ export default function AddPageModal({ isOpen, onClose, onAdd }: Props) {
                   <span>Creating...</span>
                 </>
               ) : (
-                'Create Page'
+                "Create Page"
               )}
             </button>
           </div>

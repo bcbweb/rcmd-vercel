@@ -7,6 +7,8 @@ import { useBlockStore } from "@/stores/block-store";
 import { useModalStore } from "@/stores/modal-store";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface RcmdBlockModalProps {
   profileId: string;
@@ -21,6 +23,7 @@ export default function RcmdBlockModal({
 }: RcmdBlockModalProps) {
   const { saveRCMDBlock, isLoading: isSaving, error } = useBlockStore();
   const [selectedRcmdId, setSelectedRcmdId] = useState("");
+  const [showBorder, setShowBorder] = useState(false);
   const [rcmds, setRcmds] = useState<RCMD[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
@@ -80,9 +83,15 @@ export default function RcmdBlockModal({
         profileId,
         rcmdId: selectedRcmdId,
         pageId: pageId || "not provided",
+        showBorder,
       });
 
-      const success = await saveRCMDBlock(profileId, selectedRcmdId, pageId);
+      const success = await saveRCMDBlock(
+        profileId,
+        selectedRcmdId,
+        pageId,
+        showBorder
+      );
 
       if (success) {
         toast.success("RCMD block added successfully");
@@ -201,37 +210,81 @@ export default function RcmdBlockModal({
             </button>
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-8">
-                <Spinner className="h-8 w-8" />
-              </div>
-            ) : rcmds.length === 0 ? (
-              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                No RCMDs found. Please add some RCMDs first.
-              </div>
-            ) : (
-              rcmds.map((rcmd) => (
+          {isLoading ? (
+            <div className="flex justify-center my-8">
+              <Spinner className="h-8 w-8 text-blue-500" />
+            </div>
+          ) : rcmds.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              You haven't created any RCMDs yet.
+              <br />
+              Click the "New RCMD" button to get started.
+            </div>
+          ) : (
+            <div className="max-h-80 overflow-y-auto space-y-2 pr-1 mb-4">
+              {rcmds.map((rcmd) => (
                 <div
                   key={rcmd.id}
-                  className={`p-4 border rounded-lg mb-2 cursor-pointer transition-colors
-                    ${
-                      selectedRcmdId === rcmd.id
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                        : "border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50"
-                    }`}
+                  className={`p-3 rounded-lg border transition-all cursor-pointer ${
+                    selectedRcmdId === rcmd.id
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"
+                  }`}
                   onClick={() => setSelectedRcmdId(rcmd.id)}
                 >
-                  <h3 className="font-medium">{rcmd.title}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {rcmd.description}
-                  </p>
+                  <div className="flex items-center gap-3">
+                    {rcmd.featured_image && (
+                      <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700">
+                        <img
+                          src={rcmd.featured_image}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                        {rcmd.title || "Untitled RCMD"}
+                      </h3>
+                      {rcmd.location && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          📍{" "}
+                          {typeof rcmd.location === "string"
+                            ? rcmd.location
+                            : JSON.stringify(rcmd.location)}
+                        </p>
+                      )}
+                      {rcmd.url && (
+                        <p className="text-xs text-blue-600 dark:text-blue-400 truncate">
+                          {rcmd.url?.replace(/^https?:\/\/(www\.)?/, "")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              ))
-            )}
+              ))}
+            </div>
+          )}
+
+          {/* Display options */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+            <h3 className="font-medium text-sm mb-3">Display Options</h3>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="show-border"
+                checked={showBorder}
+                onCheckedChange={(checked) => setShowBorder(checked === true)}
+              />
+              <Label
+                htmlFor="show-border"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Show border around block
+              </Label>
+            </div>
           </div>
 
-          <div className="mt-4 flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={handleClose}
               className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 
@@ -242,10 +295,9 @@ export default function RcmdBlockModal({
             </button>
             <button
               onClick={handleSave}
-              disabled={!selectedRcmdId || isSaving || isLoading}
+              disabled={isSaving || !selectedRcmdId}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 
-                disabled:opacity-50 disabled:cursor-not-allowed transition-colors 
-                flex items-center gap-2"
+                disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {isSaving ? (
                 <>
@@ -253,7 +305,7 @@ export default function RcmdBlockModal({
                   <span>Saving...</span>
                 </>
               ) : (
-                "Add RCMD Block"
+                "Save"
               )}
             </button>
           </div>

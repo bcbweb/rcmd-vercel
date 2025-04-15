@@ -1,38 +1,64 @@
-import { createClient } from "@/utils/supabase/server";
-import { PostgrestError } from '@supabase/supabase-js';
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { TextBlockType } from "@/types";
 import { blockStyles } from "@/components/common";
-import parse from 'html-react-parser';
+import parse from "html-react-parser";
 
 interface TextBlockProps {
   blockId: string;
 }
 
-interface TextBlock {
-  profile_block_id: string;
-  text: string;
-  view_count?: number;
-  like_count?: number;
-  save_count?: number;
-  created_at: string;
-}
+export default function TextBlock({ blockId }: TextBlockProps) {
+  const [textBlock, setTextBlock] = useState<TextBlockType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-export default async function TextBlock({ blockId }: TextBlockProps) {
-  const supabase = await createClient();
+  useEffect(() => {
+    async function fetchTextBlock() {
+      try {
+        setIsLoading(true);
+        const supabase = createClient();
 
-  const { data: textBlock, error } = await supabase
-    .from('text_blocks')
-    .select('*')
-    .eq('profile_block_id', blockId)
-    .single() as { data: TextBlock | null, error: PostgrestError | null; };
+        const { data, error } = await supabase
+          .from("text_blocks")
+          .select("*")
+          .eq("profile_block_id", blockId)
+          .single();
+
+        if (error) throw error;
+        if (!data) throw new Error("Text block not found");
+
+        setTextBlock(data);
+      } catch (err) {
+        console.error("Error fetching text block:", err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchTextBlock();
+  }, [blockId]);
+
+  if (isLoading) {
+    return (
+      <div className={`${blockStyles.container} animate-pulse`}>
+        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded mb-3 w-3/4"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-full"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-5/6"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-4/5"></div>
+      </div>
+    );
+  }
 
   if (error || !textBlock) return null;
 
   return (
     <div className={blockStyles.container}>
-      <div className="flex flex-col h-full">
-        <div className="prose dark:prose-invert max-w-none prose-sm sm:prose-base">
-          {parse(textBlock.text)}
-        </div>
+      <div className="prose dark:prose-invert max-w-none">
+        {parse(textBlock.text)}
       </div>
     </div>
   );

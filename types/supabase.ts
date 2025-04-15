@@ -745,6 +745,7 @@ export type Database = {
           id: string
           page_id: string
           profile_id: string | null
+          show_border: boolean
           type: string
           updated_at: string | null
         }
@@ -755,6 +756,7 @@ export type Database = {
           id?: string
           page_id: string
           profile_id?: string | null
+          show_border?: boolean
           type: string
           updated_at?: string | null
         }
@@ -765,6 +767,7 @@ export type Database = {
           id?: string
           page_id?: string
           profile_id?: string | null
+          show_border?: boolean
           type?: string
           updated_at?: string | null
         }
@@ -882,6 +885,7 @@ export type Database = {
           cover_image: string | null
           created_at: string | null
           default_page_id: string | null
+          default_page_type: string | null
           email: string
           first_name: string | null
           handle: string | null
@@ -900,6 +904,7 @@ export type Database = {
           cover_image?: string | null
           created_at?: string | null
           default_page_id?: string | null
+          default_page_type?: string | null
           email: string
           first_name?: string | null
           handle?: string | null
@@ -918,6 +923,7 @@ export type Database = {
           cover_image?: string | null
           created_at?: string | null
           default_page_id?: string | null
+          default_page_type?: string | null
           email?: string
           first_name?: string | null
           handle?: string | null
@@ -1278,6 +1284,7 @@ export type Database = {
           id: string
           page_id: string
           profile_id: string | null
+          show_border: boolean
           type: string
           updated_at: string | null
         }
@@ -1287,21 +1294,28 @@ export type Database = {
         Returns: Json
       }
       insert_collection_block: {
-        Args: { p_profile_id: string; p_collection_id: string }
-        Returns: undefined
+        Args: {
+          p_profile_id: string
+          p_collection_id: string
+          p_page_id?: string
+          p_show_border?: boolean
+        }
+        Returns: Json
       }
       insert_image_block: {
         Args: {
           p_profile_id: string
           p_image_url: string
-          p_caption: string
-          p_original_filename: string
-          p_size_bytes: number
-          p_mime_type: string
-          p_width: number
-          p_height: number
+          p_caption?: string
+          p_original_filename?: string
+          p_size_bytes?: number
+          p_mime_type?: string
+          p_width?: number
+          p_height?: number
+          p_page_id?: string
+          p_show_border?: boolean
         }
-        Returns: undefined
+        Returns: Json
       }
       insert_link: {
         Args: {
@@ -1323,8 +1337,13 @@ export type Database = {
         }[]
       }
       insert_link_block: {
-        Args: { p_profile_id: string; p_link_id: string }
-        Returns: undefined
+        Args: {
+          p_profile_id: string
+          p_link_id: string
+          p_page_id?: string
+          p_show_border?: boolean
+        }
+        Returns: Json
       }
       insert_profile_page: {
         Args: { page_name: string; page_slug: string }
@@ -1381,21 +1400,32 @@ export type Database = {
         }[]
       }
       insert_rcmd_block: {
-        Args: { p_profile_id: string; p_rcmd_id: string; p_page_id?: string }
+        Args: {
+          p_profile_id: string
+          p_rcmd_id: string
+          p_page_id?: string
+          p_show_border?: boolean
+        }
         Returns: Json
       }
       insert_text_block: {
-        Args: { p_profile_id: string; p_text: string }
+        Args: {
+          p_profile_id: string
+          p_text: string
+          p_page_id?: string
+          p_show_border?: boolean
+        }
         Returns: {
           auth_user_id: string
-          created_at: string | null
+          created_at: string
           display_order: number
           id: string
           page_id: string
-          profile_id: string | null
+          profile_id: string
+          show_border: boolean
           type: string
-          updated_at: string | null
-        }
+          updated_at: string
+        }[]
       }
       next_block_order: {
         Args: { p_profile_id: string }

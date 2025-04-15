@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { create } from 'zustand';
-import { createClient } from '@/utils/supabase/client';
-import { toast } from 'sonner';
-import { ProfilePage } from '@/types';
-import { devtools } from 'zustand/middleware';
+import { create } from "zustand";
+import { createClient } from "@/utils/supabase/client";
+import { toast } from "sonner";
+import { ProfilePage } from "@/types";
+import { devtools } from "zustand/middleware";
 
 const supabase = createClient();
 
@@ -20,6 +20,8 @@ interface Profile {
   tags: string[] | null;
   bio: string | null;
   location: string | null;
+  default_page_type: string | null;
+  default_page_id: string | null;
 }
 
 interface SocialLink {
@@ -33,13 +35,19 @@ interface ProfileState {
   socialLinks: SocialLink[];
   isLoading: boolean;
   error: string | null;
+  lastFetchTimestamp: number;
 
   // Actions
-  fetchProfile: (userId: string) => Promise<{ needsOnboarding?: boolean; }>;
+  fetchProfile: (userId: string) => Promise<{ needsOnboarding?: boolean }>;
   fetchPages: (userId: string) => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
   updateSocialLinks: (profileId: string, links: SocialLink[]) => Promise<void>;
   clearProfile: () => void;
+  setDefaultPage: (
+    profileId: string,
+    defaultPageType: string,
+    defaultPageId?: string
+  ) => Promise<boolean>;
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -50,14 +58,17 @@ export const useProfileStore = create<ProfileState>()(
       socialLinks: [],
       isLoading: false,
       error: null,
+      lastFetchTimestamp: 0,
 
       fetchProfile: async (userId: string) => {
         try {
+          console.log("[PROFILE-STORE] Fetching profile for user:", userId);
           set({ isLoading: true, error: null });
 
           const { data: profile, error: profileError } = await supabase
             .from("profiles")
-            .select(`
+            .select(
+              `
           id,
           is_onboarded,
           first_name,
@@ -68,8 +79,11 @@ export const useProfileStore = create<ProfileState>()(
           interests,
           tags,
           bio,
-          location
-        `)
+          location,
+          default_page_type,
+          default_page_id
+        `
+            )
             .eq("auth_user_id", userId)
             .single();
 
@@ -80,6 +94,11 @@ export const useProfileStore = create<ProfileState>()(
             set({ isLoading: false });
             return { needsOnboarding: true };
           }
+
+          console.log("[PROFILE-STORE] Profile loaded with default page:", {
+            type: profile.default_page_type,
+            id: profile.default_page_id,
+          });
 
           // Fetch social links
           const { data: socialLinks, error: socialLinksError } = await supabase
@@ -92,14 +111,15 @@ export const useProfileStore = create<ProfileState>()(
           set({
             profile,
             socialLinks: socialLinks || [],
-            isLoading: false
+            isLoading: false,
+            lastFetchTimestamp: Date.now(),
           });
 
           return {};
         } catch (error) {
           const message = (error as Error).message;
           set({ error: message, isLoading: false });
-          toast.error('Failed to load profile data');
+          toast.error("Failed to load profile data");
           throw error;
         }
       },
@@ -107,16 +127,40 @@ export const useProfileStore = create<ProfileState>()(
       fetchPages: async (userId) => {
         set({ isLoading: true });
         try {
+          // First get the profile ID from the auth user ID
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("auth_user_id", userId)
+            .single();
+
+          if (profileError) throw profileError;
+          if (!profileData || !profileData.id) {
+            throw new Error("Profile not found");
+          }
+
+          const profileId = profileData.id;
+          console.log("[PROFILE-STORE] Fetching pages for profile:", profileId);
+
+          // Now fetch pages using the profile ID
           const { data: pages, error } = await supabase
-            .from('profile_pages')
-            .select('*')
-            .eq('profile_id', userId)
-            .order('created_at', { ascending: true });
+            .from("profile_pages")
+            .select("*")
+            .eq("profile_id", profileId)
+            .order("created_at", { ascending: true });
 
           if (error) throw error;
+
+          // Debug pages data
+          console.log("[PROFILE-STORE] Fetched pages:", pages?.length || 0);
+
           set({ pages: pages || [] });
         } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'Error fetching pages' });
+          console.error("[PROFILE-STORE] Error fetching pages:", error);
+          set({
+            error:
+              error instanceof Error ? error.message : "Error fetching pages",
+          });
         } finally {
           set({ isLoading: false });
         }
@@ -124,66 +168,170 @@ export const useProfileStore = create<ProfileState>()(
 
       updateProfile: async (updates: Partial<Profile>) => {
         try {
+          console.log("[PROFILE-STORE] Updating profile:", updates);
           set({ isLoading: true, error: null });
+
+          const currentProfile = get().profile;
+          if (!currentProfile || !currentProfile.id) {
+            throw new Error("No profile loaded");
+          }
 
           const { data, error } = await supabase
             .from("profiles")
             .update(updates)
-            .eq("id", get().profile?.id)
+            .eq("id", currentProfile.id)
             .select()
             .single();
 
           if (error) throw error;
 
-          set({ profile: data, isLoading: false });
-          toast.success('Profile updated successfully');
+          console.log("[PROFILE-STORE] Profile updated:", data);
+          set({
+            profile: data as Profile,
+            isLoading: false,
+            lastFetchTimestamp: Date.now(),
+          });
+          toast.success("Profile updated successfully");
         } catch (error) {
           const message = (error as Error).message;
           set({ error: message, isLoading: false });
-          toast.error('Failed to update profile');
+          toast.error("Failed to update profile");
           throw error;
+        }
+      },
+
+      setDefaultPage: async (
+        profileId: string,
+        defaultPageType: string,
+        defaultPageId?: string
+      ) => {
+        try {
+          console.log("[PROFILE-STORE] Setting default page:", {
+            profileId,
+            defaultPageType,
+            defaultPageId,
+          });
+          set({ isLoading: true, error: null });
+
+          // Prepare update object
+          const updates: {
+            default_page_type: string;
+            default_page_id?: string | null;
+          } = {
+            default_page_type: defaultPageType,
+          };
+
+          // Only set default_page_id if custom page type is selected
+          if (defaultPageType === "custom") {
+            if (!defaultPageId) {
+              throw new Error("Page ID is required for custom page type");
+            }
+            updates.default_page_id = defaultPageId;
+          } else {
+            // For non-custom pages, set to null
+            updates.default_page_id = null;
+          }
+
+          // Update the profile
+          const { data, error } = await supabase
+            .from("profiles")
+            .update(updates)
+            .eq("id", profileId)
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          // Update the store's profile state
+          const currentProfile = get().profile;
+          if (currentProfile && currentProfile.id === profileId) {
+            const updatedProfile: Profile = {
+              ...currentProfile,
+              default_page_type: defaultPageType,
+              default_page_id: updates.default_page_id || null,
+            };
+            console.log(
+              "[PROFILE-STORE] Updated profile state:",
+              updatedProfile
+            );
+            set({
+              profile: updatedProfile,
+              isLoading: false,
+              lastFetchTimestamp: Date.now(),
+            });
+          } else {
+            console.log(
+              "[PROFILE-STORE] Profile state not updated (IDs don't match)"
+            );
+            set({ isLoading: false });
+          }
+
+          toast.success("Default page updated successfully");
+          return true;
+        } catch (error) {
+          const message = (error as Error).message;
+          console.error("[PROFILE-STORE] Error setting default page:", message);
+          set({ error: message, isLoading: false });
+          toast.error("Failed to update default page");
+          return false;
         }
       },
 
       updateSocialLinks: async (profileId, links) => {
         set({ isLoading: true });
         try {
-          await supabase.from('profile_social_links').delete().eq('profile_id', profileId);
+          await supabase
+            .from("profile_social_links")
+            .delete()
+            .eq("profile_id", profileId);
 
           if (links.length > 0) {
-            const { error } = await supabase.from('profile_social_links').insert(
-              links.map(link => ({
-                profile_id: profileId,
-                platform: link.platform,
-                handle: link.handle,
-                updated_at: new Date().toISOString()
-              }))
-            );
+            const { error } = await supabase
+              .from("profile_social_links")
+              .insert(
+                links.map((link) => ({
+                  profile_id: profileId,
+                  platform: link.platform,
+                  handle: link.handle,
+                  updated_at: new Date().toISOString(),
+                }))
+              );
 
             if (error) throw error;
           }
 
           set({ socialLinks: links });
         } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'Error fetching social links' });
+          set({
+            error:
+              error instanceof Error
+                ? error.message
+                : "Error fetching social links",
+          });
           throw error;
         } finally {
           set({ isLoading: false });
         }
       },
 
-      clearProfile: () => set({
-        profile: null,
-        socialLinks: [],
-        pages: [],
-        isLoading: false,
-        error: null
-      }, false, 'profile/clear'),
+      clearProfile: () =>
+        set(
+          {
+            profile: null,
+            socialLinks: [],
+            pages: [],
+            isLoading: false,
+            error: null,
+            lastFetchTimestamp: 0,
+          },
+          false,
+          "profile/clear"
+        ),
     }),
 
     {
-      name: 'ProfileStore',
-      enabled: process.env.NODE_ENV === 'development',
+      name: "ProfileStore",
+      enabled: process.env.NODE_ENV === "development",
     }
   )
 );

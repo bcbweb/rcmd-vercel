@@ -10,9 +10,17 @@ interface Props {
   imageBlock: ImageBlockType;
   onDelete?: () => void;
   onSave?: (updatedBlock: Partial<ImageBlockType>) => void;
+  noBorder?: boolean;
+  hideEdit?: boolean;
 }
 
-export default function ImageBlock({ imageBlock, onDelete, onSave }: Props) {
+export default function ImageBlock({
+  imageBlock,
+  onDelete,
+  onSave,
+  noBorder = false,
+  hideEdit = false,
+}: Props) {
   const [isEditMode, setIsEditMode] = useState(false);
 
   const handleSave = async (result: ImageEditorResult) => {
@@ -22,7 +30,7 @@ export default function ImageBlock({ imageBlock, onDelete, onSave }: Props) {
 
   if (isEditMode) {
     return (
-      <div className={blockStyles.container}>
+      <div className={noBorder ? "" : blockStyles.container}>
         <ImageEditor
           currentImageUrl={imageBlock.image_url}
           currentCaption={imageBlock.caption || ""}
@@ -36,11 +44,11 @@ export default function ImageBlock({ imageBlock, onDelete, onSave }: Props) {
   }
 
   return (
-    <div className={blockStyles.container}>
+    <div className={noBorder ? "" : blockStyles.container}>
       <div className="flex justify-end mb-2 gap-2">
         <BlockActions
           isEditMode={isEditMode}
-          onEdit={() => setIsEditMode(true)}
+          onEdit={hideEdit ? undefined : () => setIsEditMode(true)}
           onDelete={onDelete}
           onCancel={() => setIsEditMode(false)}
         />

@@ -8,10 +8,11 @@ import {
   ImageBlockModal,
   LinkBlockModal,
   CollectionBlockModal,
+  PageConfigModal,
 } from "@/components/features/profile/modals";
 import { createClient } from "@/utils/supabase/client";
 import type { ProfileBlockType } from "@/types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useAuthStore } from "@/stores/auth-store";
@@ -22,6 +23,9 @@ import { useLinkStore } from "@/stores/link-store";
 import { useRCMDStore } from "@/stores/rcmd-store";
 import { useParams, useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Eye, Settings } from "lucide-react";
 
 export default function CustomProfilePage() {
   const params = useParams();
@@ -34,6 +38,7 @@ export default function CustomProfilePage() {
   const [profileId, setProfileId] = useState<string>("");
   const [pageId, setPageId] = useState<string>("");
   const [pageName, setPageName] = useState<string>("");
+  const [handle, setHandle] = useState<string>("");
   const userId = useAuthStore((state) => state.userId);
   const {
     isRCMDBlockModalOpen,
@@ -52,6 +57,16 @@ export default function CustomProfilePage() {
   );
   const fetchLinks = useLinkStore((state) => state.fetchLinks);
   const fetchRCMDs = useRCMDStore((state) => state.fetchRCMDs);
+  const [isPageConfigOpen, setIsPageConfigOpen] = useState(false);
+  const [isDefaultPage, setIsDefaultPage] = useState(false);
+
+  // Track if we're currently fetching to avoid duplicate fetches
+  const isFetchingRef = useRef(false);
+  const lastFetchTimeRef = useRef(0);
+
+  // Refs to store IDs without causing re-renders
+  const pageIdRef = useRef<string>("");
+  const profileIdRef = useRef<string>("");
 
   // Define refreshBlocks function first
   const refreshBlocks = useCallback(
@@ -83,66 +98,219 @@ export default function CustomProfilePage() {
     const getPageData = async () => {
       if (!userId || !slug) return;
 
+      // Don't allow multiple simultaneous fetches
+      if (isFetchingRef.current) {
+        console.log("[CUSTOM-PAGE] Already fetching page data, skipping");
+        return;
+      }
+
+      // Debounce fetches to prevent rapid consecutive calls
+      const now = Date.now();
+      if (now - lastFetchTimeRef.current < 2000) {
+        console.log(
+          "[CUSTOM-PAGE] Debouncing page data fetch, last fetch too recent"
+        );
+        return;
+      }
+
+      isFetchingRef.current = true;
+      lastFetchTimeRef.current = now;
       setIsLoading(true);
+
       try {
+        console.log("[CUSTOM-PAGE] Fetching page data for slug:", slug);
         // First get user's profile ID
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("auth_user_id", userId)
-          .single();
+        try {
+          // First try to fetch with the new columns
+          const { data: profile, error } = await supabase
+            .from("profiles")
+            .select("id, handle, default_page_type, default_page_id")
+            .eq("auth_user_id", userId)
+            .single();
 
-        if (profileError) throw profileError;
-        if (!profile) {
-          toast.error("Profile not found");
+          let profileData = null;
+
+          if (error && error.message.includes("does not exist")) {
+            // If the columns don't exist yet, fall back to just getting id and handle
+            console.log(
+              "Default page columns not available yet, fetching basic profile data"
+            );
+            const { data: basicData, error: basicError } = await supabase
+              .from("profiles")
+              .select("id, handle")
+              .eq("auth_user_id", userId)
+              .single();
+
+            if (basicError) throw basicError;
+            profileData = {
+              ...basicData,
+              default_page_type: undefined,
+              default_page_id: undefined,
+            };
+          } else if (error) {
+            throw error;
+          } else {
+            // No error, use the data from the first query
+            profileData = profile;
+          }
+
+          if (!profileData) {
+            toast.error("Profile not found");
+            router.push("/protected/profile");
+            return;
+          }
+
+          setProfileId(profileData.id);
+          profileIdRef.current = profileData.id;
+          setHandle(profileData.handle || "");
+
+          // Now get the page details using the slug
+          const { data: page, error: pageError } = await supabase
+            .from("profile_pages")
+            .select("*")
+            .eq("profile_id", profileData.id)
+            .eq("slug", slug)
+            .single();
+
+          if (pageError) {
+            console.error("Error fetching page:", pageError);
+            toast.error("Page not found");
+            router.push("/protected/profile");
+            return;
+          }
+
+          if (!page) {
+            toast.error("Page not found");
+            router.push("/protected/profile");
+            return;
+          }
+
+          setPageId(page.id);
+          pageIdRef.current = page.id;
+          setPageName(page.name);
+
+          // Check if this is the default page only if the columns exist
+          if (profileData.default_page_type !== undefined) {
+            setIsDefaultPage(
+              profileData.default_page_type === "custom" &&
+                profileData.default_page_id === page.id
+            );
+          } else {
+            // Assume it's not a default page if we don't have that data
+            setIsDefaultPage(false);
+          }
+
+          // Fetch blocks for this page
+          await refreshBlocks(page.id);
+        } catch (error) {
+          console.error("Error fetching page data:", error);
+          toast.error("Failed to load page");
           router.push("/protected/profile");
-          return;
         }
-
-        setProfileId(profile.id);
-
-        // Now get the page details using the slug
-        const { data: page, error: pageError } = await supabase
-          .from("profile_pages")
-          .select("*")
-          .eq("profile_id", profile.id)
-          .eq("slug", slug)
-          .single();
-
-        if (pageError) {
-          console.error("Error fetching page:", pageError);
-          toast.error("Page not found");
-          router.push("/protected/profile");
-          return;
-        }
-
-        if (!page) {
-          toast.error("Page not found");
-          router.push("/protected/profile");
-          return;
-        }
-
-        setPageId(page.id);
-        setPageName(page.name);
-
-        // Fetch blocks for this page
-        await refreshBlocks(page.id);
-      } catch (error) {
-        console.error("Error fetching page data:", error);
-        toast.error("Failed to load page");
-        router.push("/protected/profile");
       } finally {
         setIsLoading(false);
+        isFetchingRef.current = false;
       }
     };
 
     // Reset page data when slug changes
     setBlocks([]);
     setPageId("");
+    pageIdRef.current = "";
     setPageName("");
 
     getPageData();
-  }, [userId, slug, supabase, refreshBlocks, router]);
+
+    // Set up real-time subscriptions
+    if (userId) {
+      const supabase = createClient();
+
+      // Use a separate function for the checkDefaultPageStatus logic that uses refs
+      const checkDefaultPageStatus = async (
+        profileIdValue: string,
+        pageIdValue: string
+      ) => {
+        if (!profileIdValue || !pageIdValue) return;
+
+        try {
+          const { data } = await supabase
+            .from("profiles")
+            .select("default_page_type, default_page_id")
+            .eq("id", profileIdValue)
+            .single();
+
+          if (data) {
+            const isDefault =
+              data.default_page_type === "custom" &&
+              data.default_page_id === pageIdValue;
+            setIsDefaultPage(isDefault);
+          }
+        } catch (error) {
+          console.error("Error checking default page status:", error);
+        }
+      };
+
+      // Set up subscription for changes to this page
+      const pageSubscription = supabase
+        .channel("page-changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "profile_pages",
+            filter: `id=eq.${pageIdRef.current}`, // Use the page ID to filter
+          },
+          (payload) => {
+            console.log("Page update received:", payload);
+            if (payload.new) {
+              // Update the page name if it changed
+              setPageName(payload.new.name);
+              // Also refresh blocks in case display order changed
+              if (pageIdRef.current) {
+                refreshBlocks(pageIdRef.current);
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      // Set up subscription for changes to the profile (for default page changes)
+      const profileSubscription = supabase
+        .channel("profile-default-changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "profiles",
+            filter: `id=eq.${profileIdRef.current}`, // Use the profile ID to filter
+          },
+          (payload) => {
+            console.log("Profile update received:", payload);
+            // When profile updates, check if this page is still the default
+            if (pageIdRef.current && profileIdRef.current) {
+              checkDefaultPageStatus(profileIdRef.current, pageIdRef.current);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(pageSubscription);
+        supabase.removeChannel(profileSubscription);
+      };
+    }
+  }, [userId, supabase, refreshBlocks]);
+
+  // Update the refs when state changes
+  useEffect(() => {
+    if (pageId) pageIdRef.current = pageId;
+  }, [pageId]);
+
+  useEffect(() => {
+    if (profileId) profileIdRef.current = profileId;
+  }, [profileId]);
 
   useEffect(() => {
     if (profileId) {
@@ -313,13 +481,43 @@ export default function CustomProfilePage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div>
+      <div className="max-w-screen-xl mx-auto relative">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold border-b pb-4 mb-4 text-center">
-            {pageName}
-          </h1>
-          <div className="flex justify-end mb-3">
-            <AddBlockButton />
+          <div className="flex justify-between items-center border-b pb-4 mb-4">
+            <h1 className="text-2xl font-bold">{pageName}</h1>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 py-1 h-auto text-sm"
+                onClick={() => setIsPageConfigOpen(true)}
+              >
+                <Settings className="w-3.5 h-3.5" />
+                Configure
+              </Button>
+              {handle && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 py-1 h-auto text-sm"
+                  asChild
+                >
+                  <Link
+                    href={`/${handle}/${slug}`}
+                    className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
+                    target="_blank"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    Preview Page
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="mb-6">
+            <div className="flex justify-start items-center mb-3">
+              <AddBlockButton />
+            </div>
           </div>
         </div>
 
@@ -374,6 +572,61 @@ export default function CustomProfilePage() {
             onSuccess={handleCollectionBlockAdded}
           />
         )}
+
+        {/* Page config modal */}
+        <PageConfigModal
+          isOpen={isPageConfigOpen}
+          onClose={() => setIsPageConfigOpen(false)}
+          pageId={pageId}
+          pageType="custom"
+          pageName={pageName}
+          isDefault={isDefaultPage}
+          profileId={profileId}
+          onUpdate={async () => {
+            console.log("[DEBUG-PAGE] Page config updated, refreshing data");
+            setIsPageConfigOpen(false);
+
+            // Create a new supabase client for this request
+            const supabase = createClient();
+
+            try {
+              // Refetch the page details to get the updated name
+              if (pageId) {
+                const { data: page, error: pageError } = await supabase
+                  .from("profile_pages")
+                  .select("*")
+                  .eq("id", pageId)
+                  .single();
+
+                if (pageError) throw pageError;
+                if (page) {
+                  setPageName(page.name);
+                }
+
+                // Check if default status changed
+                if (profileId) {
+                  const { data: profile, error: profileError } = await supabase
+                    .from("profiles")
+                    .select("default_page_type, default_page_id")
+                    .eq("id", profileId)
+                    .single();
+
+                  if (profileError) throw profileError;
+                  if (profile) {
+                    setIsDefaultPage(
+                      profile.default_page_type === "custom" &&
+                        profile.default_page_id === pageId
+                    );
+                  }
+                }
+              }
+              toast.success("Page settings updated successfully");
+            } catch (error) {
+              console.error("Error refreshing page data:", error);
+              toast.error("Error refreshing page data");
+            }
+          }}
+        />
       </div>
     </DndProvider>
   );

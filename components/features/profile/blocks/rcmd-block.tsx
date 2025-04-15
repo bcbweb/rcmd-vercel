@@ -4,22 +4,32 @@ import React, { useState, useEffect, useCallback } from "react";
 import { RCMD, RCMDBlockType } from "@/types";
 import { MapPin, Link, DollarSign } from "lucide-react";
 import { useModalStore } from "@/stores/modal-store";
-import { BlockActions } from "@/components/common";
+import { BlockActions, blockStyles } from "@/components/common";
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
-import { BlockStats, BlockSkeleton, blockStyles } from "@/components/common";
+import { BlockSkeleton } from "@/components/common";
 import { imageLoader } from "@/utils/image";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface RCMDBlockProps {
   rcmdBlock: RCMDBlockType;
   onDelete?: () => void;
-  onSave?: (block: Partial<RCMDBlockType>) => void;
+  onSave?: (updatedBlock: Partial<RCMDBlockType>) => void;
+  noBorder?: boolean;
+  hideEdit?: boolean;
 }
 
 export default function RCMDBlock({
   rcmdBlock,
   onDelete,
   onSave,
+  noBorder = false,
+  hideEdit = false,
 }: RCMDBlockProps) {
   const supabase = createClient();
   const [rcmd, setRCMD] = useState<RCMD | null>(null);
@@ -147,12 +157,12 @@ export default function RCMDBlock({
 
   return (
     <div
-      className={`${blockStyles.container} ${blockStyles.card} relative pt-12`}
+      className={`${noBorder ? "" : blockStyles.container} ${blockStyles.card} relative pt-12`}
     >
       <div className="absolute top-2 right-2 z-10">
         <BlockActions
           isEditMode={false}
-          onEdit={handleEdit}
+          onEdit={hideEdit ? undefined : handleEdit}
           onDelete={onDelete}
           onSave={() => {}}
           onCancel={() => {}}
@@ -230,24 +240,28 @@ export default function RCMDBlock({
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-2">
-          <span className={blockStyles.tag}>{rcmd.visibility}</span>
-          <span className={blockStyles.metaText}>
-            {new Date(rcmdBlock.created_at).toLocaleDateString()}
-          </span>
+      {rcmd.visibility === "private" && (
+        <div className="mt-2">
+          <TooltipProvider delayDuration={100}>
+            <Tooltip defaultOpen={false}>
+              <TooltipTrigger asChild>
+                <span
+                  className={blockStyles.tag}
+                  title="This block won't be visible on your public page unless visibility is changed to public"
+                >
+                  private
+                </span>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                className="bg-gray-900 text-white text-xs p-2"
+              >
+                This is only visible to you
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
-      </div>
-
-      <BlockStats
-        stats={[
-          { value: rcmd.view_count || 0, label: "views" },
-          { value: rcmd.like_count || 0, label: "likes" },
-          { value: rcmd.share_count || 0, label: "shares" },
-          { value: rcmd.save_count || 0, label: "saves" },
-          { value: rcmd.click_count || 0, label: "clicks" },
-        ]}
-      />
+      )}
     </div>
   );
 }

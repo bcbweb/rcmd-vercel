@@ -20,9 +20,17 @@ interface Props {
   block: ProfileBlockType;
   onDelete?: () => void;
   onSave?: (updatedBlock: ProfileBlockType) => void;
+  noBorder?: boolean;
+  hideEdit?: boolean;
 }
 
-export default function BlockRenderer({ block, onDelete, onSave }: Props) {
+export default function BlockRenderer({
+  block,
+  onDelete,
+  onSave,
+  noBorder = false,
+  hideEdit = false,
+}: Props) {
   const { supabase } = useSupabase();
   const [textBlock, setTextBlock] = useState<TextBlockType | null>(null);
   const [imageBlock, setImageBlock] = useState<ImageBlockType | null>(null);
@@ -283,6 +291,8 @@ export default function BlockRenderer({ block, onDelete, onSave }: Props) {
           textBlock={textBlock}
           onDelete={onDelete}
           onSave={handleTextBlockSave}
+          noBorder={noBorder}
+          hideEdit={hideEdit}
         />
       );
     case "image":
@@ -292,6 +302,8 @@ export default function BlockRenderer({ block, onDelete, onSave }: Props) {
           imageBlock={imageBlock}
           onDelete={onDelete}
           onSave={handleImageBlockSave}
+          noBorder={noBorder}
+          hideEdit={hideEdit}
         />
       );
     case "link":
@@ -301,6 +313,8 @@ export default function BlockRenderer({ block, onDelete, onSave }: Props) {
           linkBlock={linkBlock}
           onDelete={onDelete}
           onSave={handleLinkBlockSave}
+          noBorder={noBorder}
+          hideEdit={hideEdit}
         />
       );
     case "rcmd":
@@ -310,6 +324,8 @@ export default function BlockRenderer({ block, onDelete, onSave }: Props) {
           rcmdBlock={rcmdBlock}
           onDelete={onDelete}
           onSave={handleRCMDBlockSave}
+          noBorder={noBorder}
+          hideEdit={hideEdit}
         />
       );
     case "collection":
@@ -319,6 +335,8 @@ export default function BlockRenderer({ block, onDelete, onSave }: Props) {
           collection={collectionBlock.collection}
           onDelete={onDelete}
           onSave={() => handleCollectionBlockSave(collectionBlock)}
+          noBorder={noBorder}
+          hideEdit={hideEdit}
         />
       );
     default:

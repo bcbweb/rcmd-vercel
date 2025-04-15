@@ -1,82 +1,89 @@
 // page.tsx
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useModalStore } from "@/stores/modal-store";
 import { useCollectionStore } from "@/stores/collection-store";
+import { useProfileStore } from "@/stores/profile-store";
 import {
   AddCollectionButton,
   CollectionBlocks,
 } from "@/components/features/collections";
 import type { Collection, CollectionBlockType } from "@/types";
 import { toast } from "sonner";
-
-// Create an extended type for the collection block that includes the _collection property
-interface ExtendedCollectionBlock extends Partial<CollectionBlockType> {
-  _collection?: {
-    rcmdIds: string[];
-    linkIds: string[];
-    collection_items?: Record<string, unknown>[];
-    [key: string]: unknown;
-  };
-}
+import { Button } from "@/components/ui/button";
+import { Eye, Settings } from "lucide-react";
+import Link from "next/link";
+import { PageConfigModal } from "@/components/features/profile/modals";
 
 export default function CollectionsPage() {
   const [collectionBlocks, setCollectionBlocks] = useState<
     CollectionBlockType[]
   >([]);
   const [isCollectionSaving, setIsCollectionSaving] = useState(false);
-  const userId = useAuthStore((state) => state.userId);
-  const { collections, fetchCollections, deleteCollection } =
-    useCollectionStore();
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
-  // Use a ref to track if a fetch is in progress to prevent duplicate fetches
-  const isFetchingRef = useRef(false);
-  // Use a ref to track the last fetch time to prevent excessive fetches
-  const lastFetchTimeRef = useRef(0);
+  const userId = useAuthStore((state) => state.userId);
+  const { collections, fetchCollections, deleteCollection, updateCollection } =
+    useCollectionStore();
+  const [userHandle, setUserHandle] = useState<string | null>(null);
+  const [profileId, setProfileId] = useState<string>("");
+
+  // Get profile store state and actions
+  const { profile, fetchProfile, lastFetchTimestamp } = useProfileStore();
+
+  // Determine if this is the default page
+  const isDefaultPage = profile?.default_page_type === "collection";
+
+  // Fetch user profile when userId changes or profile is outdated
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (!userId) return;
+      try {
+        console.log("[Collections] Loading profile for user:", userId);
+        await fetchProfile(userId);
+      } catch (error) {
+        console.error("[Collections] Error loading profile:", error);
+      }
+    };
+
+    loadProfileData();
+  }, [userId, fetchProfile]);
+
+  // Extract profile data when profile changes
+  useEffect(() => {
+    if (profile) {
+      console.log("[Collections] Profile data updated:", {
+        id: profile.id,
+        handle: profile.handle,
+        defaultPageType: profile.default_page_type,
+        isCollectionsDefault: profile.default_page_type === "collection",
+      });
+
+      setProfileId(profile.id);
+      setUserHandle(profile.handle);
+    }
+  }, [profile, lastFetchTimestamp]);
 
   const transformCollectionsToBlocks = useCallback(
     (collections: Collection[]) => {
       return collections.map((collection) => ({
-        id: crypto.randomUUID(),
+        id: collection.id,
         collection_id: collection.id,
         profile_block_id: `profile-block-${collection.id}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: collection.created_at ?? new Date().toISOString(),
+        updated_at: collection.updated_at ?? new Date().toISOString(),
       }));
     },
     []
   );
 
-  // Debounced fetch function to prevent multiple rapid fetches
-  const debouncedFetchCollections = useCallback(
-    (userId: string) => {
-      const now = Date.now();
-      // Don't fetch if we've fetched in the last 1 second or if a fetch is in progress
-      if (isFetchingRef.current || now - lastFetchTimeRef.current < 1000) {
-        console.log(
-          "Page: Skipping fetch - already fetching or fetched recently"
-        );
-        return;
-      }
-
-      console.log("Page: Fetching collections");
-      isFetchingRef.current = true;
-      lastFetchTimeRef.current = now;
-
-      fetchCollections(userId).finally(() => {
-        isFetchingRef.current = false;
-      });
-    },
-    [fetchCollections]
-  );
-
   useEffect(() => {
     if (userId) {
-      debouncedFetchCollections(userId);
+      fetchCollections();
     }
-  }, [userId, debouncedFetchCollections]);
+  }, [userId, fetchCollections]);
 
   useEffect(() => {
     setCollectionBlocks(transformCollectionsToBlocks(collections));
@@ -84,13 +91,13 @@ export default function CollectionsPage() {
 
   useEffect(() => {
     useModalStore.setState({
-      // Set a simple callback that does nothing - we'll handle updates through the onSave prop
       onModalSuccess: () => {
-        console.log("Modal success callback - handled through onSave");
-        // No need to refetch, as the store updates are already handled by the onSave function
+        if (userId) {
+          fetchCollections();
+        }
       },
     });
-  }, []);
+  }, [userId, fetchCollections]);
 
   const handleDeleteCollection = useCallback(
     async (id: string) => {
@@ -102,6 +109,7 @@ export default function CollectionsPage() {
             try {
               setIsCollectionSaving(true);
               await deleteCollection(id);
+              await fetchCollections();
               toast.success("Collection deleted successfully");
             } catch (error) {
               toast.error(
@@ -122,100 +130,66 @@ export default function CollectionsPage() {
         },
       });
     },
-    [deleteCollection]
+    [deleteCollection, fetchCollections]
   );
 
-  // Track updates to prevent duplicate operations on the same collection
-  const updatingCollectionRef = useRef<string | null>(null);
-
-  const handleSaveCollection = async (block: ExtendedCollectionBlock) => {
+  const handleSaveCollection = async (block: Partial<CollectionBlockType>) => {
     if (!userId || !block.collection_id) return;
-
-    // Prevent duplicate saves on the same collection
-    if (updatingCollectionRef.current === block.collection_id) {
-      console.log(
-        `Page: Already updating collection ${block.collection_id}, skipping`
-      );
-      return;
-    }
-
-    updatingCollectionRef.current = block.collection_id;
-
     try {
-      console.log("Page: Starting to save collection", block.collection_id);
       setIsCollectionSaving(true);
-
-      // Ensure we have the collection data
-      if (!block._collection) {
-        console.error("Missing _collection data in the block");
-        return;
-      }
-
-      // Get the collection store instance
-      const storeInstance = useCollectionStore.getState();
-
-      // Prepare the batch update payload
-      const batchUpdatePayload = {
-        details: {} as Partial<Collection>,
-        rcmdIds: undefined as string[] | undefined,
-        linkIds: undefined as string[] | undefined,
-      };
-
-      // Add collection details if present
-      if (block._collection.name !== undefined) {
-        batchUpdatePayload.details.name = block._collection.name as string;
-      }
-
-      if (block._collection.description !== undefined) {
-        batchUpdatePayload.details.description = block._collection
-          .description as string;
-      }
-
-      if (block._collection.visibility !== undefined) {
-        batchUpdatePayload.details.visibility = block._collection.visibility as
-          | "public"
-          | "private"
-          | "followers"
-          | null;
-      }
-
-      // Add collection items if present
-      if (Array.isArray(block._collection.rcmdIds)) {
-        batchUpdatePayload.rcmdIds = block._collection.rcmdIds;
-      }
-
-      if (Array.isArray(block._collection.linkIds)) {
-        batchUpdatePayload.linkIds = block._collection.linkIds;
-      }
-
-      console.log("Batch updating collection with:", batchUpdatePayload);
-
-      // Use a single batched update call instead of separate calls
-      const result = await storeInstance.batchUpdateCollection(
-        block.collection_id,
-        batchUpdatePayload
-      );
-
-      if (result.error) {
-        throw new Error(`Failed to update collection: ${result.error}`);
-      }
-
-      // Show a single success message
-      toast.success("Collection updated successfully");
+      await updateCollection(block.collection_id, {
+        updated_at: new Date().toISOString(),
+      });
     } catch (error) {
-      console.error("Page: Error saving collection:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to save collection"
-      );
+      console.error("Error saving collection:", error);
+      toast.error("Failed to save collection");
     } finally {
-      // Reset the updating ref and remove the saving indicator
-      updatingCollectionRef.current = null;
       setIsCollectionSaving(false);
     }
   };
 
+  const handleConfigUpdated = () => {
+    console.log("[Collections] Config updated, refreshing profile");
+    // Refresh profile data to get updated default page settings
+    if (userId) {
+      fetchProfile(userId);
+    }
+  };
+
   return (
-    <div>
+    <div className="max-w-screen-xl mx-auto relative">
+      <div className="flex justify-between items-center border-b pb-4 mb-4">
+        <h1 className="text-2xl font-bold">Collections</h1>
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 py-1 h-auto text-sm"
+            onClick={() => setIsConfigModalOpen(true)}
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Configure
+          </Button>
+          {userHandle && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 py-1 h-auto text-sm"
+              asChild
+            >
+              <Link
+                href={`/${userHandle}/collections`}
+                className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
+                target="_blank"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                Preview Page
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+
       <div className="flex gap-4 mb-4">
         <AddCollectionButton />
       </div>
@@ -231,6 +205,17 @@ export default function CollectionsPage() {
           Saving changes...
         </div>
       )}
+
+      {/* Page config modal */}
+      <PageConfigModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        pageId={undefined}
+        pageType="collection"
+        isDefault={isDefaultPage}
+        profileId={profileId}
+        onUpdate={handleConfigUpdated}
+      />
     </div>
   );
 }

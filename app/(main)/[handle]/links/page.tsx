@@ -2,15 +2,9 @@ import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { ProfileBlockType } from "@/types";
-import ProfileTabsWrapper from "./profile-tabs-wrapper";
+import ProfileTabsWrapper from "../profile-tabs-wrapper";
 
 type Params = Promise<{ handle: string }>;
-
-interface ProfilePage {
-  id: string;
-  name: string;
-  slug: string;
-}
 
 interface Profile {
   id: string;
@@ -28,12 +22,12 @@ interface Profile {
   default_page_id?: string;
 }
 
-export default async function ProfilePage({ params }: { params: Params }) {
+export default async function ProfileLinksPage({ params }: { params: Params }) {
   const resolvedParams = await params;
   const { handle } = resolvedParams;
   const supabase = await createClient();
 
-  // Fetch the profile data with default page information
+  // Fetch the profile data
   const { data: profile } = (await supabase
     .from("profiles")
     .select(
@@ -68,36 +62,23 @@ export default async function ProfilePage({ params }: { params: Params }) {
     console.error("Error fetching profile pages:", pagesError);
   }
 
-  // Use the first page as default
+  // Get the default page
   const defaultPage = pages?.length ? pages[0] : null;
-  const defaultPageId = defaultPage?.id;
 
-  // Log debug information for the default page
-  console.log("[handle]/page.tsx DEBUG:", {
-    handle,
-    profileId: profile.id,
-    defaultPageType: profile.default_page_type,
-    defaultPageId: profile.default_page_id,
-    firstPage: defaultPage
-      ? { id: defaultPage.id, name: defaultPage.name }
-      : null,
-    pagesCount: pages?.length || 0,
-  });
-
-  // Fetch blocks for the default page
-  const { data: defaultBlocks, error: blocksError } = await supabase
+  // Fetch links for this profile
+  const { data: linkBlocks, error: blocksError } = await supabase
     .from("profile_blocks")
     .select("*")
     .eq("profile_id", profile.id)
-    .eq("page_id", defaultPageId)
+    .eq("type", "link")
     .order("display_order", { ascending: true });
 
   if (blocksError) {
-    console.error("Error fetching default page blocks:", blocksError);
+    console.error("Error fetching link blocks:", blocksError);
   }
 
   // Sort blocks by order
-  const sortedBlocks = defaultBlocks || [];
+  const sortedBlocks = linkBlocks || [];
 
   return (
     <div className="w-full">
@@ -193,7 +174,7 @@ export default async function ProfilePage({ params }: { params: Params }) {
               profileId={profile.id}
               defaultBlocks={sortedBlocks}
               defaultPage={defaultPage}
-              activeTab={defaultPage?.id}
+              activeTab="links"
             />
           </div>
         </div>

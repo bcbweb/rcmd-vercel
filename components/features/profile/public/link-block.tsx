@@ -1,23 +1,57 @@
-import { createClient } from "@/utils/supabase/server";
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { Link, LinkBlockType } from "@/types";
-import { PostgrestError } from "@supabase/supabase-js";
 import { blockStyles, BlockStats } from "@/components/common";
 
 interface LinkBlockProps {
   blockId: string;
 }
 
-export default async function LinkBlock({ blockId }: LinkBlockProps) {
-  const supabase = await createClient();
+export default function LinkBlock({ blockId }: LinkBlockProps) {
+  const [linkBlock, setLinkBlock] = useState<
+    (LinkBlockType & { links: Link }) | null
+  >(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const { data: linkBlock, error } = (await supabase
-    .from("link_blocks")
-    .select(`*, links (*)`)
-    .eq("profile_block_id", blockId)
-    .single()) as {
-    data: (LinkBlockType & { links: Link }) | null;
-    error: PostgrestError;
-  };
+  useEffect(() => {
+    async function fetchLinkBlock() {
+      try {
+        setIsLoading(true);
+        const supabase = createClient();
+
+        const { data, error } = await supabase
+          .from("link_blocks")
+          .select(`*, links (*)`)
+          .eq("profile_block_id", blockId)
+          .single();
+
+        if (error) throw error;
+        if (!data || !data.links) throw new Error("Link block not found");
+
+        setLinkBlock(data as LinkBlockType & { links: Link });
+      } catch (err) {
+        console.error("Error fetching link block:", err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchLinkBlock();
+  }, [blockId]);
+
+  if (isLoading) {
+    return (
+      <div className={`${blockStyles.container} animate-pulse`}>
+        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-4 w-3/4"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-2/3"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-1/2"></div>
+      </div>
+    );
+  }
 
   if (error || !linkBlock || !linkBlock.links) return null;
   const link = linkBlock.links;
