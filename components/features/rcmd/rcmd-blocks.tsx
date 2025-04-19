@@ -5,6 +5,7 @@ import type { RCMD, RCMDBlockType } from "@/types";
 import Image from "next/image";
 import { MapPin, Link, Calendar } from "lucide-react";
 import { formatDistance } from "date-fns";
+import RCMDBlock from "../profile/blocks/rcmd-block";
 
 interface Props {
   initialRCMDBlocks?: RCMDBlockType[];
@@ -118,21 +119,12 @@ export default function RCMDBlocks({
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {rcmdBlocks.map((block) => (
-          <div key={block.id} className="relative">
-            {/* Your existing block rendering for the admin view */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <h3 className="font-medium mb-2">RCMD Block</h3>
-              <div className="text-sm text-gray-500">ID: {block.id}</div>
-              {onDelete && (
-                <button
-                  onClick={() => onDelete(block.id)}
-                  className="mt-2 text-red-500 text-sm"
-                >
-                  Delete
-                </button>
-              )}
-            </div>
-          </div>
+          <RCMDBlock
+            key={block.id}
+            rcmdBlock={block}
+            onDelete={onDelete ? () => onDelete(block.id) : undefined}
+            onSave={onSave ? (updatedBlock) => onSave(updatedBlock) : undefined}
+          />
         ))}
       </div>
     );
