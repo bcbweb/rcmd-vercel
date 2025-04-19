@@ -65,7 +65,7 @@ export default function RcmdBlockModal({
     } finally {
       setIsLoading(false);
     }
-  }, [profileId]);
+  }, [supabase]);
 
   useEffect(() => {
     console.log("RcmdBlockModal mounted, fetching RCMDs...");

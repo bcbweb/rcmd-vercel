@@ -32,23 +32,18 @@ export default function ProfileLayout({
 
       // Prevent multiple simultaneous fetches
       if (isLoadingRef.current && !force) {
-        console.log("[LAYOUT] Skipping loadProfile call, already loading");
         return;
       }
 
       // Debounce - don't fetch if we just did (within the last 2 seconds)
       const now = Date.now();
       if (!force && now - lastFetchTimeRef.current < 2000) {
-        console.log(
-          "[LAYOUT] Debouncing loadProfile call, last fetch too recent"
-        );
         return;
       }
 
       try {
         isLoadingRef.current = true;
         lastFetchTimeRef.current = now;
-        console.log("[LAYOUT] Loading profile data");
 
         // Fetch both profile and pages data
         const result = await fetchProfile(userId);
@@ -75,7 +70,6 @@ export default function ProfileLayout({
       return;
     }
 
-    console.log("[LAYOUT] Initial profile load triggered");
     loadProfile(true); // force the initial load
   }, [userId, isInitialized, loadProfile]);
 

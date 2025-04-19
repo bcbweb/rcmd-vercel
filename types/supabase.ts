@@ -1356,34 +1356,34 @@ export type Database = {
               p_description: string
               p_type: string
               p_visibility: string
+              p_featured_image: string
+            }
+          | {
+              p_title: string
+              p_description: string
+              p_type: string
+              p_visibility: string
+              p_featured_image?: string
+              p_tags?: string[]
+            }
+          | {
+              p_title: string
+              p_description: string
+              p_type: string
+              p_visibility: string
+              p_featured_image?: string
+              p_tags?: string[]
+              p_url?: string
+            }
+          | {
+              p_title: string
+              p_description: string
+              p_type: string
+              p_visibility: string
               p_featured_image?: string
               p_tags?: string[]
               p_url?: string
               p_location?: Json
-            }
-          | {
-              p_title: string
-              p_description: string
-              p_type: string
-              p_visibility: string
-              p_featured_image?: string
-              p_tags?: string[]
-            }
-          | {
-              p_title: string
-              p_description: string
-              p_type: string
-              p_visibility: string
-              p_featured_image?: string
-              p_tags?: string[]
-              p_url?: string
-            }
-          | {
-              p_title: string
-              p_description: string
-              p_type: string
-              p_visibility: string
-              p_featured_image: string
             }
         Returns: {
           id: string

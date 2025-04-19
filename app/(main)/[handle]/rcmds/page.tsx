@@ -1,10 +1,14 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import type { ProfileBlockType } from "@/types";
-import ProfileTabsWrapper from "../profile-tabs-wrapper";
+import type { ProfileBlockType, ProfilePage, RCMD } from "@/types";
+import type { Database } from "@/types/supabase";
+import RCMDBlocks from "@/components/features/rcmd/rcmd-blocks";
 
-type Params = Promise<{ handle: string }>;
+// Set revalidation period (reduced to 60 seconds for more frequent updates)
+export const revalidate = 60;
+
+type Params = { handle: string };
 
 interface Profile {
   id: string;
@@ -23,9 +27,11 @@ interface Profile {
 }
 
 export default async function ProfileRCMDsPage({ params }: { params: Params }) {
-  const resolvedParams = await params;
-  const { handle } = resolvedParams;
+  // Await the params destructuring to ensure it's ready
+  const { handle } = await Promise.resolve(params);
   const supabase = await createClient();
+
+  console.log(`[RCMD Trace] Starting fetch for handle: ${handle}`);
 
   // Fetch the profile data with default page information
   const { data: profile } = (await supabase
@@ -65,20 +71,32 @@ export default async function ProfileRCMDsPage({ params }: { params: Params }) {
   // Get the default page
   const defaultPage = pages?.length ? pages[0] : null;
 
-  // Fetch RCMDs for this profile
-  const { data: rcmdBlocks, error: blocksError } = await supabase
-    .from("profile_blocks")
+  console.log(`[RCMD Trace] Before fetching RCMDs for owner_id: ${profile.id}`);
+
+  // Directly fetch RCMD entities for the RCMDs page
+  const { data: rcmds, error: rcmdsError } = await supabase
+    .from("rcmds")
     .select("*")
     .eq("profile_id", profile.id)
-    .eq("type", "rcmd")
-    .order("display_order", { ascending: true });
+    .order("created_at", { ascending: true });
 
-  if (blocksError) {
-    console.error("Error fetching RCMD blocks:", blocksError);
+  if (rcmdsError) {
+    console.error("Server Error fetching RCMDs:", rcmdsError);
   }
 
-  // Sort blocks by order
-  const sortedBlocks = rcmdBlocks || [];
+  console.log(`[RCMD Trace] RCMDs fetched: ${rcmds?.length || 0}`);
+  if (rcmds && rcmds.length > 0) {
+    console.log(
+      `[RCMD Trace] First RCMD sample:`,
+      JSON.stringify(rcmds[0]).substring(0, 100) + "..."
+    );
+  }
+
+  // Track view count
+  await supabase.rpc("increment_profile_view", { profile_id: profile.id });
+
+  // Final trace before rendering
+  console.log(`[RCMD Trace] Before rendering with ${rcmds?.length || 0} RCMDs`);
 
   return (
     <div className="w-full">
@@ -170,12 +188,8 @@ export default async function ProfileRCMDsPage({ params }: { params: Params }) {
           </header>
 
           <div className="mt-8 w-full">
-            <ProfileTabsWrapper
-              profileId={profile.id}
-              defaultBlocks={sortedBlocks}
-              defaultPage={defaultPage}
-              activeTab="rcmds"
-            />
+            <h2 className="text-2xl font-bold mb-6">Recommendations</h2>
+            <RCMDBlocks rcmds={rcmds as RCMD[]} isPublic={true} />
           </div>
         </div>
       </div>

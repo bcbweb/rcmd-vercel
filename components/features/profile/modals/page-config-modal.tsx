@@ -38,7 +38,6 @@ export function PageConfigModal({
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState(pageName || "");
   const [isDefaultPage, setIsDefaultPage] = useState(isDefault);
-  const [startTime, setStartTime] = useState<number | null>(null);
 
   // Get setDefaultPage function from the profile store
   const setDefaultPage = useProfileStore((state) => state.setDefaultPage);
@@ -48,46 +47,19 @@ export function PageConfigModal({
     setName(pageName || "");
     // Set default to true if this is a new page and there's no default page set yet
     if (isOpen) {
-      console.log("[DEBUG-MODAL] Modal opened with props:", {
-        pageId,
-        pageType,
-        pageName,
-        isDefault,
-        profileId,
-      });
       setIsDefaultPage(isDefault);
-      setStartTime(Date.now());
     }
   }, [isOpen, pageName, isDefault, pageId, pageType, profileId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const submitTime = Date.now();
-    const timeOpen = startTime ? submitTime - startTime : 0;
-
-    console.log("[DEBUG-MODAL] Submitting form with values:", {
-      name,
-      isDefaultPage,
-      initialIsDefault: isDefault,
-      hasChanged: isDefaultPage !== isDefault || name !== pageName,
-      pageId,
-      pageType,
-      profileId,
-      timeOpen: `${timeOpen}ms`,
-    });
 
     try {
       let updatesMade = false;
 
       // If making this the default page status has changed
       if (isDefaultPage !== isDefault) {
-        console.log("[DEBUG-MODAL] Default page status changed:", {
-          from: isDefault,
-          to: isDefaultPage,
-          timestamp: new Date().toISOString(),
-        });
-
         // Use the profile store to update the default page
         const success = await setDefaultPage(
           profileId,
@@ -96,69 +68,38 @@ export function PageConfigModal({
         );
 
         if (success) {
-          console.log("[DEBUG-MODAL] Default page update succeeded via store");
           updatesMade = true;
         } else {
-          console.error("[DEBUG-MODAL] Default page update failed");
+          console.error("Default page update failed");
           throw new Error("Failed to update default page");
         }
-      } else {
-        console.log("[DEBUG-MODAL] Default page status unchanged");
       }
 
       // For custom pages, additionally update the name if changed
       if (pageType === "custom" && name !== pageName && pageId) {
-        console.log("[DEBUG-MODAL] Updating custom page name:", {
-          from: pageName,
-          to: name,
-          pageId,
-          timestamp: new Date().toISOString(),
-        });
-
-        const nameUpdateStartTime = Date.now();
         const supabase = createClient();
         const { error: nameError } = await supabase
           .from("profile_pages")
           .update({ name })
           .eq("id", pageId);
 
-        const nameUpdateDuration = Date.now() - nameUpdateStartTime;
-        console.log(`[DEBUG-MODAL] Name update took ${nameUpdateDuration}ms`);
-
         if (nameError) {
-          console.error("[DEBUG-MODAL] Error updating page name:", nameError);
+          console.error("Error updating page name:", nameError);
           toast.error("Failed to update page name");
         } else {
-          console.log("[DEBUG-MODAL] Page name update succeeded");
           updatesMade = true;
           toast.success("Page name updated successfully");
         }
-      } else if (pageType === "custom" && name === pageName) {
-        console.log("[DEBUG-MODAL] Page name unchanged, skipping update");
       }
 
       // Always call onUpdate if any updates were made
-      if (updatesMade) {
-        console.log("[DEBUG-MODAL] Updates made, calling onUpdate callback");
-        if (onUpdate) {
-          console.log("[DEBUG-MODAL] onUpdate callback is defined, calling it");
-          onUpdate();
-        } else {
-          console.log("[DEBUG-MODAL] onUpdate callback is not defined");
-        }
-      } else {
-        console.log("[DEBUG-MODAL] No updates made, not calling onUpdate");
+      if (updatesMade && onUpdate) {
+        onUpdate();
       }
 
-      const totalTime = Date.now() - submitTime;
-      console.log(
-        `[DEBUG-MODAL] Total form submission process took ${totalTime}ms`
-      );
-
-      console.log("[DEBUG-MODAL] Closing modal");
       onClose();
     } catch (error) {
-      console.error("[DEBUG-MODAL] Error updating page:", error);
+      console.error("Error updating page:", error);
       toast.error("Failed to update page settings");
     } finally {
       setLoading(false);
@@ -169,7 +110,6 @@ export function PageConfigModal({
     <Dialog
       open={isOpen}
       onOpenChange={(open: boolean) => {
-        console.log("[DEBUG-MODAL] Dialog onOpenChange:", open);
         if (!open) onClose();
       }}
     >
@@ -191,13 +131,7 @@ export function PageConfigModal({
               <Input
                 id="name"
                 value={name}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  console.log(
-                    `[DEBUG-MODAL] Name changed: "${name}" → "${newValue}"`
-                  );
-                  setName(newValue);
-                }}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Enter page name"
                 required
               />
@@ -208,14 +142,7 @@ export function PageConfigModal({
             <Checkbox
               id="isDefault"
               checked={isDefaultPage}
-              onCheckedChange={(checked) => {
-                console.log("[DEBUG-MODAL] Default checkbox changed:", {
-                  from: isDefaultPage,
-                  to: checked === true,
-                  timestamp: new Date().toISOString(),
-                });
-                setIsDefaultPage(checked === true);
-              }}
+              onCheckedChange={(checked) => setIsDefaultPage(checked === true)}
             />
             <Label htmlFor="isDefault" className="cursor-pointer">
               Set as default page
@@ -223,14 +150,7 @@ export function PageConfigModal({
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                console.log("[DEBUG-MODAL] Cancel button clicked");
-                onClose();
-              }}
-            >
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

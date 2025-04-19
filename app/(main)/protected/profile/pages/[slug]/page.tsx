@@ -100,16 +100,12 @@ export default function CustomProfilePage() {
 
       // Don't allow multiple simultaneous fetches
       if (isFetchingRef.current) {
-        console.log("[CUSTOM-PAGE] Already fetching page data, skipping");
         return;
       }
 
       // Debounce fetches to prevent rapid consecutive calls
       const now = Date.now();
       if (now - lastFetchTimeRef.current < 2000) {
-        console.log(
-          "[CUSTOM-PAGE] Debouncing page data fetch, last fetch too recent"
-        );
         return;
       }
 
@@ -118,7 +114,6 @@ export default function CustomProfilePage() {
       setIsLoading(true);
 
       try {
-        console.log("[CUSTOM-PAGE] Fetching page data for slug:", slug);
         // First get user's profile ID
         try {
           // First try to fetch with the new columns
@@ -132,9 +127,6 @@ export default function CustomProfilePage() {
 
           if (error && error.message.includes("does not exist")) {
             // If the columns don't exist yet, fall back to just getting id and handle
-            console.log(
-              "Default page columns not available yet, fetching basic profile data"
-            );
             const { data: basicData, error: basicError } = await supabase
               .from("profiles")
               .select("id, handle")
@@ -261,11 +253,10 @@ export default function CustomProfilePage() {
             table: "profile_pages",
             filter: `id=eq.${pageIdRef.current}`, // Use the page ID to filter
           },
-          (payload) => {
-            console.log("Page update received:", payload);
-            if (payload.new) {
+          ({ new: newData }) => {
+            if (newData) {
               // Update the page name if it changed
-              setPageName(payload.new.name);
+              setPageName(newData.name);
               // Also refresh blocks in case display order changed
               if (pageIdRef.current) {
                 refreshBlocks(pageIdRef.current);
@@ -286,8 +277,7 @@ export default function CustomProfilePage() {
             table: "profiles",
             filter: `id=eq.${profileIdRef.current}`, // Use the profile ID to filter
           },
-          (payload) => {
-            console.log("Profile update received:", payload);
+          () => {
             // When profile updates, check if this page is still the default
             if (pageIdRef.current && profileIdRef.current) {
               checkDefaultPageStatus(profileIdRef.current, pageIdRef.current);
@@ -301,7 +291,7 @@ export default function CustomProfilePage() {
         supabase.removeChannel(profileSubscription);
       };
     }
-  }, [userId, supabase, refreshBlocks]);
+  }, [userId, supabase, refreshBlocks, router, slug]);
 
   // Update the refs when state changes
   useEffect(() => {
@@ -583,7 +573,6 @@ export default function CustomProfilePage() {
           isDefault={isDefaultPage}
           profileId={profileId}
           onUpdate={async () => {
-            console.log("[DEBUG-PAGE] Page config updated, refreshing data");
             setIsPageConfigOpen(false);
 
             // Create a new supabase client for this request
@@ -600,7 +589,14 @@ export default function CustomProfilePage() {
 
                 if (pageError) throw pageError;
                 if (page) {
+                  // Update page name without a refresh
                   setPageName(page.name);
+
+                  // Update the URL slug if it has changed, but only if necessary
+                  if (page.slug !== slug) {
+                    // Use replace instead of push to avoid browser history stack issues
+                    router.replace(`/protected/profile/pages/${page.slug}`);
+                  }
                 }
 
                 // Check if default status changed
@@ -619,8 +615,12 @@ export default function CustomProfilePage() {
                     );
                   }
                 }
+
+                // If this page's blocks need to be refreshed, do that
+                refreshBlocks(pageId);
+
+                toast.success("Page settings updated successfully");
               }
-              toast.success("Page settings updated successfully");
             } catch (error) {
               console.error("Error refreshing page data:", error);
               toast.error("Error refreshing page data");

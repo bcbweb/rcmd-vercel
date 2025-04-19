@@ -2,9 +2,14 @@ import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { ProfileBlockType } from "@/types";
-import ProfileTabsWrapper from "../profile-tabs-wrapper";
+import ProfileTabsServer from "@/components/features/profile/public/profile-tabs-server";
+import type { Database } from "@/types/supabase";
+import type { ProfilePage } from "@/types";
 
-type Params = Promise<{ handle: string }>;
+// Set revalidation period for ISR (10 minutes)
+export const revalidate = 600;
+
+type Params = { handle: string };
 
 interface Profile {
   id: string;
@@ -27,11 +32,11 @@ export default async function ProfileCollectionsPage({
 }: {
   params: Params;
 }) {
-  const resolvedParams = await params;
-  const { handle } = resolvedParams;
+  // Await the params destructuring to ensure it's ready
+  const { handle } = await Promise.resolve(params);
   const supabase = await createClient();
 
-  // Fetch the profile data
+  // Fetch the profile data with default page information
   const { data: profile } = (await supabase
     .from("profiles")
     .select(
@@ -55,34 +60,72 @@ export default async function ProfileCollectionsPage({
 
   if (!profile) return notFound();
 
-  // Find all pages
-  const { data: pages, error: pagesError } = await supabase
+  // Get all profile pages
+  const { data: pages } = await supabase
     .from("profile_pages")
-    .select("id, name, slug")
+    .select("*")
+    .eq("profile_id", profile.id);
+
+  // Get the default page
+  const { data: defaultPage } = await supabase
+    .from("profile_pages")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .eq("is_default", true)
+    .single();
+
+  // Fetch RCMD entities directly
+  const { data: rcmds, error: rcmdsError } = await supabase
+    .from("rcmds")
+    .select("*")
+    .eq("owner_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  if (rcmdsError) {
+    console.error("Error fetching RCMDs:", rcmdsError);
+  }
+
+  // Fetch links directly
+  const { data: links, error: linksError } = await supabase
+    .from("links")
+    .select("*")
     .eq("profile_id", profile.id)
     .order("created_at", { ascending: true });
 
-  if (pagesError) {
-    console.error("Error fetching profile pages:", pagesError);
+  if (linksError) {
+    console.error("Error fetching links:", linksError);
   }
 
-  // Get the default page
-  const defaultPage = pages?.length ? pages[0] : null;
-
-  // Fetch collections for this profile
-  const { data: collectionBlocks, error: blocksError } = await supabase
-    .from("profile_blocks")
-    .select("*")
+  // Directly fetch Collection entities for the Collections page
+  const { data: collections, error: collectionsError } = await supabase
+    .from("collections")
+    .select("*, collection_items(*)")
     .eq("profile_id", profile.id)
-    .eq("type", "collection")
-    .order("display_order", { ascending: true });
+    .order("created_at", { ascending: true });
 
-  if (blocksError) {
-    console.error("Error fetching collection blocks:", blocksError);
+  if (collectionsError) {
+    console.error("Error fetching collections:", collectionsError);
   }
 
-  // Sort blocks by order
-  const sortedBlocks = collectionBlocks || [];
+  // Fetch all page blocks to avoid client-side fetching
+  const allPageBlocks: Record<string, ProfileBlockType[]> = {};
+
+  // Fetch blocks for all pages
+  if (pages && pages.length > 0) {
+    for (const page of pages) {
+      const { data: pageBlocks } = await supabase
+        .from("profile_blocks")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .eq("page_id", page.id)
+        .order("display_order", { ascending: true });
+
+      allPageBlocks[page.id] = pageBlocks || [];
+    }
+  }
+
+  // Track view count
+  await supabase.rpc("increment_profile_view", { profile_id: profile.id });
 
   return (
     <div className="w-full">
@@ -174,11 +217,21 @@ export default async function ProfileCollectionsPage({
           </header>
 
           <div className="mt-8 w-full">
-            <ProfileTabsWrapper
-              profileId={profile.id}
-              defaultBlocks={sortedBlocks}
-              defaultPage={defaultPage}
-              activeTab="collections"
+            <ProfileTabsServer
+              handle={params.handle as string}
+              pages={(pages as ProfilePage[]) || []}
+              defaultPage={defaultPage as ProfilePage | null}
+              pageBlocks={allPageBlocks}
+              rcmdBlocks={
+                rcmds as Database["public"]["Tables"]["rcmds"]["Row"][]
+              }
+              linkBlocks={
+                links as Database["public"]["Tables"]["links"]["Row"][]
+              }
+              collectionBlocks={
+                collections as Database["public"]["Tables"]["collections"]["Row"][]
+              }
+              defaultPageType={(defaultPage?.type as string) || "custom"}
             />
           </div>
         </div>

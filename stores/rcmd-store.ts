@@ -23,7 +23,8 @@ interface RCMDStore {
         lat?: number;
         lng?: number;
       };
-    }
+    },
+    profile_id?: string
   ) => Promise<RCMD | null>;
   fetchRCMDs: (userId?: string) => Promise<void>;
   deleteRCMD: (id: string) => Promise<void>;
@@ -50,7 +51,8 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         lat?: number;
         lng?: number;
       };
-    }
+    },
+    profile_id?: string
   ) => {
     const supabase = createClient();
     set({ isLoading: true, error: null });
@@ -64,7 +66,7 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
           }
         : null;
 
-      const { data, error } = await supabase.rpc("insert_rcmd", {
+      const { data, error } = await supabase.rpc("insert_rcmd_v2", {
         p_title: title,
         p_description: description,
         p_type: type,
@@ -73,6 +75,7 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         p_tags: tags,
         p_url: url,
         p_location: locationData,
+        p_profile_id: profile_id,
       });
 
       if (error) throw error;
@@ -114,13 +117,10 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         query = query.eq("owner_id", user.id);
       }
 
-      console.log("Fetching RCMDs for user:", userId || "current user");
-
       const { data, error } = await query;
 
       if (error) throw error;
 
-      console.log(`Found ${data?.length || 0} RCMDs`);
       set({ rcmds: data || [], isLoading: false });
     } catch (error) {
       const errorMessage =

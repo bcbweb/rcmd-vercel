@@ -1,36 +1,45 @@
 import { createClient } from "@/utils/supabase/server";
+import { createClient as createClientFromEnv } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import type { ProfileBlockType } from "@/types";
-import ProfileTabsWrapper from "./profile-tabs-wrapper";
+import ProfileTabsServer from "@/components/features/profile/public/profile-tabs-server";
+import { ProfileBlockType } from "@/types";
+import type { Profile, ProfilePage } from "@/types";
 
-type Params = Promise<{ handle: string }>;
+// Set revalidation period (reduced to 60 seconds for more frequent updates)
+export const revalidate = 60;
 
-interface ProfilePage {
-  id: string;
-  name: string;
-  slug: string;
+// Pre-render popular profiles at build time
+export async function generateStaticParams() {
+  try {
+    // Use a server-side client that doesn't rely on cookies for static generation
+    const supabase = createClientFromEnv(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("handle")
+      .order("view_count", { ascending: false })
+      .limit(20);
+
+    return (
+      profiles?.map(({ handle }) => ({
+        handle,
+      })) || []
+    );
+  } catch (error) {
+    console.error("Error generating static params:", error);
+    return [];
+  }
 }
 
-interface Profile {
-  id: string;
-  first_name: string;
-  last_name: string;
-  bio?: string;
-  profile_picture_url?: string;
-  cover_image?: string;
-  handle?: string;
-  location?: string;
-  interests?: string[];
-  tags?: string[];
-  profile_blocks?: ProfileBlockType[];
-  default_page_type?: string;
-  default_page_id?: string;
-}
+type Params = { handle: string };
 
 export default async function ProfilePage({ params }: { params: Params }) {
-  const resolvedParams = await params;
-  const { handle } = resolvedParams;
+  // Await the params destructuring to ensure it's ready
+  const { handle } = await Promise.resolve(params);
   const supabase = await createClient();
 
   // Fetch the profile data with default page information
@@ -68,36 +77,96 @@ export default async function ProfilePage({ params }: { params: Params }) {
     console.error("Error fetching profile pages:", pagesError);
   }
 
-  // Use the first page as default
-  const defaultPage = pages?.length ? pages[0] : null;
-  const defaultPageId = defaultPage?.id;
+  // Determine the default page based on profile settings
+  let defaultPage = null;
 
-  // Log debug information for the default page
-  console.log("[handle]/page.tsx DEBUG:", {
-    handle,
-    profileId: profile.id,
-    defaultPageType: profile.default_page_type,
-    defaultPageId: profile.default_page_id,
-    firstPage: defaultPage
-      ? { id: defaultPage.id, name: defaultPage.name }
-      : null,
-    pagesCount: pages?.length || 0,
-  });
-
-  // Fetch blocks for the default page
-  const { data: defaultBlocks, error: blocksError } = await supabase
-    .from("profile_blocks")
-    .select("*")
-    .eq("profile_id", profile.id)
-    .eq("page_id", defaultPageId)
-    .order("display_order", { ascending: true });
-
-  if (blocksError) {
-    console.error("Error fetching default page blocks:", blocksError);
+  // Check if default page type is set
+  if (profile.default_page_type) {
+    if (profile.default_page_type === "custom" && profile.default_page_id) {
+      // For custom pages, find the specific page by ID
+      defaultPage =
+        pages?.find((page) => page.id === profile.default_page_id) || null;
+    }
+    // For non-custom pages, the main route displays the content directly based on default_page_type
+    // so defaultPage remains null for rcmd, link, collection types
+  } else {
+    // Fallback to the first page if no default is set
+    defaultPage = pages?.length ? pages[0] : null;
   }
 
-  // Sort blocks by order
-  const sortedBlocks = defaultBlocks || [];
+  // Fetch RCMD entities directly
+  const { data: rcmds, error: rcmdsError } = await supabase
+    .from("rcmds")
+    .select("*")
+    .eq("owner_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  console.log("RCMDs from default route: ", rcmds);
+
+  if (rcmdsError) {
+    console.error("Error fetching RCMDs:", rcmdsError);
+  }
+
+  // Fetch links directly
+  const { data: links, error: linksError } = await supabase
+    .from("links")
+    .select("*")
+    .eq("owner_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  if (linksError) {
+    console.error("Error fetching links:", linksError);
+  }
+
+  // Fetch collections directly
+  const { data: collections, error: collectionsError } = await supabase
+    .from("collections")
+    .select("*")
+    .eq("owner_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  if (collectionsError) {
+    console.error("Error fetching collections:", collectionsError);
+  }
+
+  // Create correctly structured data for the ProfileTabsServer component
+  const rcmdBlocks = rcmds || [];
+  const linkBlocks = links || [];
+  const collectionBlocks = collections || [];
+
+  // Fetch all page blocks to avoid client-side fetching
+  const allPageBlocks: Record<string, ProfileBlockType[]> = {};
+
+  // Fetch blocks for all pages
+  if (pages && pages.length > 0) {
+    for (const page of pages) {
+      const { data: pageBlocks } = await supabase
+        .from("profile_blocks")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .eq("page_id", page.id)
+        .order("display_order", { ascending: true });
+
+      allPageBlocks[page.id] = pageBlocks || [];
+    }
+  }
+
+  // Track view count (for static params generation)
+  await supabase.rpc("increment_profile_view", { profile_id: profile.id });
+
+  // Format pages for server component
+  const formattedPages =
+    pages?.map((page) => ({
+      ...page,
+      profile_id: profile.id,
+    })) || [];
+
+  const formattedDefaultPage = defaultPage
+    ? {
+        ...defaultPage,
+        profile_id: profile.id,
+      }
+    : null;
 
   return (
     <div className="w-full">
@@ -187,13 +256,17 @@ export default async function ProfilePage({ params }: { params: Params }) {
               </div>
             )}
           </header>
-
+          Default route
           <div className="mt-8 w-full">
-            <ProfileTabsWrapper
-              profileId={profile.id}
-              defaultBlocks={sortedBlocks}
-              defaultPage={defaultPage}
-              activeTab={defaultPage?.id}
+            <ProfileTabsServer
+              handle={handle}
+              pages={formattedPages}
+              defaultPage={formattedDefaultPage}
+              pageBlocks={allPageBlocks}
+              rcmdBlocks={rcmdBlocks}
+              linkBlocks={linkBlocks}
+              collectionBlocks={collectionBlocks}
+              defaultPageType={profile.default_page_type || "custom"}
             />
           </div>
         </div>

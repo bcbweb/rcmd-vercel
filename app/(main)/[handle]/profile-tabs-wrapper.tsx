@@ -34,6 +34,11 @@ export default function ProfileTabsWrapper({
   const [defaultPageType, setDefaultPageType] = useState<string | null>(null);
   const [defaultPageId, setDefaultPageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [updatedActivePage, setUpdatedActivePage] = useState<
+    WrapperProfilePage | undefined
+  >(activePage);
+  const [updatedDefaultPage, setUpdatedDefaultPage] =
+    useState<WrapperProfilePage | null>(defaultPage || null);
 
   useEffect(() => {
     async function fetchProfileDefaultInfo() {
@@ -53,27 +58,6 @@ export default function ProfileTabsWrapper({
         }
 
         if (data) {
-          console.log("[profile-tabs-wrapper] Fetched default page info:", {
-            profileId,
-            default_page_type: data.default_page_type,
-            default_page_id: data.default_page_id,
-            activePage,
-            defaultPage,
-            activeTab,
-          });
-
-          // Add specific debug for collections
-          if (data.default_page_type === "collection") {
-            console.log(
-              "%c COLLECTIONS DEFAULT PAGE DETECTED in wrapper",
-              "background: #f00; color: #fff; font-size: 16px",
-              {
-                default_page_type: data.default_page_type,
-                default_page_id: data.default_page_id,
-              }
-            );
-          }
-
           // Use the actual values from database
           setDefaultPageType(data.default_page_type || null);
           setDefaultPageId(data.default_page_id || null);
@@ -102,19 +86,10 @@ export default function ProfileTabsWrapper({
           filter: `id=eq.${profileId}`,
         },
         (payload) => {
-          console.log(
-            "[profile-tabs-wrapper] Profile update received:",
-            payload
-          );
           if (payload.new) {
             const { default_page_type, default_page_id } = payload.new;
             setDefaultPageType(default_page_type || null);
             setDefaultPageId(default_page_id || null);
-
-            console.log("[profile-tabs-wrapper] Real-time update received:", {
-              default_page_type,
-              default_page_id,
-            });
           }
         }
       )
@@ -131,23 +106,59 @@ export default function ProfileTabsWrapper({
           table: "profile_pages",
           filter: `profile_id=eq.${profileId}`,
         },
-        (payload) => {
-          console.log("[profile-tabs-wrapper] Page update received:", payload);
+        async (payload) => {
           if (payload.new) {
-            // When a page is updated, we need to refresh the whole data
-            // by navigating to trigger a server component reload
-            // This ensures both name and default status changes are reflected immediately
-            console.log(
-              "[profile-tabs-wrapper] Page update detected, triggering refresh"
-            );
+            const updatedPage = payload.new as WrapperProfilePage;
 
-            // Use window.location to force a full refresh to get the latest data
-            // This is an SPA-breaking approach but ensures consistency
-            window.location.reload();
+            // Update the active page if it's the one that was changed
+            if (activePage && activePage.id === updatedPage.id) {
+              setUpdatedActivePage({
+                ...activePage,
+                name: updatedPage.name,
+                slug: updatedPage.slug,
+              });
+            }
+
+            // Update the default page if it's the one that was changed
+            if (defaultPage && defaultPage.id === updatedPage.id) {
+              setUpdatedDefaultPage({
+                ...defaultPage,
+                name: updatedPage.name,
+                slug: updatedPage.slug,
+              });
+            }
+
+            // Fetch all pages to ensure the tabs list is up-to-date
+            // This is more efficient than a full page reload
+            await fetchProfilePages();
           }
         }
       )
       .subscribe();
+
+    // Function to fetch profile pages when needed
+    async function fetchProfilePages() {
+      if (!profileId) return;
+
+      try {
+        const supabase = createClient();
+        const { error } = await supabase
+          .from("profile_pages")
+          .select("id, name, slug")
+          .eq("profile_id", profileId)
+          .order("created_at", { ascending: true });
+
+        if (error) {
+          console.error("Error fetching profile pages:", error);
+          return;
+        }
+
+        // We don't need to do anything with the data here
+        // The ProfileTabs component will refetch this data when it renders
+      } catch (err) {
+        console.error("Error fetching profile pages:", err);
+      }
+    }
 
     // Clean up subscriptions on component unmount
     return () => {
@@ -156,26 +167,17 @@ export default function ProfileTabsWrapper({
     };
   }, [profileId, activePage, defaultPage, activeTab]);
 
-  const convertedActivePage = activePage
-    ? ({ ...activePage, profile_id: profileId } as TabsProfilePage)
+  const convertedActivePage = updatedActivePage
+    ? ({ ...updatedActivePage, profile_id: profileId } as TabsProfilePage)
     : undefined;
 
-  const convertedDefaultPage = defaultPage
-    ? ({ ...defaultPage, profile_id: profileId } as TabsProfilePage)
+  const convertedDefaultPage = updatedDefaultPage
+    ? ({ ...updatedDefaultPage, profile_id: profileId } as TabsProfilePage)
     : null;
 
   if (loading) {
     return <TabsLoadingSkeleton />;
   }
-
-  console.log("[profile-tabs-wrapper] Rendering with:", {
-    profileId,
-    defaultPageType,
-    defaultPageId,
-    convertedActivePage,
-    convertedDefaultPage,
-    activeTab,
-  });
 
   // Add a visible debug element when in development
   const isDevEnvironment = process.env.NODE_ENV === "development";
@@ -188,6 +190,7 @@ export default function ProfileTabsWrapper({
           <div>DefaultPageId: {defaultPageId || "null"}</div>
           <div>ActiveTab: {activeTab || "null"}</div>
           <div>DefaultPage: {convertedDefaultPage?.name || "null"}</div>
+          <div>ActivePage: {convertedActivePage?.name || "null"}</div>
         </div>
       )}
       <Suspense fallback={<TabsLoadingSkeleton />}>

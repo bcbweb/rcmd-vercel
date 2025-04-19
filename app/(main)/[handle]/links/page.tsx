@@ -1,10 +1,14 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import type { ProfileBlockType } from "@/types";
-import ProfileTabsWrapper from "../profile-tabs-wrapper";
+import type { ProfileBlockType, ProfilePage } from "@/types";
+import ProfileTabsServer from "@/components/features/profile/public/profile-tabs-server";
+import type { Database } from "@/types/supabase";
 
-type Params = Promise<{ handle: string }>;
+// Set revalidation period for ISR (10 minutes)
+export const revalidate = 600;
+
+type Params = { handle: string };
 
 interface Profile {
   id: string;
@@ -23,11 +27,11 @@ interface Profile {
 }
 
 export default async function ProfileLinksPage({ params }: { params: Params }) {
-  const resolvedParams = await params;
-  const { handle } = resolvedParams;
+  // Await the params destructuring to ensure it's ready
+  const { handle } = await Promise.resolve(params);
   const supabase = await createClient();
 
-  // Fetch the profile data
+  // Fetch the profile data with default page information
   const { data: profile } = (await supabase
     .from("profiles")
     .select(
@@ -65,20 +69,58 @@ export default async function ProfileLinksPage({ params }: { params: Params }) {
   // Get the default page
   const defaultPage = pages?.length ? pages[0] : null;
 
-  // Fetch links for this profile
-  const { data: linkBlocks, error: blocksError } = await supabase
-    .from("profile_blocks")
+  // Fetch RCMD entities directly
+  const { data: rcmds, error: rcmdsError } = await supabase
+    .from("rcmds")
     .select("*")
-    .eq("profile_id", profile.id)
-    .eq("type", "link")
-    .order("display_order", { ascending: true });
+    .eq("owner_id", profile.id)
+    .order("created_at", { ascending: true });
 
-  if (blocksError) {
-    console.error("Error fetching link blocks:", blocksError);
+  if (rcmdsError) {
+    console.error("Server Error fetching RCMDs:", rcmdsError);
   }
 
-  // Sort blocks by order
-  const sortedBlocks = linkBlocks || [];
+  // Directly fetch Link entities for the Links page
+  const { data: links, error: linksError } = await supabase
+    .from("links")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  if (linksError) {
+    console.error("Error fetching links:", linksError);
+  }
+
+  // Fetch collection entities directly
+  const { data: collections, error: collectionsError } = await supabase
+    .from("collections")
+    .select("*")
+    .eq("profile_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  if (collectionsError) {
+    console.error("Error fetching collections:", collectionsError);
+  }
+
+  // Fetch all page blocks to avoid client-side fetching
+  const allPageBlocks: Record<string, ProfileBlockType[]> = {};
+
+  // Fetch blocks for all pages
+  if (pages && pages.length > 0) {
+    for (const page of pages) {
+      const { data: pageBlocks } = await supabase
+        .from("profile_blocks")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .eq("page_id", page.id)
+        .order("display_order", { ascending: true });
+
+      allPageBlocks[page.id] = pageBlocks || [];
+    }
+  }
+
+  // Track view count
+  await supabase.rpc("increment_profile_view", { profile_id: profile.id });
 
   return (
     <div className="w-full">
@@ -170,11 +212,21 @@ export default async function ProfileLinksPage({ params }: { params: Params }) {
           </header>
 
           <div className="mt-8 w-full">
-            <ProfileTabsWrapper
-              profileId={profile.id}
-              defaultBlocks={sortedBlocks}
-              defaultPage={defaultPage}
-              activeTab="links"
+            <ProfileTabsServer
+              handle={handle}
+              pages={(pages as ProfilePage[]) || []}
+              defaultPage={defaultPage as ProfilePage | null}
+              pageBlocks={allPageBlocks}
+              rcmdBlocks={
+                rcmds as Database["public"]["Tables"]["rcmds"]["Row"][]
+              }
+              linkBlocks={
+                links as Database["public"]["Tables"]["links"]["Row"][]
+              }
+              collectionBlocks={
+                collections as Database["public"]["Tables"]["collections"]["Row"][]
+              }
+              defaultPageType={profile.default_page_type || "custom"}
             />
           </div>
         </div>

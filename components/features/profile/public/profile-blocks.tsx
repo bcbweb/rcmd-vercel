@@ -1,12 +1,18 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import TextBlock from "./text-block";
 import LinkBlock from "./link-block";
 import RCMDBlock from "./rcmd-block";
 import ImageBlock from "./image-block";
 import CollectionBlock from "./collection-block";
 import type { ProfileBlockType } from "@/types";
+
+// Define a generic extended block type for type safe operations
+interface ExtendedProfileBlock extends ProfileBlockType {
+  rcmd_blocks?: Record<string, unknown>;
+  [key: string]: unknown;
+}
 
 interface PublicProfileBlocksProps {
   blocks: ProfileBlockType[];
@@ -32,21 +38,75 @@ function BlockWithSuspense({ children }: { children: React.ReactNode }) {
 export default function PublicProfileBlocks({
   blocks,
 }: PublicProfileBlocksProps) {
+  // Add debugging for the blocks
+  useEffect(() => {
+    console.log("PublicProfileBlocks received blocks:", blocks);
+
+    // Check for RCMD blocks specifically
+    const rcmdBlocks = blocks.filter((block) => block.type === "rcmd");
+    console.log(`Found ${rcmdBlocks.length} RCMD blocks:`, rcmdBlocks);
+
+    // Log each RCMD block's structure
+    rcmdBlocks.forEach((block, index) => {
+      console.log(`RCMD block ${index + 1} structure:`, {
+        id: block.id,
+        type: block.type,
+        hasRcmdBlocks: "rcmd_blocks" in block,
+        keys: Object.keys(block),
+      });
+    });
+  }, [blocks]);
+
   return (
     <div className="space-y-8">
-      {blocks.map((block) => (
-        <div key={block.id}>
-          <BlockWithSuspense>
-            {block.type === "text" && <TextBlock blockId={block.id} />}
-            {block.type === "link" && <LinkBlock blockId={block.id} />}
-            {block.type === "rcmd" && <RCMDBlock blockId={block.id} />}
-            {block.type === "image" && <ImageBlock blockId={block.id} />}
-            {block.type === "collection" && (
-              <CollectionBlock blockId={block.id} />
-            )}
-          </BlockWithSuspense>
-        </div>
-      ))}
+      {blocks.map((block) => {
+        // Extract preloaded data if available
+        let preloadedData: ExtendedProfileBlock | undefined = undefined;
+
+        if (block.type === "rcmd") {
+          console.log(`Processing RCMD block ID ${block.id}:`, block);
+
+          if ("rcmd_blocks" in block) {
+            // For the nested structure where rcmd_blocks contains the RCMD data
+            const typedBlock = block as ExtendedProfileBlock;
+            const rcmdBlocksData = typedBlock.rcmd_blocks;
+
+            if (rcmdBlocksData && typeof rcmdBlocksData === "object") {
+              preloadedData = {
+                ...typedBlock,
+                // Pass through the nested rcmd data
+                rcmd_blocks: rcmdBlocksData,
+              };
+              console.log(
+                `Block has rcmd_blocks structure, preloaded data:`,
+                preloadedData
+              );
+            }
+          } else {
+            // For the flattened structure or to let the RCMDBlock component fetch its own data
+            console.log(
+              `Block does NOT have rcmd_blocks property, using as is`
+            );
+            preloadedData = block as ExtendedProfileBlock;
+          }
+        }
+
+        return (
+          <div key={block.id}>
+            <BlockWithSuspense>
+              {block.type === "text" && <TextBlock blockId={block.id} />}
+              {block.type === "link" && <LinkBlock blockId={block.id} />}
+              {block.type === "rcmd" && (
+                <RCMDBlock blockId={block.id} preloadedData={preloadedData} />
+              )}
+              {block.type === "image" && <ImageBlock blockId={block.id} />}
+              {block.type === "collection" && (
+                <CollectionBlock blockId={block.id} />
+              )}
+            </BlockWithSuspense>
+          </div>
+        );
+      })}
     </div>
   );
 }

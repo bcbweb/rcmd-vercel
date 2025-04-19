@@ -33,11 +33,6 @@ export default function CollectionModal() {
   // Add modal ref for focus handling
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Fetch RCMDs on mount
-  useEffect(() => {
-    fetchRCMDs();
-  }, [fetchRCMDs]);
-
   // Filter RCMDs based on search query
   const filteredRCMDs = rcmds.filter(
     (rcmd) =>

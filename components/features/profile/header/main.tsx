@@ -37,6 +37,8 @@ interface ProfileHeaderProps {
   defaultPageType?: string | null;
 }
 
+const isString = (value: unknown): value is string => typeof value === "string";
+
 export default function ProfileHeaderMain({
   handle,
   firstName,
@@ -223,7 +225,6 @@ export default function ProfileHeaderMain({
 
   const handleMakeDefault = async (pageId: string) => {
     try {
-      console.log("[DEBUG] handleMakeDefault called with pageId:", pageId);
       // Get profile ID first
       const { data: profile } = await supabase
         .from("profiles")
@@ -232,62 +233,54 @@ export default function ProfileHeaderMain({
         .single();
 
       if (!profile) {
-        console.log("[DEBUG] No profile found for user ID:", userId);
         throw new Error("Profile not found");
       }
 
-      console.log("[DEBUG] Found profile:", profile.id);
+      const profileId = profile.id;
 
-      // Try to update with type information first
-      try {
-        console.log(
-          "[DEBUG] Updating profile with new default page settings:",
-          {
-            profile_id: profile.id,
-            default_page_id: pageId,
-            default_page_type: "custom",
-          }
-        );
+      // Find if it's a custom page
+      const matchingPage = customPages.find((page) => page.id === pageId);
+      let defaultPageType = matchingPage ? "custom" : null;
 
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            default_page_id: pageId, // For custom pages, this is always a valid UUID
-            default_page_type: "custom",
-          })
-          .eq("id", profile.id);
-
-        if (error) {
-          console.log("[DEBUG] Error updating default page:", error);
-          if (error.message.includes("does not exist")) {
-            // If the default_page_type column doesn't exist, fall back to just updating default_page_id
-            console.log(
-              "[DEBUG] Falling back to update without default_page_type"
-            );
-            const { error: fallbackError } = await supabase
-              .from("profiles")
-              .update({ default_page_id: pageId })
-              .eq("id", profile.id);
-
-            if (fallbackError) {
-              console.log("[DEBUG] Fallback update failed:", fallbackError);
-              throw fallbackError;
-            }
-
-            console.log("[DEBUG] Fallback update succeeded");
-            // Notify the user about the schema issue
-            toast.info(
-              "Default page set with limited functionality. Please run database migrations."
-            );
-          } else {
-            throw error;
-          }
-        } else {
-          console.log("[DEBUG] Default page update succeeded");
+      if (!defaultPageType) {
+        // Check if it's a known system page type
+        if (pathname.includes("/rcmds")) {
+          defaultPageType = "rcmd";
+        } else if (pathname.includes("/links")) {
+          defaultPageType = "link";
+        } else if (pathname.includes("/collections")) {
+          defaultPageType = "collection";
         }
-      } catch (error) {
-        console.error("[DEBUG] Detailed error setting default page:", error);
-        throw new Error("Failed to update default page");
+      }
+
+      try {
+        if (isString(defaultPageType)) {
+          try {
+            if (defaultPageType === "custom" && pageId) {
+              await supabase
+                .from("profiles")
+                .update({
+                  default_page_type: "custom",
+                  default_page_id: pageId,
+                })
+                .eq("id", profileId);
+            } else {
+              // For non-custom pages (rcmd, link, collection)
+              await supabase
+                .from("profiles")
+                .update({
+                  default_page_type: defaultPageType,
+                  default_page_id: null,
+                })
+                .eq("id", profileId);
+            }
+          } catch {
+            throw new Error("Failed to update default page");
+          }
+        }
+      } catch {
+        toast.error("Failed to update default page");
+        return;
       }
 
       // Call the onUpdate prop to refresh the parent component
@@ -296,8 +289,7 @@ export default function ProfileHeaderMain({
       }
 
       toast.success("Default page updated");
-    } catch (error) {
-      console.error("[DEBUG] Error setting default page:", error);
+    } catch {
       toast.error("Failed to update default page");
     }
   };

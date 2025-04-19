@@ -2,9 +2,12 @@ import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { ProfileBlockType } from "@/types";
-import ProfileTabsWrapper from "../profile-tabs-wrapper";
+import ProfileTabsServer from "@/components/features/profile/public/profile-tabs-server";
 
-type Params = Promise<{ handle: string; slug: string }>;
+// Set revalidation period for ISR (10 minutes)
+export const revalidate = 600;
+
+type Params = { handle: string; slug: string };
 
 interface Profile {
   id: string;
@@ -17,21 +20,20 @@ interface Profile {
   location?: string;
   interests?: string[];
   tags?: string[];
-  profile_blocks?: ProfileBlockType[];
   default_page_type?: string;
   default_page_id?: string;
 }
 
-export default async function ProfilePageWithSlug({
+export default async function ProfileCustomPage({
   params,
 }: {
   params: Params;
 }) {
-  const resolvedParams = await params;
-  const { handle, slug } = resolvedParams;
+  // Await the params destructuring to ensure it's ready
+  const { handle, slug } = await Promise.resolve(params);
   const supabase = await createClient();
 
-  // Fetch the profile data
+  // Fetch the profile data with default page information
   const { data: profile } = (await supabase
     .from("profiles")
     .select(
@@ -66,27 +68,90 @@ export default async function ProfilePageWithSlug({
     console.error("Error fetching profile pages:", pagesError);
   }
 
-  // Find the requested page by slug
-  const targetPage = pages?.find((page) => page.slug === slug);
-  if (!targetPage) return notFound();
+  // Find the current page by slug
+  const currentPage = pages?.find((page) => page.slug === slug);
+  if (!currentPage) return notFound();
 
-  // Get the default page (first page)
-  const defaultPage = pages?.length ? pages[0] : null;
+  // Get the default page
+  const defaultPage =
+    pages?.find((page) => page.id === profile.default_page_id) ||
+    (pages?.length ? pages[0] : null);
 
-  // Fetch blocks for the target page
-  const { data: pageBlocks, error: blocksError } = await supabase
-    .from("profile_blocks")
+  // Fetch RCMD entities directly
+  const { data: rcmds, error: rcmdsError } = await supabase
+    .from("rcmds")
     .select("*")
-    .eq("profile_id", profile.id)
-    .eq("page_id", targetPage.id)
-    .order("display_order", { ascending: true });
+    .eq("owner_id", profile.id)
+    .order("created_at", { ascending: true });
 
-  if (blocksError) {
-    console.error("Error fetching page blocks:", blocksError);
+  console.log("RCMDs from slug route: ", rcmds);
+
+  if (rcmdsError) {
+    console.error("Error fetching RCMDs:", rcmdsError);
   }
 
-  // Sort blocks by order
-  const sortedBlocks = pageBlocks || [];
+  // Fetch link entities directly
+  const { data: links, error: linksError } = await supabase
+    .from("links")
+    .select("*")
+    .eq("owner_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  if (linksError) {
+    console.error("Error fetching links:", linksError);
+  }
+
+  // Fetch collection entities directly
+  const { data: collections, error: collectionsError } = await supabase
+    .from("collections")
+    .select("*")
+    .eq("owner_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  if (collectionsError) {
+    console.error("Error fetching collections:", collectionsError);
+  }
+
+  // Transform into a format the ProfileTabsServer can display
+  const rcmdBlocks = rcmds || [];
+  const linkBlocks = links || [];
+  const collectionBlocks = collections || [];
+
+  // Fetch all page blocks to avoid client-side fetching
+  const allPageBlocks: Record<string, ProfileBlockType[]> = {};
+
+  // Fetch blocks for all pages
+  if (pages && pages.length > 0) {
+    for (const page of pages) {
+      const { data: pageBlocks } = await supabase
+        .from("profile_blocks")
+        .select("*")
+        .eq("profile_id", profile.id)
+        .eq("page_id", page.id)
+        .order("display_order", { ascending: true });
+
+      allPageBlocks[page.id] = pageBlocks || [];
+    }
+  }
+
+  // Track view count
+  await supabase.rpc("increment_profile_view", { profile_id: profile.id });
+
+  // Format pages for server component
+  const formattedPages =
+    pages
+      ?.map((page) => ({
+        ...page,
+        profile_id: profile.id,
+      }))
+      .filter((page) => page.id !== defaultPage?.id) || [];
+
+  const formattedDefaultPage = defaultPage
+    ? {
+        ...defaultPage,
+        profile_id: profile.id,
+      }
+    : null;
 
   return (
     <div className="w-full">
@@ -176,14 +241,17 @@ export default async function ProfilePageWithSlug({
               </div>
             )}
           </header>
-
+          Slug route
           <div className="mt-8 w-full">
-            <ProfileTabsWrapper
-              profileId={profile.id}
-              defaultBlocks={sortedBlocks}
-              activePage={targetPage}
-              defaultPage={defaultPage}
-              activeTab={targetPage.id}
+            <ProfileTabsServer
+              handle={handle}
+              pages={formattedPages}
+              defaultPage={formattedDefaultPage}
+              pageBlocks={allPageBlocks}
+              rcmdBlocks={rcmdBlocks}
+              linkBlocks={linkBlocks}
+              collectionBlocks={collectionBlocks}
+              defaultPageType={profile.default_page_type || "custom"}
             />
           </div>
         </div>

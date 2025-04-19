@@ -53,14 +53,6 @@ export function ProfileTabs({
   onPageRenamed,
   onMakeDefault,
 }: ProfileTabsProps) {
-  console.log("[DEBUG-TABS] Rendering ProfileTabs with props:", {
-    customPages: customPages?.length,
-    defaultPageId,
-    defaultPageType,
-    currentPath,
-    isAddingPage,
-  });
-
   // Check if we're on a custom page path
   const isOnCustomPagePath = currentPath.includes("/protected/profile/pages/");
 
@@ -74,11 +66,6 @@ export function ProfileTabs({
 
   // Get the slug from the path if we're on a custom page
   const currentPageSlug = getPageSlugFromPath();
-  console.log("[DEBUG-TABS] Current path analysis:", {
-    currentPath,
-    isOnCustomPagePath,
-    currentPageSlug,
-  });
 
   // Find which tab should be active based on the current path
   const getActiveTabKey = () => {
@@ -86,23 +73,19 @@ export function ProfileTabs({
 
     for (const tab of tabs) {
       if (currentPath === tab.href) {
-        console.log("[DEBUG-TABS] Active tab from exact match:", tab.key);
         return tab.key;
       }
     }
 
     // Default tab handling
     if (defaultPageType && defaultPageId) {
-      console.log("[DEBUG-TABS] Using default tab:", defaultPageType);
       return defaultPageType;
     }
 
-    console.log("[DEBUG-TABS] No match found, using first tab:", tabs[0]?.key);
     return tabs[0]?.key;
   };
 
   const activeTabKey = getActiveTabKey();
-  console.log("[DEBUG-TABS] Active tab key determined:", activeTabKey);
 
   const [renamingPage, setRenamingPage] = useState<CustomPage | null>(null);
   const [deletingPage, setDeletingPage] = useState<CustomPage | null>(null);
@@ -121,14 +104,6 @@ export function ProfileTabs({
 
   // Update local state when props change
   useEffect(() => {
-    console.log("[DEBUG-TABS] Props changed, updating local state:", {
-      customPagesLength: customPages.length,
-      defaultPageId,
-      defaultPageType,
-      firstPageId: customPages[0]?.id,
-      firstPageName: customPages[0]?.name,
-    });
-
     setLocalPages(customPages);
     setLocalDefaultPageId(defaultPageId);
     setLocalDefaultPageType(defaultPageType);
@@ -136,42 +111,16 @@ export function ProfileTabs({
     // Extract profile ID if available from custom pages
     if (customPages.length > 0 && customPages[0].profile_id) {
       profileIdRef.current = customPages[0].profile_id;
-      console.log(
-        "[DEBUG-TABS] Set profileIdRef from customPages:",
-        customPages[0].profile_id
-      );
     }
   }, [customPages, defaultPageId, defaultPageType]);
 
   // Set up real-time subscriptions to profile page updates
   useEffect(() => {
-    if (!userId) {
-      console.log("[DEBUG-TABS] No userId found, skipping subscription setup");
-      return;
-    }
-
-    console.log(
-      "[DEBUG-TABS] Setting up real-time subscriptions for userId:",
-      userId,
-      {
-        currentLocalDefaultId: localDefaultPageId,
-        currentLocalDefaultType: localDefaultPageType,
-      }
-    );
-
     const setupRealtimeSubscription = async () => {
       const supabase = createClient();
-      console.log(
-        "[DEBUG-TABS] Current profileIdRef.current:",
-        profileIdRef.current
-      );
-
       // If we don't have profile ID from pages, get it from the auth user
       if (!profileIdRef.current) {
         try {
-          console.log(
-            "[DEBUG-TABS] No profile ID in ref, fetching from profiles table"
-          );
           const { data: profile } = await supabase
             .from("profiles")
             .select("id, default_page_id, default_page_type")
@@ -180,51 +129,24 @@ export function ProfileTabs({
 
           if (profile) {
             profileIdRef.current = profile.id;
-            console.log("[DEBUG-TABS] Fetched profile ID:", profile.id);
-            console.log("[DEBUG-TABS] Profile default settings:", {
-              default_page_id: profile.default_page_id,
-              default_page_type: profile.default_page_type,
-            });
             // While we have fresh data, update local state
             if (
               profile.default_page_id !== localDefaultPageId ||
               profile.default_page_type !== localDefaultPageType
             ) {
-              console.log(
-                "[DEBUG-TABS] Updating local default state with fresh data:",
-                {
-                  from: {
-                    id: localDefaultPageId,
-                    type: localDefaultPageType,
-                  },
-                  to: {
-                    id: profile.default_page_id,
-                    type: profile.default_page_type,
-                  },
-                }
-              );
               setLocalDefaultPageId(profile.default_page_id);
               setLocalDefaultPageType(profile.default_page_type);
             }
           } else {
-            console.log("[DEBUG-TABS] No profile found for user ID:", userId);
             return; // Can't continue without profile ID
           }
         } catch (error) {
-          console.error(
-            "[DEBUG-TABS] Error getting profile ID for subscriptions:",
-            error
-          );
           return;
         }
       }
 
       // Now set up the subscriptions with the valid profile ID
       const profileId = profileIdRef.current;
-      console.log(
-        "[DEBUG-TABS] Setting up subscriptions with profileId:",
-        profileId
-      );
 
       // Listen for page renames and modifications
       const pagesSubscription = supabase
@@ -238,21 +160,10 @@ export function ProfileTabs({
             filter: `profile_id=eq.${profileId}`,
           },
           (payload) => {
-            console.log("[DEBUG-TABS] Page update received:", {
-              eventType: payload.eventType,
-              old: payload.old,
-              new: payload.new,
-              table: payload.table,
-            });
-
             // Handle different types of events
             if (payload.eventType === "INSERT") {
               // New page added
               if (payload.new) {
-                console.log(
-                  "[DEBUG-TABS] Inserting new page to local state:",
-                  payload.new
-                );
                 setLocalPages((current) => [
                   ...current,
                   payload.new as CustomPage,
@@ -261,14 +172,6 @@ export function ProfileTabs({
             } else if (payload.eventType === "UPDATE") {
               // Page updated (e.g., name changed)
               if (payload.new && payload.old) {
-                console.log(
-                  "[DEBUG-TABS] Updating existing page in local state:",
-                  {
-                    oldName: payload.old.name,
-                    newName: payload.new.name,
-                    id: payload.new.id,
-                  }
-                );
                 setLocalPages((current) =>
                   current.map((page) =>
                     page.id === payload.new.id
@@ -280,10 +183,6 @@ export function ProfileTabs({
             } else if (payload.eventType === "DELETE") {
               // Page deleted
               if (payload.old) {
-                console.log(
-                  "[DEBUG-TABS] Removing deleted page from local state:",
-                  payload.old.id
-                );
                 setLocalPages((current) =>
                   current.filter((page) => page.id !== payload.old.id)
                 );
@@ -293,9 +192,6 @@ export function ProfileTabs({
                   localDefaultPageId === payload.old.id &&
                   localDefaultPageType === "custom"
                 ) {
-                  console.log(
-                    "[DEBUG-TABS] Default page was deleted, clearing default state"
-                  );
                   setLocalDefaultPageId(null);
                   setLocalDefaultPageType(null);
                 }
@@ -304,11 +200,6 @@ export function ProfileTabs({
           }
         )
         .subscribe();
-
-      console.log(
-        "[DEBUG-TABS] Pages subscription set up for profileId:",
-        profileId
-      );
 
       // Listen for default page changes
       const profileSubscription = supabase
@@ -322,29 +213,7 @@ export function ProfileTabs({
             filter: `id=eq.${profileId}`,
           },
           (payload) => {
-            console.log("[DEBUG-TABS] Profile default page update received:", {
-              old: {
-                default_page_id: payload.old?.default_page_id,
-                default_page_type: payload.old?.default_page_type,
-              },
-              new: {
-                default_page_id: payload.new?.default_page_id,
-                default_page_type: payload.new?.default_page_type,
-              },
-            });
-
             if (payload.new) {
-              console.log("[DEBUG-TABS] Setting local default page state:", {
-                from: {
-                  id: localDefaultPageId,
-                  type: localDefaultPageType,
-                },
-                to: {
-                  id: payload.new.default_page_id,
-                  type: payload.new.default_page_type,
-                },
-              });
-
               setLocalDefaultPageId(payload.new.default_page_id);
               setLocalDefaultPageType(payload.new.default_page_type);
             }
@@ -352,13 +221,7 @@ export function ProfileTabs({
         )
         .subscribe();
 
-      console.log(
-        "[DEBUG-TABS] Profile subscription set up for profileId:",
-        profileId
-      );
-
       return () => {
-        console.log("[DEBUG-TABS] Cleaning up subscriptions");
         supabase.removeChannel(pagesSubscription);
         supabase.removeChannel(profileSubscription);
       };
@@ -366,9 +229,6 @@ export function ProfileTabs({
 
     const cleanup = setupRealtimeSubscription();
     return () => {
-      console.log(
-        "[DEBUG-TABS] Component unmounting, cleaning up subscriptions"
-      );
       cleanup.then((cleanupFn) => cleanupFn && cleanupFn());
     };
   }, [userId, localDefaultPageId, localDefaultPageType]);
@@ -378,23 +238,12 @@ export function ProfileTabs({
     page: CustomPage,
     action: "rename" | "delete" | "default"
   ) => {
-    console.log("[DEBUG-TABS] Page menu action:", {
-      action,
-      pageId: page.id,
-      pageName: page.name,
-    });
-
     if (action === "rename") {
       setRenamingPage(page);
     } else if (action === "delete") {
       setDeletingPage(page);
     } else if (action === "default") {
       // Call the parent's onMakeDefault function
-      console.log("[DEBUG-TABS] Setting as default page:", {
-        id: page.id,
-        name: page.name,
-        currentDefaultId: localDefaultPageId,
-      });
       onMakeDefault(page.id);
     }
   };
@@ -403,14 +252,6 @@ export function ProfileTabs({
     if (a.id === localDefaultPageId) return -1;
     if (b.id === localDefaultPageId) return 1;
     return 0;
-  });
-
-  console.log("[DEBUG-TABS] Rendering tabs with:", {
-    standardTabsCount: tabs.length,
-    customPagesCount: localPages.length,
-    sortedCustomPagesCount: sortedCustomPages.length,
-    defaultPageId: localDefaultPageId,
-    defaultPageType: localDefaultPageType,
   });
 
   return (

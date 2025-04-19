@@ -33,7 +33,6 @@ export default function RCMDsPage() {
     const loadProfileData = async () => {
       if (!userId) return;
       try {
-        console.log("[RCMDs] Loading profile for user:", userId);
         await fetchProfile(userId);
       } catch (error) {
         console.error("[RCMDs] Error loading profile:", error);
@@ -46,13 +45,6 @@ export default function RCMDsPage() {
   // Extract profile data when profile changes
   useEffect(() => {
     if (profile) {
-      console.log("[RCMDs] Profile data updated:", {
-        id: profile.id,
-        handle: profile.handle,
-        defaultPageType: profile.default_page_type,
-        isRCMDsDefault: profile.default_page_type === "rcmd",
-      });
-
       setProfileId(profile.id);
       setUserHandle(profile.handle);
     }
@@ -136,7 +128,6 @@ export default function RCMDsPage() {
   };
 
   const handleConfigUpdated = () => {
-    console.log("[RCMDs] Config updated, refreshing profile");
     // Refresh profile data to get updated default page settings
     if (userId) {
       fetchProfile(userId);
@@ -146,7 +137,7 @@ export default function RCMDsPage() {
   return (
     <div className="max-w-screen-xl mx-auto relative">
       <div className="flex justify-between items-center border-b pb-4 mb-4">
-        <h1 className="text-2xl font-bold">Recommendations</h1>
+        <h1 className="text-2xl font-bold">RCMDs</h1>
         <div className="flex space-x-2">
           <Button
             variant="outline"

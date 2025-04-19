@@ -62,7 +62,6 @@ export const useProfileStore = create<ProfileState>()(
 
       fetchProfile: async (userId: string) => {
         try {
-          console.log("[PROFILE-STORE] Fetching profile for user:", userId);
           set({ isLoading: true, error: null });
 
           const { data: profile, error: profileError } = await supabase
@@ -94,11 +93,6 @@ export const useProfileStore = create<ProfileState>()(
             set({ isLoading: false });
             return { needsOnboarding: true };
           }
-
-          console.log("[PROFILE-STORE] Profile loaded with default page:", {
-            type: profile.default_page_type,
-            id: profile.default_page_id,
-          });
 
           // Fetch social links
           const { data: socialLinks, error: socialLinksError } = await supabase
@@ -140,7 +134,6 @@ export const useProfileStore = create<ProfileState>()(
           }
 
           const profileId = profileData.id;
-          console.log("[PROFILE-STORE] Fetching pages for profile:", profileId);
 
           // Now fetch pages using the profile ID
           const { data: pages, error } = await supabase
@@ -151,12 +144,8 @@ export const useProfileStore = create<ProfileState>()(
 
           if (error) throw error;
 
-          // Debug pages data
-          console.log("[PROFILE-STORE] Fetched pages:", pages?.length || 0);
-
           set({ pages: pages || [] });
         } catch (error) {
-          console.error("[PROFILE-STORE] Error fetching pages:", error);
           set({
             error:
               error instanceof Error ? error.message : "Error fetching pages",
@@ -168,7 +157,6 @@ export const useProfileStore = create<ProfileState>()(
 
       updateProfile: async (updates: Partial<Profile>) => {
         try {
-          console.log("[PROFILE-STORE] Updating profile:", updates);
           set({ isLoading: true, error: null });
 
           const currentProfile = get().profile;
@@ -185,7 +173,6 @@ export const useProfileStore = create<ProfileState>()(
 
           if (error) throw error;
 
-          console.log("[PROFILE-STORE] Profile updated:", data);
           set({
             profile: data as Profile,
             isLoading: false,
@@ -206,11 +193,6 @@ export const useProfileStore = create<ProfileState>()(
         defaultPageId?: string
       ) => {
         try {
-          console.log("[PROFILE-STORE] Setting default page:", {
-            profileId,
-            defaultPageType,
-            defaultPageId,
-          });
           set({ isLoading: true, error: null });
 
           // Prepare update object
@@ -250,19 +232,12 @@ export const useProfileStore = create<ProfileState>()(
               default_page_type: defaultPageType,
               default_page_id: updates.default_page_id || null,
             };
-            console.log(
-              "[PROFILE-STORE] Updated profile state:",
-              updatedProfile
-            );
             set({
               profile: updatedProfile,
               isLoading: false,
               lastFetchTimestamp: Date.now(),
             });
           } else {
-            console.log(
-              "[PROFILE-STORE] Profile state not updated (IDs don't match)"
-            );
             set({ isLoading: false });
           }
 
@@ -270,7 +245,6 @@ export const useProfileStore = create<ProfileState>()(
           return true;
         } catch (error) {
           const message = (error as Error).message;
-          console.error("[PROFILE-STORE] Error setting default page:", message);
           set({ error: message, isLoading: false });
           toast.error("Failed to update default page");
           return false;
