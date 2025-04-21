@@ -57,7 +57,7 @@ export default function LinkModal() {
           const { data, error } = await supabase
             .from("profiles")
             .select("id")
-            .eq("user_id", user.id)
+            .eq("auth_user_id", user.id)
             .single();
 
           if (error) {

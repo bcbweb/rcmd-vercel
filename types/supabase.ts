@@ -677,6 +677,7 @@ export type Database = {
           like_count: number
           monetization_enabled: boolean
           owner_id: string
+          profile_id: string | null
           save_count: number
           share_count: number
           status: string
@@ -697,6 +698,7 @@ export type Database = {
           like_count?: number
           monetization_enabled?: boolean
           owner_id: string
+          profile_id?: string | null
           save_count?: number
           share_count?: number
           status?: string
@@ -717,6 +719,7 @@ export type Database = {
           like_count?: number
           monetization_enabled?: boolean
           owner_id?: string
+          profile_id?: string | null
           save_count?: number
           share_count?: number
           status?: string
@@ -733,6 +736,13 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "links_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1275,6 +1285,30 @@ export type Database = {
         Args: { page_id: string }
         Returns: undefined
       }
+      get_public_links_for_profile: {
+        Args: { profile_id_param: string }
+        Returns: {
+          click_count: number
+          created_at: string
+          creator_id: string | null
+          description: string | null
+          id: string
+          is_sponsored: boolean
+          like_count: number
+          monetization_enabled: boolean
+          owner_id: string
+          profile_id: string | null
+          save_count: number
+          share_count: number
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          url: string
+          view_count: number
+          visibility: string
+        }[]
+      }
       get_public_rcmds_for_profile: {
         Args: { profile_id_param: string }
         Returns: {
@@ -1354,16 +1388,28 @@ export type Database = {
           p_description: string
           p_type: string
           p_visibility: string
+          p_profile_id?: string
         }
         Returns: {
-          id: string
+          click_count: number
           created_at: string
-          title: string
-          url: string
-          description: string
-          type: string
-          visibility: string
+          creator_id: string | null
+          description: string | null
+          id: string
+          is_sponsored: boolean
+          like_count: number
+          monetization_enabled: boolean
           owner_id: string
+          profile_id: string | null
+          save_count: number
+          share_count: number
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          url: string
+          view_count: number
+          visibility: string
         }[]
       }
       insert_link_block: {

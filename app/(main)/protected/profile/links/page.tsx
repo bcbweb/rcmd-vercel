@@ -1,6 +1,6 @@
 "use client";
 
-import { LinkBlocks } from "@/components/features/links";
+import { LinkBlocks, AddLinkButton } from "@/components/features/links";
 import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLinkStore } from "@/stores/link-store";
@@ -179,7 +179,7 @@ export default function LinksPage() {
       </div>
 
       <div className="flex gap-4 mb-4">
-        <Button className="flex items-center gap-1"><span>+</span> Add Link</Button>
+        <AddLinkButton />
       </div>
 
       <LinkBlocks
