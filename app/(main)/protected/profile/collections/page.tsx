@@ -13,9 +13,10 @@ import {
 import type { Collection, CollectionBlockType } from "@/types";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Eye, Settings } from "lucide-react";
+import { Eye, Settings, Share2 } from "lucide-react";
 import Link from "next/link";
 import { PageConfigModal } from "@/components/features/profile/modals";
+import { ShareModal } from "@/components/common/modals";
 
 export default function CollectionsPage() {
   const [collectionBlocks, setCollectionBlocks] = useState<
@@ -23,6 +24,7 @@ export default function CollectionsPage() {
   >([]);
   const [isCollectionSaving, setIsCollectionSaving] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const userId = useAuthStore((state) => state.userId);
   const { collections, fetchCollections, deleteCollection, updateCollection } =
@@ -99,47 +101,33 @@ export default function CollectionsPage() {
     });
   }, [userId, fetchCollections]);
 
-  const handleDeleteCollection = useCallback(
-    async (id: string) => {
-      toast("Are you sure you want to delete this collection?", {
-        duration: Infinity,
-        action: {
-          label: "Delete",
-          onClick: async () => {
-            try {
-              setIsCollectionSaving(true);
-              await deleteCollection(id);
-              await fetchCollections();
-              toast.success("Collection deleted successfully");
-            } catch (error) {
-              toast.error(
-                error instanceof Error
-                  ? error.message
-                  : "Failed to delete collection"
-              );
-            } finally {
-              setIsCollectionSaving(false);
-            }
-          },
-        },
-        cancel: {
-          label: "Cancel",
-          onClick: () => {
-            toast.dismiss();
-          },
-        },
-      });
-    },
-    [deleteCollection, fetchCollections]
-  );
+  // Handle collection deletion
+  const handleDeleteCollection = async (id: string) => {
+    try {
+      setIsCollectionSaving(true);
+      await deleteCollection(id);
 
+      // Remove the block locally
+      setCollectionBlocks((prev) => prev.filter((block) => block.id !== id));
+      toast.success("Collection deleted successfully");
+    } catch (error) {
+      console.error("Error deleting collection:", error);
+      toast.error("Failed to delete collection");
+    } finally {
+      setIsCollectionSaving(false);
+    }
+  };
+
+  // Handle collection save/update
   const handleSaveCollection = async (block: Partial<CollectionBlockType>) => {
-    if (!userId || !block.collection_id) return;
+    if (!block.collection_id) return;
+
     try {
       setIsCollectionSaving(true);
       await updateCollection(block.collection_id, {
         updated_at: new Date().toISOString(),
       });
+      toast.success("Collection updated successfully");
     } catch (error) {
       console.error("Error saving collection:", error);
       toast.error("Failed to save collection");
@@ -149,7 +137,6 @@ export default function CollectionsPage() {
   };
 
   const handleConfigUpdated = () => {
-    console.log("[Collections] Config updated, refreshing profile");
     // Refresh profile data to get updated default page settings
     if (userId) {
       fetchProfile(userId);
@@ -171,21 +158,32 @@ export default function CollectionsPage() {
             Configure
           </Button>
           {userHandle && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1 py-1 h-auto text-sm"
-              asChild
-            >
-              <Link
-                href={`/${userHandle}/collections`}
-                className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
-                target="_blank"
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 py-1 h-auto text-sm"
+                asChild
               >
-                <Eye className="w-3.5 h-3.5" />
-                Preview Page
-              </Link>
-            </Button>
+                <Link
+                  href={`/${userHandle}/collections`}
+                  className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
+                  target="_blank"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Preview Page
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 py-1 h-auto text-sm"
+                onClick={() => setIsShareModalOpen(true)}
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                Share
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -216,6 +214,15 @@ export default function CollectionsPage() {
         profileId={profileId}
         onUpdate={handleConfigUpdated}
       />
+
+      {/* Share modal */}
+      {isShareModalOpen && userHandle && (
+        <ShareModal
+          handle={userHandle}
+          path="collections"
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

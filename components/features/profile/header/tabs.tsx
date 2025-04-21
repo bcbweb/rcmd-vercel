@@ -54,38 +54,33 @@ export function ProfileTabs({
   onMakeDefault,
 }: ProfileTabsProps) {
   // Check if we're on a custom page path
-  const isOnCustomPagePath = currentPath.includes("/protected/profile/pages/");
+  // const isOnCustomPagePath = currentPath.includes("/protected/profile/pages/");
 
-  const getPageSlugFromPath = () => {
-    if (isOnCustomPagePath) {
-      const parts = currentPath.split("/");
-      return parts[parts.length - 1];
-    }
-    return null;
-  };
-
-  // Get the slug from the path if we're on a custom page
-  const currentPageSlug = getPageSlugFromPath();
+  // const getPageSlugFromPath = () => {
+  //   if (isOnCustomPagePath) {
+  //     const parts = currentPath.split("/");
+  //     return parts[parts.length - 1];
+  //   }
+  //   return null;
+  // };
 
   // Find which tab should be active based on the current path
-  const getActiveTabKey = () => {
-    if (isOnCustomPagePath) return "custom";
+  // const getActiveTabKey = () => {
+  //   if (isOnCustomPagePath) return "custom";
 
-    for (const tab of tabs) {
-      if (currentPath === tab.href) {
-        return tab.key;
-      }
-    }
+  //   for (const tab of tabs) {
+  //     if (currentPath === tab.href) {
+  //       return tab.key;
+  //     }
+  //   }
 
-    // Default tab handling
-    if (defaultPageType && defaultPageId) {
-      return defaultPageType;
-    }
+  //   // Default tab handling
+  //   if (defaultPageType && defaultPageId) {
+  //     return defaultPageType;
+  //   }
 
-    return tabs[0]?.key;
-  };
-
-  const activeTabKey = getActiveTabKey();
+  //   return tabs[0]?.key;
+  // };
 
   const [renamingPage, setRenamingPage] = useState<CustomPage | null>(null);
   const [deletingPage, setDeletingPage] = useState<CustomPage | null>(null);
@@ -141,6 +136,7 @@ export function ProfileTabs({
             return; // Can't continue without profile ID
           }
         } catch (error) {
+          console.error("Error fetching profile ID:", error);
           return;
         }
       }

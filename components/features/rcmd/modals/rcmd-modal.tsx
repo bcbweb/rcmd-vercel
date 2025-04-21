@@ -12,7 +12,7 @@ import Script from "next/script";
 import { RCMDType, RCMDVisibility } from "@/types";
 import { toast } from "sonner";
 import { imageLoader } from "@/utils/image";
-import MetadataPreviewImage from "@/components/common/MetadataPreviewImage";
+import { MetadataPreviewImage } from "@/components/common/MetadataPreviewImage";
 
 // Fix TypeScript declarations for Google Maps
 declare global {

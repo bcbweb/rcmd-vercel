@@ -1,7 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { getMetadataBase } from "@/utils/metadata";
 
 export const metadata: Metadata = {
+  metadataBase: getMetadataBase(),
   title: "RCMD for Businesses",
   description:
     "Zero-risk marketing for businesses to connect with authentic content creators and grow their customer base.",

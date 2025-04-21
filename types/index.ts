@@ -1,4 +1,5 @@
 import type { Database } from "./supabase";
+import type { Tables } from "./supabase";
 
 type Tables = Database["public"]["Tables"];
 
@@ -76,3 +77,16 @@ export enum BusinessStatus {
 
 export type RCMDType = Database["public"]["Enums"]["rcmd_type"];
 export type RCMDVisibility = Database["public"]["Enums"]["rcmd_visibility"];
+
+// Augmented types with additional properties
+export interface RCMDEntity extends RCMD {
+  profile_id?: string;
+}
+
+export interface LinkEntity extends Link {
+  profile_id?: string;
+}
+
+export interface CollectionEntity extends Collection {
+  profile_id?: string;
+}

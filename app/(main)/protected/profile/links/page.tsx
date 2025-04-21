@@ -1,7 +1,6 @@
 "use client";
 
 import { LinkBlocks } from "@/components/features/links";
-import { AddLinkButton } from "@/components/features/links";
 import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLinkStore } from "@/stores/link-store";
@@ -10,14 +9,16 @@ import type { Link, LinkBlockType } from "@/types";
 import { useModalStore } from "@/stores/modal-store";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Eye, Settings } from "lucide-react";
+import { Eye, Settings, Share2 } from "lucide-react";
 import NextLink from "next/link";
 import { PageConfigModal } from "@/components/features/profile/modals";
+import { ShareModal } from "@/components/common/modals";
 
 export default function LinksPage() {
   const [linkBlocks, setLinkBlocks] = useState<LinkBlockType[]>([]);
   const [isLinksSaving, setIsLinksSaving] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const userId = useAuthStore((state) => state.userId);
   const { links, fetchLinks, deleteLink, updateLink } = useLinkStore();
@@ -90,45 +91,33 @@ export default function LinksPage() {
     });
   }, [userId, fetchLinks]);
 
-  const handleDeleteLink = useCallback(
-    async (id: string) => {
-      toast("Are you sure you want to delete this link?", {
-        duration: Infinity,
-        action: {
-          label: "Delete",
-          onClick: async () => {
-            try {
-              setIsLinksSaving(true);
-              await deleteLink(id);
-              await fetchLinks();
-              toast.success("Link deleted successfully");
-            } catch (error) {
-              toast.error(
-                error instanceof Error ? error.message : "Failed to delete link"
-              );
-            } finally {
-              setIsLinksSaving(false);
-            }
-          },
-        },
-        cancel: {
-          label: "Cancel",
-          onClick: () => {
-            toast.dismiss();
-          },
-        },
-      });
-    },
-    [deleteLink, fetchLinks]
-  );
+  // Handle link deletion
+  const handleDeleteLink = async (id: string) => {
+    try {
+      setIsLinksSaving(true);
+      await deleteLink(id);
 
+      // Remove the block locally
+      setLinkBlocks((prev) => prev.filter((block) => block.id !== id));
+      toast.success("Link deleted successfully");
+    } catch (error) {
+      console.error("Error deleting link:", error);
+      toast.error("Failed to delete link");
+    } finally {
+      setIsLinksSaving(false);
+    }
+  };
+
+  // Handle link save/update
   const handleSaveLink = async (block: Partial<LinkBlockType>) => {
-    if (!userId || !block.link_id) return;
+    if (!block.link_id) return;
+
     try {
       setIsLinksSaving(true);
       await updateLink(block.link_id, {
         updated_at: new Date().toISOString(),
       });
+      toast.success("Link updated successfully");
     } catch (error) {
       console.error("Error saving link:", error);
       toast.error("Failed to save link");
@@ -138,7 +127,6 @@ export default function LinksPage() {
   };
 
   const handleConfigUpdated = () => {
-    console.log("[Links] Config updated, refreshing profile");
     // Refresh profile data to get updated default page settings
     if (userId) {
       fetchProfile(userId);
@@ -160,27 +148,38 @@ export default function LinksPage() {
             Configure
           </Button>
           {userHandle && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1 py-1 h-auto text-sm"
-              asChild
-            >
-              <NextLink
-                href={`/${userHandle}/links`}
-                className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
-                target="_blank"
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 py-1 h-auto text-sm"
+                asChild
               >
-                <Eye className="w-3.5 h-3.5" />
-                Preview Page
-              </NextLink>
-            </Button>
+                <NextLink
+                  href={`/${userHandle}/links`}
+                  className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
+                  target="_blank"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Preview Page
+                </NextLink>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 py-1 h-auto text-sm"
+                onClick={() => setIsShareModalOpen(true)}
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                Share
+              </Button>
+            </>
           )}
         </div>
       </div>
 
       <div className="flex gap-4 mb-4">
-        <AddLinkButton />
+        <Button className="flex items-center gap-1"><span>+</span> Add Link</Button>
       </div>
 
       <LinkBlocks
@@ -205,6 +204,15 @@ export default function LinksPage() {
         profileId={profileId}
         onUpdate={handleConfigUpdated}
       />
+
+      {/* Share modal */}
+      {isShareModalOpen && userHandle && (
+        <ShareModal
+          handle={userHandle}
+          path="links"
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

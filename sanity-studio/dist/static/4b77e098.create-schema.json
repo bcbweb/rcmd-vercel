@@ -1,0 +1,1097 @@
+[
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "description": "Title for the homepage (for internal use)",
+        "name": "title",
+        "type": "string",
+        "title": "Page Title"
+      },
+      {
+        "initialValue": false,
+        "description": "Show or hide the footer on the homepage. Defaults to hidden if not specified.",
+        "name": "showFooter",
+        "type": "boolean"
+      },
+      {
+        "fields": [
+          {
+            "name": "heading",
+            "type": "string"
+          },
+          {
+            "name": "subheading",
+            "type": "text"
+          },
+          {
+            "options": {
+              "hotspot": true
+            },
+            "name": "backgroundImage",
+            "type": "image"
+          },
+          {
+            "fields": [
+              {
+                "name": "text",
+                "type": "string",
+                "title": "Button Text"
+              },
+              {
+                "name": "link",
+                "type": "string",
+                "title": "Button Link"
+              }
+            ],
+            "name": "cta",
+            "type": "object",
+            "title": "Call to Action"
+          }
+        ],
+        "name": "hero",
+        "type": "object",
+        "title": "Hero Section"
+      },
+      {
+        "of": [
+          {
+            "fields": [
+              {
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "description": "Unique identifier for this section (e.g., 'trending-rcmds', 'staff-picks')",
+                "name": "sectionId",
+                "type": "string",
+                "title": "Section ID"
+              },
+              {
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "name": "title",
+                "type": "string",
+                "title": "Section Title"
+              },
+              {
+                "name": "description",
+                "type": "text",
+                "title": "Section Description"
+              },
+              {
+                "options": {
+                  "list": [
+                    {
+                      "title": "Featured Links",
+                      "value": "links"
+                    },
+                    {
+                      "title": "Custom Content",
+                      "value": "custom"
+                    }
+                  ]
+                },
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "valid",
+                        "constraint": [
+                          "links",
+                          "custom"
+                        ]
+                      },
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "name": "contentType",
+                "type": "string"
+              },
+              {
+                "options": {
+                  "list": [
+                    {
+                      "title": "Grid",
+                      "value": "grid"
+                    },
+                    {
+                      "title": "Carousel",
+                      "value": "carousel"
+                    },
+                    {
+                      "title": "Featured",
+                      "value": "featured"
+                    },
+                    {
+                      "title": "List",
+                      "value": "list"
+                    }
+                  ]
+                },
+                "initialValue": "carousel",
+                "name": "layout",
+                "type": "string",
+                "title": "Layout Style"
+              },
+              {
+                "initialValue": 3,
+                "options": {
+                  "list": [
+                    {
+                      "title": "1",
+                      "value": 1
+                    },
+                    {
+                      "title": "2",
+                      "value": 2
+                    },
+                    {
+                      "title": "3",
+                      "value": 3
+                    },
+                    {
+                      "title": "4",
+                      "value": 4
+                    }
+                  ]
+                },
+                "hidden": "conditional",
+                "name": "cardsPerView",
+                "type": "number",
+                "title": "Cards Per View (for carousel)"
+              },
+              {
+                "initialValue": 10,
+                "name": "limit",
+                "type": "number",
+                "title": "Number of Items to Show"
+              },
+              {
+                "description": "For custom curated sections, select specific items",
+                "of": [
+                  {
+                    "fields": [
+                      {
+                        "validation": [
+                          {
+                            "rules": [
+                              {
+                                "flag": "presence",
+                                "constraint": "required"
+                              }
+                            ],
+                            "level": "error"
+                          }
+                        ],
+                        "name": "title",
+                        "type": "string"
+                      },
+                      {
+                        "name": "description",
+                        "type": "text"
+                      },
+                      {
+                        "options": {
+                          "hotspot": true
+                        },
+                        "name": "image",
+                        "type": "image"
+                      },
+                      {
+                        "validation": [
+                          {
+                            "rules": [
+                              {
+                                "flag": "uri",
+                                "constraint": {
+                                  "options": {
+                                    "scheme": [
+                                      "/^http$/",
+                                      "/^https$/"
+                                    ],
+                                    "allowRelative": false,
+                                    "relativeOnly": false,
+                                    "allowCredentials": false
+                                  }
+                                }
+                              }
+                            ],
+                            "level": "error"
+                          }
+                        ],
+                        "name": "link",
+                        "type": "url"
+                      }
+                    ],
+                    "type": "object",
+                    "name": "customItem"
+                  }
+                ],
+                "hidden": "conditional",
+                "name": "featuredItems",
+                "type": "array"
+              },
+              {
+                "description": "CSS color value (e.g., #f3f4f6)",
+                "name": "backgroundColor",
+                "type": "string"
+              },
+              {
+                "initialValue": true,
+                "name": "showMoreLink",
+                "type": "boolean",
+                "title": "Show 'See More' Link"
+              },
+              {
+                "description": "URL for the 'See More' link",
+                "hidden": "conditional",
+                "name": "moreLink",
+                "type": "string",
+                "title": "'See More' Link"
+              },
+              {
+                "initialValue": 10,
+                "description": "Order of appearance on the homepage (lower = earlier)",
+                "name": "priority",
+                "type": "number",
+                "title": "Display Priority"
+              }
+            ],
+            "type": "object",
+            "title": "Content Section"
+          }
+        ],
+        "name": "featuredSections",
+        "type": "array",
+        "title": "Featured Content Sections"
+      },
+      {
+        "fields": [
+          {
+            "name": "metaTitle",
+            "type": "string"
+          },
+          {
+            "name": "metaDescription",
+            "type": "text"
+          },
+          {
+            "name": "shareImage",
+            "type": "image",
+            "title": "Social Sharing Image"
+          }
+        ],
+        "name": "seo",
+        "type": "object",
+        "title": "SEO Settings"
+      }
+    ],
+    "name": "homepage",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "title",
+        "type": "string",
+        "title": "Page Title"
+      },
+      {
+        "options": {
+          "source": "title",
+          "maxLength": 96
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "custom"
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "slug",
+        "type": "slug"
+      },
+      {
+        "initialValue": false,
+        "description": "Show or hide the footer on this page. Defaults to hidden if not specified.",
+        "name": "showFooter",
+        "type": "boolean"
+      },
+      {
+        "of": [
+          {
+            "marks": {
+              "annotations": [
+                {
+                  "i18nTitleKey": "inputs.portable-text.annotation.link",
+                  "options": {
+                    "modal": {
+                      "type": "popover"
+                    }
+                  },
+                  "fields": [
+                    {
+                      "validation": [
+                        {
+                          "rules": [
+                            {
+                              "flag": "uri",
+                              "constraint": {
+                                "options": {
+                                  "scheme": [
+                                    "/^http$/",
+                                    "/^https$/",
+                                    "/^tel$/",
+                                    "/^mailto$/"
+                                  ],
+                                  "allowRelative": true,
+                                  "relativeOnly": false,
+                                  "allowCredentials": false
+                                }
+                              }
+                            }
+                          ],
+                          "level": "error"
+                        }
+                      ],
+                      "description": "A valid web, email, phone, or relative link.",
+                      "name": "href",
+                      "type": "url",
+                      "title": "Link"
+                    }
+                  ],
+                  "name": "link",
+                  "type": "object"
+                }
+              ],
+              "decorators": [
+                {
+                  "value": "strong",
+                  "title": "Strong"
+                },
+                {
+                  "value": "em",
+                  "title": "Italic"
+                },
+                {
+                  "value": "code",
+                  "title": "Code"
+                },
+                {
+                  "value": "underline",
+                  "title": "Underline"
+                },
+                {
+                  "value": "strike-through",
+                  "title": "Strike"
+                }
+              ]
+            },
+            "lists": [
+              {
+                "value": "bullet",
+                "title": "Bulleted list"
+              },
+              {
+                "value": "number",
+                "title": "Numbered list"
+              }
+            ],
+            "styles": [
+              {
+                "value": "normal",
+                "title": "Normal"
+              },
+              {
+                "value": "h1",
+                "title": "Heading 1"
+              },
+              {
+                "value": "h2",
+                "title": "Heading 2"
+              },
+              {
+                "value": "h3",
+                "title": "Heading 3"
+              },
+              {
+                "value": "h4",
+                "title": "Heading 4"
+              },
+              {
+                "value": "h5",
+                "title": "Heading 5"
+              },
+              {
+                "value": "h6",
+                "title": "Heading 6"
+              },
+              {
+                "value": "blockquote",
+                "title": "Quote"
+              }
+            ],
+            "of": [],
+            "type": "block"
+          },
+          {
+            "options": {
+              "hotspot": true
+            },
+            "fields": [
+              {
+                "description": "A description of the image for screen readers and SEO",
+                "name": "alt",
+                "type": "string",
+                "title": "Alternative Text"
+              },
+              {
+                "description": "A caption to display with the image",
+                "name": "caption",
+                "type": "string"
+              }
+            ],
+            "type": "image"
+          }
+        ],
+        "name": "content",
+        "type": "array",
+        "title": "Page Content"
+      },
+      {
+        "fields": [
+          {
+            "name": "metaTitle",
+            "type": "string"
+          },
+          {
+            "name": "metaDescription",
+            "type": "text"
+          },
+          {
+            "name": "shareImage",
+            "type": "image",
+            "title": "Social Sharing Image"
+          }
+        ],
+        "name": "seo",
+        "type": "object",
+        "title": "SEO Settings"
+      }
+    ],
+    "name": "page",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "title",
+        "type": "string",
+        "title": "Page Title"
+      },
+      {
+        "options": {
+          "source": "title",
+          "maxLength": 96
+        },
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "custom"
+              },
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "name": "slug",
+        "type": "slug"
+      },
+      {
+        "description": "Meta description for SEO and social sharing",
+        "name": "description",
+        "type": "text"
+      },
+      {
+        "initialValue": true,
+        "description": "Show or hide the footer on this page.",
+        "name": "showFooter",
+        "type": "boolean"
+      },
+      {
+        "description": "Main headline for the page",
+        "name": "headline",
+        "type": "string"
+      },
+      {
+        "description": "Supporting text below the headline",
+        "name": "tagline",
+        "type": "string"
+      },
+      {
+        "description": "Short slogan or catchphrase",
+        "name": "slogan",
+        "type": "string"
+      },
+      {
+        "of": [
+          {
+            "fields": [
+              {
+                "name": "emoji",
+                "type": "string"
+              },
+              {
+                "name": "title",
+                "type": "string"
+              },
+              {
+                "name": "description",
+                "type": "text"
+              }
+            ],
+            "type": "object"
+          }
+        ],
+        "name": "featuresList",
+        "type": "array"
+      },
+      {
+        "description": "Sections of FAQs for pages like Help",
+        "of": [
+          {
+            "fields": [
+              {
+                "name": "title",
+                "type": "string",
+                "title": "Section Title"
+              },
+              {
+                "of": [
+                  {
+                    "fields": [
+                      {
+                        "name": "question",
+                        "type": "string"
+                      },
+                      {
+                        "name": "answer",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "object"
+                  }
+                ],
+                "name": "faqs",
+                "type": "array",
+                "title": "FAQs"
+              }
+            ],
+            "type": "object"
+          }
+        ],
+        "name": "faqSections",
+        "type": "array",
+        "title": "FAQ Sections"
+      },
+      {
+        "description": "Section for contacting support or getting help",
+        "fields": [
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "content",
+            "type": "text"
+          },
+          {
+            "name": "ctaText",
+            "type": "string",
+            "title": "CTA Text"
+          },
+          {
+            "name": "ctaLink",
+            "type": "string",
+            "title": "CTA Link"
+          }
+        ],
+        "name": "contactSection",
+        "type": "object"
+      },
+      {
+        "fields": [
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "of": [
+              {
+                "fields": [
+                  {
+                    "name": "emoji",
+                    "type": "string"
+                  },
+                  {
+                    "name": "title",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "text"
+                  }
+                ],
+                "type": "object"
+              }
+            ],
+            "name": "useCases",
+            "type": "array"
+          }
+        ],
+        "name": "useCaseSection",
+        "type": "object"
+      },
+      {
+        "fields": [
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "content",
+            "type": "text"
+          },
+          {
+            "of": [
+              {
+                "fields": [
+                  {
+                    "name": "emoji",
+                    "type": "string"
+                  },
+                  {
+                    "name": "title",
+                    "type": "string"
+                  }
+                ],
+                "type": "object"
+              }
+            ],
+            "name": "steps",
+            "type": "array"
+          }
+        ],
+        "name": "infoSection",
+        "type": "object"
+      },
+      {
+        "fields": [
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "of": [
+              {
+                "fields": [
+                  {
+                    "name": "emoji",
+                    "type": "string"
+                  },
+                  {
+                    "name": "title",
+                    "type": "string"
+                  },
+                  {
+                    "name": "description",
+                    "type": "text"
+                  }
+                ],
+                "type": "object"
+              }
+            ],
+            "name": "steps",
+            "type": "array"
+          }
+        ],
+        "name": "howItWorksSection",
+        "type": "object"
+      },
+      {
+        "fields": [
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "of": [
+              {
+                "fields": [
+                  {
+                    "name": "emoji",
+                    "type": "string"
+                  },
+                  {
+                    "name": "text",
+                    "type": "text"
+                  }
+                ],
+                "type": "object"
+              }
+            ],
+            "name": "steps",
+            "type": "array",
+            "title": "Story Steps"
+          }
+        ],
+        "name": "successStory",
+        "type": "object"
+      },
+      {
+        "description": "Text for the call-to-action button",
+        "name": "ctaText",
+        "type": "string",
+        "title": "Call to Action Text"
+      },
+      {
+        "description": "URL for the call-to-action button",
+        "name": "ctaLink",
+        "type": "string",
+        "title": "Call to Action Link"
+      }
+    ],
+    "name": "marketingPage",
+    "type": "document"
+  },
+  {
+    "fields": [
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "description": "Name of this navigation menu (e.g., 'Main Menu', 'Footer Menu')",
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "validation": [
+          {
+            "rules": [
+              {
+                "flag": "presence",
+                "constraint": "required"
+              }
+            ],
+            "level": "error"
+          }
+        ],
+        "description": "Unique identifier for this navigation menu (e.g., 'main', 'footer')",
+        "name": "identifier",
+        "type": "string"
+      },
+      {
+        "of": [
+          {
+            "fields": [
+              {
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "name": "text",
+                "type": "string"
+              },
+              {
+                "options": {
+                  "list": [
+                    {
+                      "title": "Internal Page",
+                      "value": "internal"
+                    },
+                    {
+                      "title": "External URL",
+                      "value": "external"
+                    }
+                  ]
+                },
+                "initialValue": "internal",
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "valid",
+                        "constraint": [
+                          "internal",
+                          "external"
+                        ]
+                      },
+                      {
+                        "flag": "presence",
+                        "constraint": "required"
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "name": "link",
+                "type": "string",
+                "title": "Link Type"
+              },
+              {
+                "to": [
+                  {
+                    "type": "page"
+                  }
+                ],
+                "hidden": "conditional",
+                "name": "internalLink",
+                "type": "reference",
+                "title": "Internal Page"
+              },
+              {
+                "validation": [
+                  {
+                    "rules": [
+                      {
+                        "flag": "uri",
+                        "constraint": {
+                          "options": {
+                            "scheme": [
+                              "/^http$/",
+                              "/^https$/"
+                            ],
+                            "allowRelative": false,
+                            "relativeOnly": false,
+                            "allowCredentials": false
+                          }
+                        }
+                      }
+                    ],
+                    "level": "error"
+                  }
+                ],
+                "hidden": "conditional",
+                "name": "externalUrl",
+                "type": "url",
+                "title": "External URL"
+              },
+              {
+                "initialValue": false,
+                "description": "Display this item as a button instead of a text link",
+                "name": "isButton",
+                "type": "boolean",
+                "title": "Show as Button"
+              },
+              {
+                "initialValue": true,
+                "description": "Whether this navigation item is currently active",
+                "name": "isActive",
+                "type": "boolean",
+                "title": "Active"
+              },
+              {
+                "description": "Add child navigation items (for dropdowns)",
+                "of": [
+                  {
+                    "fields": [
+                      {
+                        "validation": [
+                          {
+                            "rules": [
+                              {
+                                "flag": "presence",
+                                "constraint": "required"
+                              }
+                            ],
+                            "level": "error"
+                          }
+                        ],
+                        "name": "text",
+                        "type": "string"
+                      },
+                      {
+                        "options": {
+                          "list": [
+                            {
+                              "title": "Internal Page",
+                              "value": "internal"
+                            },
+                            {
+                              "title": "External URL",
+                              "value": "external"
+                            }
+                          ]
+                        },
+                        "initialValue": "internal",
+                        "validation": [
+                          {
+                            "rules": [
+                              {
+                                "flag": "valid",
+                                "constraint": [
+                                  "internal",
+                                  "external"
+                                ]
+                              },
+                              {
+                                "flag": "presence",
+                                "constraint": "required"
+                              }
+                            ],
+                            "level": "error"
+                          }
+                        ],
+                        "name": "link",
+                        "type": "string",
+                        "title": "Link Type"
+                      },
+                      {
+                        "to": [
+                          {
+                            "type": "page"
+                          }
+                        ],
+                        "hidden": "conditional",
+                        "name": "internalLink",
+                        "type": "reference",
+                        "title": "Internal Page"
+                      },
+                      {
+                        "validation": [
+                          {
+                            "rules": [
+                              {
+                                "flag": "uri",
+                                "constraint": {
+                                  "options": {
+                                    "scheme": [
+                                      "/^http$/",
+                                      "/^https$/"
+                                    ],
+                                    "allowRelative": false,
+                                    "relativeOnly": false,
+                                    "allowCredentials": false
+                                  }
+                                }
+                              }
+                            ],
+                            "level": "error"
+                          }
+                        ],
+                        "hidden": "conditional",
+                        "name": "externalUrl",
+                        "type": "url",
+                        "title": "External URL"
+                      },
+                      {
+                        "initialValue": true,
+                        "description": "Whether this navigation item is currently active",
+                        "name": "isActive",
+                        "type": "boolean",
+                        "title": "Active"
+                      }
+                    ],
+                    "type": "object",
+                    "name": "childNavItem"
+                  }
+                ],
+                "name": "children",
+                "type": "array",
+                "title": "Child Items"
+              }
+            ],
+            "type": "object",
+            "name": "navItem",
+            "title": "Navigation Item"
+          }
+        ],
+        "name": "items",
+        "type": "array",
+        "title": "Navigation Items"
+      }
+    ],
+    "name": "navigation",
+    "type": "document"
+  }
+]

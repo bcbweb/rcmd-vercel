@@ -3,7 +3,7 @@ import { useState } from "react";
 
 interface MetadataPreviewImageProps {
   src: string;
-  alt?: string;
+  alt: string;
   fallbackSrc?: string;
   width?: number;
   height?: number;
@@ -12,97 +12,84 @@ interface MetadataPreviewImageProps {
 }
 
 /**
- * A component for safely displaying external images in metadata previews
- * Handles errors and provides fallbacks
+ * A component for displaying metadata preview images that handles errors,
+ * proxying of external images when needed, and uses Next.js <Image> component
+ * for all image rendering with appropriate configuration.
  */
-export default function MetadataPreviewImage({
+export function MetadataPreviewImage({
   src,
-  alt = "Preview image",
-  fallbackSrc = "/images/default-preview.jpg",
-  width = 800,
-  height = 600,
-  className = "",
+  alt,
+  fallbackSrc,
+  width = 300,
+  height = 200,
+  className,
   fill = false,
-  ...props
 }: MetadataPreviewImageProps) {
   const [error, setError] = useState(false);
+  const [imageSrc, setImageSrc] = useState(src);
 
-  // Use proxy for images that might be problematic
-  const shouldProxyImage = (url: string): boolean => {
+  const shouldProxy = (url: string) => {
     if (!url) return false;
-
-    // Check if the URL is already from a known safe domain
-    // Only trust our own domains and services
-    const safeDomainsRegex = /(supabase\.co|vercel\.app|cdn\.sanity\.io)/i;
-    if (safeDomainsRegex.test(url)) return false;
-
-    // Internal URLs don't need proxying
-    if (url.startsWith("/")) return false;
-
-    // For external domains, proxy those with special characters
-    // or any that aren't explicitly allowed in Next.js config
-    return (
-      url.includes("*") ||
-      url.includes("@") ||
-      url.includes("+") ||
-      url.includes("%") ||
-      !url.match(/^https?:\/\/([^/]+)/)?.[1].includes(".")
-    );
+    try {
+      const parsedUrl = new URL(url);
+      // Skip proxying for our own domain or already proxied images
+      return (
+        !parsedUrl.hostname.includes("rcmd.app") &&
+        !parsedUrl.hostname.includes("supabase") &&
+        !parsedUrl.toString().includes("imagedelivery.net")
+      );
+    } catch {
+      return false;
+    }
   };
 
-  // Choose the right src
-  const getImageSrc = () => {
-    if (error || !src) return fallbackSrc;
-
-    if (shouldProxyImage(src)) {
-      return `/api/proxy-image?url=${encodeURIComponent(src)}`;
+  const handleError = () => {
+    if (fallbackSrc && !error) {
+      setError(true);
+      setImageSrc(fallbackSrc);
     }
+  };
 
+  const currentSrc = error && fallbackSrc ? fallbackSrc : imageSrc;
+
+  // Use proxy for external images
+  const finalSrc = shouldProxy(currentSrc)
+    ? `/api/proxy-image?url=${encodeURIComponent(currentSrc)}`
+    : currentSrc;
+
+  // Custom loader for external images
+  const customLoader = ({ src }: { src: string }) => {
     return src;
   };
 
-  const imageSrc = getImageSrc();
-
-  // Use regular img tag for certain cases to bypass Next.js image restrictions
-  const shouldUseImgTag = () => {
-    // If it's already a proxied or fallback image, use Next Image
-    if (imageSrc.startsWith("/api/") || imageSrc === fallbackSrc) return false;
-
-    // Internal URLs can use Next.js Image
-    if (imageSrc.startsWith("/")) return false;
-
-    // For external URLs, use regular img tag unless explicitly allowed in Next.js config
-    // This is the most reliable approach for arbitrary domains
-    return !imageSrc.match(/(supabase\.co|cdn\.sanity\.io)/i);
-  };
-
-  if (shouldUseImgTag()) {
+  // Use fill layout or fixed dimensions
+  if (fill) {
     return (
-      <div
-        className={`relative overflow-hidden h-full ${className}`}
-        style={{ aspectRatio: fill ? "auto" : `${width}/${height}` }}
-      >
-        <img
-          src={imageSrc}
+      <div className={`relative ${className || ""}`}>
+        <Image
+          src={finalSrc}
           alt={alt}
-          className={`${fill ? "absolute inset-0 w-full h-full" : "w-full h-full"} object-cover`}
-          onError={() => setError(true)}
+          className={className}
+          fill={true}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={handleError}
+          loader={customLoader}
+          unoptimized={shouldProxy(currentSrc)}
         />
       </div>
     );
   }
 
-  // Use Next.js Image for our own domains or proxied images
   return (
-    <div className={`relative overflow-hidden h-full ${className}`}>
-      <Image
-        src={imageSrc}
-        alt={alt}
-        {...(fill ? { fill: true } : { width: width, height: height })}
-        className="object-cover"
-        onError={() => setError(true)}
-        {...props}
-      />
-    </div>
+    <Image
+      src={finalSrc}
+      alt={alt}
+      width={width}
+      height={height}
+      className={className}
+      onError={handleError}
+      loader={customLoader}
+      unoptimized={shouldProxy(currentSrc)}
+    />
   );
 }

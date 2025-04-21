@@ -1,7 +1,7 @@
 "use client";
 
-import { create } from 'zustand';
-import { createClient } from '@/utils/supabase/client';
+import { create } from "zustand";
+import { createClient } from "@/utils/supabase/client";
 import type { Link, CollectionItem, Collection } from "@/types";
 
 interface LinkStore {
@@ -13,7 +13,8 @@ interface LinkStore {
     url: string,
     description: string,
     type: string,
-    visibility: string
+    visibility: string,
+    profile_id?: string
   ) => Promise<Link | null>;
   fetchLinks: (userId?: string) => Promise<void>;
   deleteLink: (id: string, skipConfirmation?: boolean) => Promise<void>;
@@ -30,31 +31,33 @@ export const useLinkStore = create<LinkStore>((set, get) => ({
     url: string,
     description: string,
     type: string,
-    visibility: string
+    visibility: string,
+    profile_id?: string
   ) => {
     const supabase = createClient();
     set({ isLoading: true, error: null });
 
     try {
-      const { data, error } = await supabase
-        .rpc('insert_link', {
-          p_title: title,
-          p_url: url,
-          p_description: description,
-          p_type: type,
-          p_visibility: visibility
-        });
+      const { data, error } = await supabase.rpc("insert_link", {
+        p_title: title,
+        p_url: url,
+        p_description: description,
+        p_type: type,
+        p_visibility: visibility,
+        p_profile_id: profile_id,
+      });
 
       if (error) throw error;
 
       set((state) => ({
         links: [data[0] as Link, ...state.links],
-        isLoading: false
+        isLoading: false,
       }));
 
       return data[0] as Link;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to insert link';
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to insert link";
       set({ error: errorMessage, isLoading: false });
       return null;
     }
@@ -66,17 +69,20 @@ export const useLinkStore = create<LinkStore>((set, get) => ({
 
     try {
       let query = supabase
-        .from('links')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from("links")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (userId) {
-        query = query.eq('owner_id', userId);
+        query = query.eq("owner_id", userId);
       } else {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
         if (userError) throw userError;
-        if (!user) throw new Error('No user found');
-        query = query.eq('owner_id', user.id);
+        if (!user) throw new Error("No user found");
+        query = query.eq("owner_id", user.id);
       }
 
       const { data, error } = await query;
@@ -85,7 +91,8 @@ export const useLinkStore = create<LinkStore>((set, get) => ({
 
       set({ links: data || [], isLoading: false });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch links';
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to fetch links";
       set({ error: errorMessage, isLoading: false });
     }
   },
@@ -96,20 +103,20 @@ export const useLinkStore = create<LinkStore>((set, get) => ({
 
     try {
       const { error: linkError } = await supabase
-        .from('links')
+        .from("links")
         .delete()
-        .eq('id', id);
+        .eq("id", id);
 
       if (linkError) throw linkError;
 
-      set(state => ({
-        links: state.links.filter(link => link.id !== id),
-        isLoading: false
+      set((state) => ({
+        links: state.links.filter((link) => link.id !== id),
+        isLoading: false,
       }));
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to delete link'
+        error: error instanceof Error ? error.message : "Failed to delete link",
       });
       throw error;
     }
@@ -130,28 +137,26 @@ export const useLinkStore = create<LinkStore>((set, get) => ({
       }));
 
       const { error } = await supabase
-        .from('links')
+        .from("links")
         .update({
           ...updates,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
+        .eq("id", id)
         .select();
 
       if (error) throw error;
 
       set({ isLoading: false });
-
     } catch (error) {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : 'Failed to update link';
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to update link";
 
       // Revert optimistic update on error
       const { data } = await supabase
-        .from('links')
-        .select('*')
-        .eq('id', id)
+        .from("links")
+        .select("*")
+        .eq("id", id)
         .single();
 
       if (data) {
@@ -159,15 +164,13 @@ export const useLinkStore = create<LinkStore>((set, get) => ({
           error: errorMessage,
           isLoading: false,
           links: state.links.map((link) =>
-            link.id === id
-              ? data as Link
-              : link
-          )
+            link.id === id ? (data as Link) : link
+          ),
         }));
       } else {
         set({
           error: errorMessage,
-          isLoading: false
+          isLoading: false,
         });
       }
 

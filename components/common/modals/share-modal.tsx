@@ -1,24 +1,31 @@
 "use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import { Link2, Check } from "lucide-react";
-import Twitter from '@/assets/icons/twitter.svg';
-import Facebook from '@/assets/icons/facebook.svg';
-import Linkedin from '@/assets/icons/linkedin.svg';
+import Twitter from "@/assets/icons/twitter.svg";
+import Facebook from "@/assets/icons/facebook.svg";
+import Linkedin from "@/assets/icons/linkedin.svg";
 import { toast } from "sonner";
 
 interface Props {
   onClose: () => void;
   handle: string;
+  path?: string; // Optional path parameter for sharing specific pages
 }
 
-export default function ShareModal({ onClose, handle }: Props) {
+export default function ShareModal({ onClose, handle, path }: Props) {
   const [copied, setCopied] = useState(false);
-  const shareUrl = `${window.location.origin}/${handle}`;
+  // If path is provided, use it, otherwise share the main profile
+  const shareUrl = `${window.location.origin}/${handle}${path ? `/${path}` : ""}`;
+
+  // Determine title and text based on whether sharing profile or specific page
+  const pageType = path
+    ? path.charAt(0).toUpperCase() + path.slice(1)
+    : "Profile";
 
   const shareData = {
-    title: `Check out ${handle}'s profile`,
-    text: `View ${handle}'s profile`,
+    title: `Check out ${handle}'s ${pageType}`,
+    text: `View ${handle}'s ${pageType} on RCMD`,
     url: shareUrl,
   };
 
@@ -41,33 +48,33 @@ export default function ShareModal({ onClose, handle }: Props) {
     };
 
     if (platform in urls) {
-      window.open(urls[platform as keyof typeof urls], '_blank');
+      window.open(urls[platform as keyof typeof urls], "_blank");
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
-        <h2 className="text-lg font-semibold mb-4">Share Profile</h2>
+        <h2 className="text-lg font-semibold mb-4">Share {pageType}</h2>
 
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
             <button
-              onClick={() => handleShare('twitter')}
+              onClick={() => handleShare("twitter")}
               className="flex items-center justify-center gap-2 p-2 border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Twitter className="w-5 h-5" />
               <span>Twitter</span>
             </button>
             <button
-              onClick={() => handleShare('facebook')}
+              onClick={() => handleShare("facebook")}
               className="flex items-center justify-center gap-2 p-2 border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Facebook className="w-5 h-5" />
               <span>Facebook</span>
             </button>
             <button
-              onClick={() => handleShare('linkedin')}
+              onClick={() => handleShare("linkedin")}
               className="flex items-center justify-center gap-2 p-2 border rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Linkedin className="w-5 h-5" />

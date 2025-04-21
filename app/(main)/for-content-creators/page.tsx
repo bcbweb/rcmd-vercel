@@ -1,7 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { getMetadataBase } from "@/utils/metadata";
 
 export const metadata: Metadata = {
+  metadataBase: getMetadataBase(),
   title: "RCMD for Content Creators",
   description:
     "Showcase your world, consolidate your links, promote brands, and earn revenue with RCMD.",

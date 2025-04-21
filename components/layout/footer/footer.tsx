@@ -28,7 +28,6 @@ export default function Footer() {
         { text: "Community", href: "/community" },
         { text: "Blog", href: "/blog" },
         { text: "Documentation", href: "/docs" },
-        { text: "Sanity Studio", href: "/sanity" },
       ],
     },
     {

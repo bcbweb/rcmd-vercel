@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { RCMD, RCMDBlockType } from "@/types";
 import Image from "next/image";
 import { MapPin, Link, Calendar } from "lucide-react";
@@ -22,12 +22,9 @@ export default function RCMDBlocks({
   onSave,
   isPublic = false,
 }: Props) {
-  const [rcmdBlocks, setRCMDBlocks] =
-    useState<RCMDBlockType[]>(initialRCMDBlocks);
-
-  useEffect(() => {
-    setRCMDBlocks(initialRCMDBlocks);
-  }, [initialRCMDBlocks]);
+  // Use state only for tracking changes made in the admin interface
+  // but don't update it every time initialRCMDBlocks changes
+  const [rcmdBlocks] = useState<RCMDBlockType[]>(initialRCMDBlocks);
 
   // For direct rendering of RCMDs in public pages
   const renderRCMD = (rcmd: RCMD) => {
@@ -64,7 +61,7 @@ export default function RCMDBlocks({
                 <MapPin className="h-3 w-3" />
                 <span className="truncate max-w-[150px]">
                   {typeof rcmd.location === "object" && rcmd.location !== null
-                    ? (rcmd.location as any).address ||
+                    ? (rcmd.location as { address?: string }).address ||
                       JSON.stringify(rcmd.location)
                     : String(rcmd.location)}
                 </span>

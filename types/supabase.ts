@@ -1143,7 +1143,6 @@ export type Database = {
           click_count: number
           commission_rate: number | null
           created_at: string | null
-          creator_id: string | null
           description: string | null
           featured_image: string | null
           id: string
@@ -1154,6 +1153,7 @@ export type Database = {
           monetization_enabled: boolean | null
           owner_id: string | null
           price_range: Json | null
+          profile_id: string | null
           save_count: number | null
           share_count: number
           sponsor_details: Json | null
@@ -1170,7 +1170,6 @@ export type Database = {
           click_count?: number
           commission_rate?: number | null
           created_at?: string | null
-          creator_id?: string | null
           description?: string | null
           featured_image?: string | null
           id?: string
@@ -1181,6 +1180,7 @@ export type Database = {
           monetization_enabled?: boolean | null
           owner_id?: string | null
           price_range?: Json | null
+          profile_id?: string | null
           save_count?: number | null
           share_count?: number
           sponsor_details?: Json | null
@@ -1197,7 +1197,6 @@ export type Database = {
           click_count?: number
           commission_rate?: number | null
           created_at?: string | null
-          creator_id?: string | null
           description?: string | null
           featured_image?: string | null
           id?: string
@@ -1208,6 +1207,7 @@ export type Database = {
           monetization_enabled?: boolean | null
           owner_id?: string | null
           price_range?: Json | null
+          profile_id?: string | null
           save_count?: number | null
           share_count?: number
           sponsor_details?: Json | null
@@ -1222,10 +1222,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "rcmds_creator_id_fkey"
-            columns: ["creator_id"]
+            foreignKeyName: "rcmds_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "creators"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1274,6 +1274,36 @@ export type Database = {
       delete_profile_page: {
         Args: { page_id: string }
         Returns: undefined
+      }
+      get_public_rcmds_for_profile: {
+        Args: { profile_id_param: string }
+        Returns: {
+          click_count: number
+          commission_rate: number | null
+          created_at: string | null
+          description: string | null
+          featured_image: string | null
+          id: string
+          is_sponsored: boolean | null
+          like_count: number
+          location: Json | null
+          metadata: Json | null
+          monetization_enabled: boolean | null
+          owner_id: string | null
+          price_range: Json | null
+          profile_id: string | null
+          save_count: number | null
+          share_count: number
+          sponsor_details: Json | null
+          status: Database["public"]["Enums"]["rcmd_status"] | null
+          tags: string[] | null
+          title: string
+          type: Database["public"]["Enums"]["rcmd_type"]
+          updated_at: string | null
+          url: string | null
+          view_count: number
+          visibility: Database["public"]["Enums"]["rcmd_visibility"] | null
+        }[]
       }
       insert_block_with_order: {
         Args: { p_profile_id: string; p_content: Json; p_type: string }
@@ -1385,6 +1415,17 @@ export type Database = {
               p_url?: string
               p_location?: Json
             }
+          | {
+              p_title: string
+              p_description: string
+              p_type: string
+              p_visibility: string
+              p_featured_image?: string
+              p_tags?: string[]
+              p_url?: string
+              p_location?: Json
+              p_profile_id?: string
+            }
         Returns: {
           id: string
           created_at: string
@@ -1407,6 +1448,46 @@ export type Database = {
           p_show_border?: boolean
         }
         Returns: Json
+      }
+      insert_rcmd_v2: {
+        Args: {
+          p_title: string
+          p_description: string
+          p_type: string
+          p_visibility: string
+          p_featured_image?: string
+          p_tags?: string[]
+          p_url?: string
+          p_location?: Json
+          p_profile_id?: string
+        }
+        Returns: {
+          click_count: number
+          commission_rate: number | null
+          created_at: string | null
+          description: string | null
+          featured_image: string | null
+          id: string
+          is_sponsored: boolean | null
+          like_count: number
+          location: Json | null
+          metadata: Json | null
+          monetization_enabled: boolean | null
+          owner_id: string | null
+          price_range: Json | null
+          profile_id: string | null
+          save_count: number | null
+          share_count: number
+          sponsor_details: Json | null
+          status: Database["public"]["Enums"]["rcmd_status"] | null
+          tags: string[] | null
+          title: string
+          type: Database["public"]["Enums"]["rcmd_type"]
+          updated_at: string | null
+          url: string | null
+          view_count: number
+          visibility: Database["public"]["Enums"]["rcmd_visibility"] | null
+        }[]
       }
       insert_text_block: {
         Args: {

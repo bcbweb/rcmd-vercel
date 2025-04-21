@@ -11,6 +11,14 @@ export default {
       validation: (Rule) => Rule.required(),
     },
     {
+      name: "showFooter",
+      title: "Show Footer",
+      type: "boolean",
+      description:
+        "Show or hide the footer on the homepage. Defaults to hidden if not specified.",
+      initialValue: false,
+    },
+    {
       name: "hero",
       title: "Hero Section",
       type: "object",
@@ -238,11 +246,12 @@ export default {
     select: {
       title: "title",
       sections: "featuredSections",
+      showFooter: "showFooter",
     },
-    prepare({ title, sections }) {
+    prepare({ title, sections, showFooter }) {
       return {
         title,
-        subtitle: `${sections?.length || 0} content section${sections?.length !== 1 ? "s" : ""}`,
+        subtitle: `${sections?.length || 0} content section${sections?.length !== 1 ? "s" : ""} ${showFooter ? "(with footer)" : "(no footer)"}`,
       };
     },
   },

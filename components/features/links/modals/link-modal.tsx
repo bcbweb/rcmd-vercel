@@ -6,6 +6,7 @@ import { useLinkStore } from "@/stores/link-store";
 import { Spinner } from "@/components/ui/spinner";
 import LinkInput from "@/components/ui/link-input";
 import { LinkMetadata } from "@/types";
+import { createClient } from "@/utils/supabase/client";
 
 export default function LinkModal() {
   const {
@@ -27,9 +28,61 @@ export default function LinkModal() {
   const [receivedMetadata, setReceivedMetadata] = useState<LinkMetadata | null>(
     null
   );
+  const [profileId, setProfileId] = useState<string | undefined>(undefined);
 
   // Create a ref for the URL input to focus it
   const urlInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch the current user's profile ID
+  useEffect(() => {
+    const fetchProfileId = async () => {
+      try {
+        // First check if we can get the profileId from localStorage
+        if (typeof window !== "undefined") {
+          const storedProfileId = localStorage.getItem("currentProfileId");
+          if (storedProfileId) {
+            console.log("Found profileId in localStorage:", storedProfileId);
+            setProfileId(storedProfileId);
+            return;
+          }
+        }
+
+        // If not in localStorage, fetch from the database
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user?.id) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+
+          if (error) {
+            console.error("Error fetching profile:", error);
+            return;
+          }
+
+          if (data?.id) {
+            console.log("Fetched profileId from database:", data.id);
+            setProfileId(data.id);
+            // Also store it for future use
+            if (typeof window !== "undefined") {
+              localStorage.setItem("currentProfileId", data.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error in fetchProfileId:", error);
+      }
+    };
+
+    if (isLinkModalOpen && !isLinkEditMode) {
+      fetchProfileId();
+    }
+  }, [isLinkModalOpen, isLinkEditMode]);
 
   // Populate form with existing Link data when in edit mode
   useEffect(() => {
@@ -39,6 +92,21 @@ export default function LinkModal() {
       setType(linkToEdit.type || "other");
       setVisibility(linkToEdit.visibility || "private");
       setUrl(linkToEdit.url || "");
+
+      // Try to get profile_id from linkToEdit
+      // Safely access profile_id using object accessor to avoid TypeScript errors
+      if (linkToEdit && typeof linkToEdit === "object") {
+        const profileIdValue = Object.prototype.hasOwnProperty.call(
+          linkToEdit,
+          "profile_id"
+        )
+          ? (linkToEdit as Record<string, unknown>)["profile_id"]
+          : undefined;
+
+        if (typeof profileIdValue === "string") {
+          setProfileId(profileIdValue);
+        }
+      }
     }
   }, [isLinkEditMode, linkToEdit, isLinkModalOpen]);
 
@@ -80,17 +148,31 @@ export default function LinkModal() {
     try {
       let result;
       if (isLinkEditMode && linkToEdit) {
-        // Update existing Link
-        result = await updateLink(linkToEdit.id, {
+        // Update existing Link with profile_id
+        const updates: Record<string, unknown> = {
           title,
           url,
           description,
           type,
           visibility,
-        });
+        };
+
+        // Only add profile_id if we have it
+        if (profileId) {
+          updates.profile_id = profileId;
+        }
+
+        result = await updateLink(linkToEdit.id, updates);
       } else {
         // Create new Link
-        result = await insertLink(title, url, description, type, visibility);
+        result = await insertLink(
+          title,
+          url,
+          description,
+          type,
+          visibility,
+          profileId
+        );
       }
 
       if (result) {

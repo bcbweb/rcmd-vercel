@@ -19,7 +19,7 @@ export default function CollectionModal() {
 
   const { insertCollection, updateCollection, isLoading } =
     useCollectionStore();
-  const { rcmds, fetchRCMDs } = useRCMDStore();
+  const { rcmds } = useRCMDStore();
 
   // Collection metadata
   const [name, setName] = useState("");

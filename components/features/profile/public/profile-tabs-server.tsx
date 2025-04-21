@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PublicProfileBlocks from "./profile-blocks";
 import type { Collection, ProfileBlockType, RCMD, Link } from "@/types";
 import NextLink from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 // We need to use type assertions to handle the direct entities
 

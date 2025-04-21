@@ -1,198 +1,175 @@
 import { createClient } from "@/utils/supabase/server";
-import { notFound } from "next/navigation";
-import Image from "next/image";
-import type { ProfileBlockType, ProfilePage, RCMD } from "@/types";
-import type { Database } from "@/types/supabase";
+import type { Metadata } from "next";
+import type { RCMD } from "@/types";
 import RCMDBlocks from "@/components/features/rcmd/rcmd-blocks";
 
 // Set revalidation period (reduced to 60 seconds for more frequent updates)
 export const revalidate = 60;
 
-type Params = { handle: string };
-
-interface Profile {
-  id: string;
-  first_name: string;
-  last_name: string;
-  bio?: string;
-  profile_picture_url?: string;
-  cover_image?: string;
-  handle?: string;
-  location?: string;
-  interests?: string[];
-  tags?: string[];
-  profile_blocks?: ProfileBlockType[];
-  default_page_type?: string;
-  default_page_id?: string;
+export async function generateMetadata({
+  params,
+}: {
+  params: { handle: string };
+}): Promise<Metadata> {
+  return {
+    title: `${params.handle}'s Recommendations | RCMD`,
+    description: `Check out all the recommendations from ${params.handle} on RCMD. Food, drinks, products, and more.`,
+  };
 }
 
+type Params = { handle: string };
+
 export default async function ProfileRCMDsPage({ params }: { params: Params }) {
-  // Await the params destructuring to ensure it's ready
-  const { handle } = await Promise.resolve(params);
   const supabase = await createClient();
 
-  console.log(`[RCMD Trace] Starting fetch for handle: ${handle}`);
+  console.log("Fetching data for handle:", params.handle);
 
-  // Fetch the profile data with default page information
-  const { data: profile } = (await supabase
+  // Get profile by handle
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select(
-      `
-      id,
-      first_name,
-      last_name,
-      bio,
-      profile_picture_url,
-      cover_image,
-      handle,
-      location,
-      interests,
-      tags,
-      default_page_type,
-      default_page_id
-    `
-    )
-    .eq("handle", handle)
-    .single()) as { data: Profile | null; error: unknown };
-
-  if (!profile) return notFound();
-
-  // Find all pages
-  const { data: pages, error: pagesError } = await supabase
-    .from("profile_pages")
-    .select("id, name, slug")
-    .eq("profile_id", profile.id)
-    .order("created_at", { ascending: true });
-
-  if (pagesError) {
-    console.error("Error fetching profile pages:", pagesError);
-  }
-
-  // Get the default page
-  const defaultPage = pages?.length ? pages[0] : null;
-
-  console.log(`[RCMD Trace] Before fetching RCMDs for owner_id: ${profile.id}`);
-
-  // Directly fetch RCMD entities for the RCMDs page
-  const { data: rcmds, error: rcmdsError } = await supabase
-    .from("rcmds")
     .select("*")
-    .eq("profile_id", profile.id)
-    .order("created_at", { ascending: true });
+    .eq("handle", params.handle)
+    .single();
 
-  if (rcmdsError) {
-    console.error("Server Error fetching RCMDs:", rcmdsError);
+  if (profileError) {
+    console.error(
+      "Error fetching profile:",
+      profileError.message,
+      profileError.code,
+      profileError.details
+    );
+    return <div className="container">Profile not found</div>;
   }
 
-  console.log(`[RCMD Trace] RCMDs fetched: ${rcmds?.length || 0}`);
-  if (rcmds && rcmds.length > 0) {
+  if (!profile) {
+    console.error("No profile found for handle:", params.handle);
+    return <div className="container">Profile not found</div>;
+  }
+
+  console.log(
+    "Found profile with ID:",
+    profile.id,
+    "Name:",
+    profile.first_name,
+    profile.last_name
+  );
+
+  // Debug: Check if the SQL function exists
+  const { data: functionExists, error: functionError } = await supabase.rpc(
+    "does_function_exist",
+    { function_name: "get_public_rcmds_for_profile" }
+  );
+
+  console.log(
+    "SQL function exists check:",
+    functionExists ? "✅ Function exists" : "❌ Function missing",
+    functionError?.message || ""
+  );
+
+  // Debug: Direct query to check for any RCMDs with this profile_id (will fail if RLS blocks)
+  const { data: directRcmds, error: directError } = await supabase
+    .from("rcmds")
+    .select("id, title, visibility")
+    .eq("profile_id", profile.id)
+    .limit(5);
+
+  console.log(
+    "Direct profile_id query results:",
+    directRcmds?.length || 0,
+    "Error:",
+    directError ? `❌ ${directError.message} (${directError.code})` : "None"
+  );
+
+  // Debug: Direct query to check for any RCMDs with this owner_id (legacy - will fail if RLS blocks)
+  const { data: legacyRcmds, error: legacyError } = await supabase
+    .from("rcmds")
+    .select("id, title, visibility")
+    .eq("owner_id", profile.id)
+    .limit(5);
+
+  console.log(
+    "Legacy owner_id query results:",
+    legacyRcmds?.length || 0,
+    "Error:",
+    legacyError ? `❌ ${legacyError.message} (${legacyError.code})` : "None"
+  );
+
+  // Use our custom SQL function to fetch RCMDs bypassing RLS
+  console.log(
+    "Calling SQL function get_public_rcmds_for_profile with profile_id:",
+    profile.id
+  );
+  const { data: rcmdsFromFunction, error: functionRcmdsError } =
+    await supabase.rpc("get_public_rcmds_for_profile", {
+      profile_id_param: profile.id,
+    });
+
+  if (functionRcmdsError) {
+    console.error(
+      "Error using SQL function:",
+      functionRcmdsError.message,
+      functionRcmdsError.code,
+      functionRcmdsError.details
+    );
+  } else {
+    console.log("SQL function call successful!");
+  }
+
+  const rcmds = rcmdsFromFunction || [];
+  console.log(`Found ${rcmds.length} RCMDs for profile`);
+  if (rcmds.length > 0) {
     console.log(
-      `[RCMD Trace] First RCMD sample:`,
-      JSON.stringify(rcmds[0]).substring(0, 100) + "..."
+      "First few RCMDs:",
+      rcmds.slice(0, 3).map((r: RCMD) => ({
+        id: r.id,
+        title: r.title,
+        visibility: r.visibility,
+        owner_id: r.owner_id,
+        profile_id: r.profile_id,
+      }))
     );
   }
 
   // Track view count
-  await supabase.rpc("increment_profile_view", { profile_id: profile.id });
+  try {
+    await supabase.rpc("increment_profile_views", { profile_id: profile.id });
+    console.log("Incremented profile view count");
+  } catch (error) {
+    console.error("Failed to increment view count:", error);
+  }
 
-  // Final trace before rendering
-  console.log(`[RCMD Trace] Before rendering with ${rcmds?.length || 0} RCMDs`);
-
-  return (
-    <div className="w-full">
-      {/* Cover Image Section */}
-      <div className="relative w-full h-[250px] md:h-[350px]">
-        {profile.cover_image ? (
-          <Image
-            src={profile.cover_image}
-            alt="Profile cover"
-            className="object-cover"
-            fill
-            sizes="100vw"
-            priority
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-r from-blue-100 to-blue-200" />
-        )}
-      </div>
-
-      <div className="w-full px-4 sm:px-6 lg:px-8 -mt-16 relative">
-        <div className="max-w-[1400px] mx-auto">
-          <header className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="relative -mt-20">
-                {profile.profile_picture_url ? (
-                  <Image
-                    src={profile.profile_picture_url}
-                    alt={profile.handle || ""}
-                    className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-white dark:border-gray-800"
-                    width={128}
-                    height={128}
-                  />
-                ) : (
-                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gray-200 border-4 border-white dark:border-gray-800" />
-                )}
-              </div>
-              <div className="flex-1 pt-4 md:pt-0">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h1 className="text-2xl md:text-3xl font-bold">
-                      {profile.first_name} {profile.last_name}
-                    </h1>
-                    {profile.handle && (
-                      <p className="text-gray-600 dark:text-gray-400 text-sm">
-                        {profile.handle}
-                      </p>
-                    )}
-                  </div>
-                  {profile.location && (
-                    <p className="mt-2 md:mt-0 text-gray-600 dark:text-gray-400 text-sm">
-                      📍 {profile.location}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {profile.bio && (
-              <p className="mt-6 text-gray-700 dark:text-gray-300 text-lg">
-                {profile.bio}
-              </p>
-            )}
-
-            {profile.interests && profile.interests.length > 0 && (
-              <div className="mt-4 flex gap-2 flex-wrap">
-                {profile.interests.map((interest: string, index: number) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm"
-                  >
-                    {interest}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {profile.tags && profile.tags.length > 0 && (
-              <div className="mt-2 flex gap-2 flex-wrap">
-                {profile.tags.map((tag: string, index: number) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-blue-100 dark:bg-blue-900 rounded-full text-sm"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </header>
-
-          <div className="mt-8 w-full">
-            <h2 className="text-2xl font-bold mb-6">Recommendations</h2>
-            <RCMDBlocks rcmds={rcmds as RCMD[]} isPublic={true} />
+  // If we have zero RCMDs, show a friendly message instead of a 404
+  if (rcmds.length === 0) {
+    return (
+      <div className="container pt-8">
+        <div className="pb-6 pt-2">
+          <div className="flex justify-between items-center">
+            <h1 className="font-bold text-xl md:text-3xl">
+              {profile.first_name} {profile.last_name}'s Recommendations
+            </h1>
           </div>
         </div>
+        <div className="p-8 text-center border rounded-lg shadow-sm">
+          <h2 className="text-xl font-semibold mb-2">No recommendations yet</h2>
+          <p className="text-muted-foreground">
+            {profile.first_name} hasn't shared any recommendations yet. Check
+            back later!
+          </p>
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="container pt-8">
+      <div className="pb-6 pt-2">
+        <div className="flex justify-between items-center">
+          <h1 className="font-bold text-xl md:text-3xl">
+            {profile.first_name} {profile.last_name}'s Recommendations
+          </h1>
+        </div>
+      </div>
+      <RCMDBlocks rcmds={rcmds} isPublic={true} />
     </div>
   );
 }

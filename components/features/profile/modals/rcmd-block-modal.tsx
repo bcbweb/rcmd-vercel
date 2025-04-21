@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { MetadataPreviewImage } from "@/components/common/MetadataPreviewImage";
 
 interface RcmdBlockModalProps {
   profileId: string;
@@ -235,10 +236,12 @@ export default function RcmdBlockModal({
                   <div className="flex items-center gap-3">
                     {rcmd.featured_image && (
                       <div className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700">
-                        <img
+                        <MetadataPreviewImage
                           src={rcmd.featured_image}
                           alt=""
                           className="w-full h-full object-cover"
+                          width={64}
+                          height={64}
                         />
                       </div>
                     )}

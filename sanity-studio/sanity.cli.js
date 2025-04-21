@@ -1,6 +1,11 @@
-import { defineCliConfig } from "sanity/cli";
+/**
+ * This configuration file lets you run `$ sanity [command]` in this folder
+ * Go to https://www.sanity.io/docs/cli to learn more.
+ **/
 
-export default defineCliConfig({
+const { defineCliConfig } = require("sanity/cli");
+
+module.exports = defineCliConfig({
   api: {
     projectId: "ce6vefd3",
     dataset: "production",

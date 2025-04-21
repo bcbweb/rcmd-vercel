@@ -4,15 +4,19 @@ import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
 import { createClient } from "@/utils/supabase/server";
 import { RootAuthInitializer } from "@/components/features/auth";
-import { Footer } from "@/components/layout/footer";
 import "../globals.css";
+import FooterWrapper from "@/components/layout/footer/footer-wrapper";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+// Determine the base URL for metadata and Open Graph/Twitter images
+const metadataBaseUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) ||
+  (process.env.NEXT_PUBLIC_VERCEL_URL &&
+    `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`) ||
+  "https://rcmd.app";
 
 export const metadata = {
-  metadataBase: new URL(defaultUrl),
+  metadataBase: new URL(metadataBaseUrl),
   title: "RCMD",
   description: "Recommend your world",
 };
@@ -43,7 +47,7 @@ export default async function RootLayout({
           <Header />
           <div className="flex-1 mx-auto w-full">{children}</div>
           <GlobalModals />
-          <Footer />
+          <FooterWrapper />
           <RootAuthInitializer initialSession={{ userId: user?.id || null }} />
         </ThemeProvider>
       </body>

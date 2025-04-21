@@ -9,17 +9,26 @@
     "start": "sanity start",
     "build": "sanity build",
     "deploy": "sanity deploy",
-    "deploy-graphql": "sanity graphql deploy"
+    "deploy-graphql": "sanity graphql deploy",
+    "migrate:for-individuals": "node scripts/migrate-for-individuals.js",
+    "migrate:for-businesses": "node scripts/migrate-for-businesses.js",
+    "migrate:for-content-creators": "node scripts/migrate-for-content-creators.js",
+    "migrate:help-page": "node scripts/migrate-help-page.js",
+    "migrate:all": "node scripts/migrate-for-individuals.js && node scripts/migrate-for-businesses.js && node scripts/migrate-for-content-creators.js && node scripts/migrate-help-page.js",
+    "get-token": "echo 'Create a token at https://manage.sanity.io/ and set it with: export SANITY_API_TOKEN=your_token_here'",
+    "check-token": "node scripts/check-token.js"
   },
   "keywords": [
     "sanity"
   ],
   "dependencies": {
-    "@sanity/vision": "^3.23.4",
+    "@sanity/cli": "^3.85.1",
+    "@sanity/client": "^6.1.0",
+    "@sanity/vision": "^3.83.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-is": "^18.2.0",
-    "sanity": "^3.23.4",
+    "sanity": "^3.83.0",
     "styled-components": "^6.1.15"
   }
 }

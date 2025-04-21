@@ -1,6 +1,7 @@
 "use client";
 
-import { AddRcmdButton, RcmdBlocks } from "@/components/features/rcmd";
+import { AddRcmdButton } from "@/components/features/rcmd";
+import RCMDBlocks from "@/components/features/rcmd/rcmd-blocks";
 import type { RCMD, RCMDBlockType } from "@/types";
 import { useCallback, useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
@@ -9,14 +10,16 @@ import { useRCMDStore } from "@/stores/rcmd-store";
 import { useProfileStore } from "@/stores/profile-store";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Eye, Settings } from "lucide-react";
+import { Eye, Settings, Share2 } from "lucide-react";
 import Link from "next/link";
 import { PageConfigModal } from "@/components/features/profile/modals";
+import { ShareModal } from "@/components/common/modals";
 
 export default function RCMDsPage() {
   const [rcmdBlocks, setRCMDBlocks] = useState<RCMDBlockType[]>([]);
   const [isRCMDSaving, setIsRCMDSaving] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const userId = useAuthStore((state) => state.userId);
   const { rcmds, fetchRCMDs, deleteRCMD, updateRCMD } = useRCMDStore();
   const [userHandle, setUserHandle] = useState<string | null>(null);
@@ -50,6 +53,7 @@ export default function RCMDsPage() {
     }
   }, [profile, lastFetchTimestamp]);
 
+  // Transform RCMDs to RCMD blocks
   const transformRCMDsToBlocks = useCallback((rcmds: RCMD[]) => {
     return rcmds.map((rcmd) => ({
       id: rcmd.id,
@@ -60,16 +64,19 @@ export default function RCMDsPage() {
     }));
   }, []);
 
+  // Fetch RCMDs when userId changes
   useEffect(() => {
     if (userId) {
       fetchRCMDs();
     }
   }, [userId, fetchRCMDs]);
 
+  // Update blocks when RCMDs change
   useEffect(() => {
     setRCMDBlocks(transformRCMDsToBlocks(rcmds));
   }, [rcmds, transformRCMDsToBlocks]);
 
+  // Set up modal success handler
   useEffect(() => {
     useModalStore.setState({
       onModalSuccess: () => {
@@ -80,48 +87,40 @@ export default function RCMDsPage() {
     });
   }, [userId, fetchRCMDs]);
 
-  const handleDeleteRCMD = useCallback(
-    async (id: string) => {
-      toast("Are you sure you want to delete this RCMD?", {
-        duration: Infinity,
-        action: {
-          label: "Delete",
-          onClick: async () => {
-            try {
-              setIsRCMDSaving(true);
-              await deleteRCMD(id);
-              await fetchRCMDs();
-              toast.success("RCMD deleted successfully");
-            } catch (error) {
-              toast.error(
-                error instanceof Error ? error.message : "Failed to delete RCMD"
-              );
-            } finally {
-              setIsRCMDSaving(false);
-            }
-          },
-        },
-        cancel: {
-          label: "Cancel",
-          onClick: () => {
-            toast.dismiss();
-          },
-        },
-      });
-    },
-    [deleteRCMD, fetchRCMDs]
-  );
-
+  // Handler for saving an RCMD
   const handleSaveRCMD = async (block: Partial<RCMDBlockType>) => {
-    if (!userId || !block.rcmd_id) return;
+    if (!block.rcmd_id) return;
+
     try {
       setIsRCMDSaving(true);
+
+      // Update the RCMD with current timestamp
       await updateRCMD(block.rcmd_id, {
         updated_at: new Date().toISOString(),
       });
+
+      toast.success("RCMD updated successfully");
     } catch (error) {
-      console.error("Error saving RCMD:", error);
-      toast.error("Failed to save RCMD");
+      console.error("Failed to update RCMD:", error);
+      toast.error("Failed to update RCMD");
+    } finally {
+      setIsRCMDSaving(false);
+    }
+  };
+
+  // Handler for deleting an RCMD
+  const handleDeleteRCMD = async (id: string) => {
+    try {
+      setIsRCMDSaving(true);
+
+      await deleteRCMD(id);
+
+      // Remove the block from the state
+      setRCMDBlocks((prev) => prev.filter((block) => block.id !== id));
+      toast.success("RCMD deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete RCMD:", error);
+      toast.error("Failed to delete RCMD");
     } finally {
       setIsRCMDSaving(false);
     }
@@ -149,21 +148,32 @@ export default function RCMDsPage() {
             Configure
           </Button>
           {userHandle && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1 py-1 h-auto text-sm"
-              asChild
-            >
-              <Link
-                href={`/${userHandle}/rcmds`}
-                className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
-                target="_blank"
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 py-1 h-auto text-sm"
+                asChild
               >
-                <Eye className="w-3.5 h-3.5" />
-                Preview Page
-              </Link>
-            </Button>
+                <Link
+                  href={`/${userHandle}/rcmds`}
+                  className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
+                  target="_blank"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Preview Page
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 py-1 h-auto text-sm"
+                onClick={() => setIsShareModalOpen(true)}
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                Share
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -172,7 +182,7 @@ export default function RCMDsPage() {
         <AddRcmdButton />
       </div>
 
-      <RcmdBlocks
+      <RCMDBlocks
         initialRCMDBlocks={rcmdBlocks}
         onDelete={handleDeleteRCMD}
         onSave={handleSaveRCMD}
@@ -194,6 +204,15 @@ export default function RCMDsPage() {
         profileId={profileId}
         onUpdate={handleConfigUpdated}
       />
+
+      {/* Share modal */}
+      {isShareModalOpen && userHandle && (
+        <ShareModal
+          handle={userHandle}
+          path="rcmds"
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
