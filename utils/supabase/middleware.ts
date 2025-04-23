@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
+// Keep track of recent auth session checks to prevent redirect loops
+const recentChecks = new Map<string, { time: number; hasCookies: boolean }>();
+
 export const updateSession = async (request: NextRequest) => {
   // This `try/catch` block is only here for the interactive tutorial.
   // Feel free to remove once you have Supabase connected.
@@ -51,29 +54,88 @@ export const updateSession = async (request: NextRequest) => {
     const url = new URL(request.url);
     const isSignInRedirect = url.searchParams.get("from") === "signin";
 
-    // protected routes - only redirect if clearly not authenticated
-    // and this isn't a redirect immediately after sign in
+    // Track check for this URL with cache
+    const requestKey = request.nextUrl.pathname;
+    const now = Date.now();
+
+    // Clear expired entries from the map (older than 5 minutes)
+    // Use Array.from to avoid iterator issues
+    Array.from(recentChecks.keys()).forEach((key) => {
+      const value = recentChecks.get(key);
+      if (value && now - value.time > 300000) {
+        recentChecks.delete(key);
+      }
+    });
+
+    // Record this check
+    recentChecks.set(requestKey, {
+      time: now,
+      hasCookies: !!authCookie,
+    });
+
+    // DEBUG: Log authentication information
+    if (request.nextUrl.pathname.startsWith("/protected")) {
+      console.log("Middleware: Protected route access - Auth check", {
+        pathname: request.nextUrl.pathname,
+        hasCookies: !!authCookie,
+        hasUser: !!user,
+        isSignInRedirect,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // MUCH MORE CONSERVATIVE approach to redirecting from protected routes:
+    // Only redirect if:
+    // 1. We're on a protected route
+    // 2. No auth cookie exists AND no user from getUser()
+    // 3. Not right after sign-in
+    // 4. No recent check showed cookies for this path in the last 30 seconds
+    const previousCheck = recentChecks.get(requestKey);
     if (
       request.nextUrl.pathname.startsWith("/protected") &&
       !authCookie &&
-      !isSignInRedirect
+      !user && // Only redirect if both cookie AND user check fail
+      !isSignInRedirect &&
+      !(
+        (
+          previousCheck &&
+          previousCheck.hasCookies &&
+          now - previousCheck.time < 30000
+        ) // Increased time window
+      )
     ) {
+      console.log(
+        "Middleware: Redirecting to sign-in, no auth cookie or user found for protected route"
+      );
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
     // If we're clearly signed in after checking cookies and user
     // And we're on the home page, redirect to profile
     if (request.nextUrl.pathname === "/" && authCookie && user && !error) {
+      // Don't redirect if we're coming from sign-in and already on a protected path
+      if (
+        isSignInRedirect &&
+        request.nextUrl.pathname.startsWith("/protected")
+      ) {
+        console.log(
+          "Middleware: Skipping redirect, already on protected route after sign-in"
+        );
+        return response;
+      }
+
       // Preserve the from=signin parameter if it exists
       const redirectUrl = new URL("/protected/profile", request.url);
       if (isSignInRedirect) {
         redirectUrl.searchParams.set("from", "signin");
       }
+      console.log("Middleware: Redirecting to profile from home page");
       return NextResponse.redirect(redirectUrl);
     }
 
     return response;
   } catch (e) {
+    console.error("Middleware error:", e);
     // If you are here, a Supabase client could not be created!
     // This is likely because you have not set up environment variables.
     // Check out http://localhost:3000 for Next Steps.
