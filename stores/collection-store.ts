@@ -23,6 +23,7 @@ interface CollectionStore {
     visibility: RCMDVisibility;
     linkIds: string[];
     rcmdIds: string[];
+    profile_id?: string;
   }) => Promise<Collection | null>;
   fetchCollections: (userId?: string) => Promise<void>;
   deleteCollection: (id: string) => Promise<void>;
@@ -67,6 +68,7 @@ export const useCollectionStore = create<CollectionStore>()(
                 visibility: input.visibility,
                 linkIds: input.linkIds,
                 rcmdIds: input.rcmdIds,
+                profile_id: input.profile_id,
               },
             }
           );
@@ -160,46 +162,30 @@ export const useCollectionStore = create<CollectionStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          // Optimistically update UI
-          set((state) => ({
-            collections: state.collections.filter((c) => c.id !== id),
-          }));
-
-          const { error } = await supabase
-            .from("collections")
-            .delete()
-            .eq("id", id);
+          // Use the RPC function to delete the collection and all associated items
+          const { data, error } = await supabase.rpc("delete_collection", {
+            p_id: id,
+          });
 
           if (error) throw error;
 
-          set({ isLoading: false });
+          // Update state after successful deletion
+          set((state) => ({
+            collections: state.collections.filter((c) => c.id !== id),
+            isLoading: false,
+          }));
         } catch (error) {
+          console.error("Error in deleteCollection:", error);
           const errorMessage =
             error instanceof Error
               ? error.message
               : "Failed to delete collection";
 
-          // Revert optimistic update on error
-          const { data } = await supabase
-            .from("collections")
-            .select("*")
-            .eq("id", id)
-            .single();
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
 
-          if (data) {
-            set((state) => ({
-              error: errorMessage,
-              isLoading: false,
-              collections: [...state.collections, data as Collection],
-            }));
-          } else {
-            set({
-              error: errorMessage,
-              isLoading: false,
-            });
-          }
-
-          console.error("Error deleting collection:", error);
           throw error;
         }
       },

@@ -86,6 +86,7 @@ export default function LinksPage() {
       onModalSuccess: () => {
         if (userId) {
           fetchLinks();
+          console.log("Links page: onModalSuccess callback executed");
         }
       },
     });

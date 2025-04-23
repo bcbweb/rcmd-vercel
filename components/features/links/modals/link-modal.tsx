@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import LinkInput from "@/components/ui/link-input";
 import { LinkMetadata } from "@/types";
 import { createClient } from "@/utils/supabase/client";
+import { toast } from "sonner";
 
 export default function LinkModal() {
   const {
@@ -139,6 +140,16 @@ export default function LinkModal() {
   const handleClose = () => {
     setIsLinkModalOpen(false);
     resetForm();
+
+    // Reset the edit mode state when closing the modal
+    if (isLinkEditMode) {
+      setTimeout(() => {
+        useModalStore.setState({
+          isLinkEditMode: false,
+          linkToEdit: null,
+        });
+      }, 100);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -175,15 +186,33 @@ export default function LinkModal() {
         );
       }
 
-      if (result) {
-        onModalSuccess?.();
-        resetForm();
-        handleClose();
+      // Show success toast notification
+      console.log("Link operation successful:", result);
+
+      // Execute the callback BEFORE closing the modal
+      if (onModalSuccess) {
+        console.log("Executing onModalSuccess callback");
+        onModalSuccess();
       }
+
+      // Reset form and close modal
+      resetForm();
+      setIsLinkModalOpen(false);
+
+      toast.success(
+        isLinkEditMode
+          ? "Link updated successfully!"
+          : "Link created successfully!"
+      );
     } catch (error) {
       console.error(
         `Error ${isLinkEditMode ? "updating" : "creating"} link:`,
         error
+      );
+
+      // Show error toast
+      toast.error(
+        `Failed to ${isLinkEditMode ? "update" : "create"} link. Please try again.`
       );
     }
   };

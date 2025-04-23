@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Link, LinkBlockType } from "@/types";
 import { blockStyles, BlockStats } from "@/components/common";
+import { Globe, EyeOff, Link2 } from "lucide-react";
 
 interface LinkBlockProps {
   blockId: string;
@@ -43,9 +44,43 @@ export default function LinkBlock({ blockId }: LinkBlockProps) {
     fetchLinkBlock();
   }, [blockId]);
 
+  // Format the URL for display
+  const formatUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch {
+      return url;
+    }
+  };
+
+  // Render visibility badge
+  const renderVisibilityBadge = () => {
+    if (!linkBlock?.links) return null;
+    const link = linkBlock.links;
+
+    if (link.visibility === "public") {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
+          <Globe className="h-3 w-3" />
+          <span>Public</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full">
+          <EyeOff className="h-3 w-3" />
+          <span>Private</span>
+        </div>
+      );
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className={`${blockStyles.container} animate-pulse`}>
+      <div
+        className={`${blockStyles.container} ${blockStyles.card} animate-pulse`}
+      >
         <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-4 w-3/4"></div>
         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-2/3"></div>
         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 w-1/2"></div>
@@ -63,26 +98,32 @@ export default function LinkBlock({ blockId }: LinkBlockProps) {
   ];
 
   return (
-    <a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`block ${blockStyles.container}`}
-    >
-      <h3 className="font-medium text-lg text-blue-600 dark:text-blue-400 mb-2">
-        {link.title}
-      </h3>
+    <div className={`${blockStyles.container} ${blockStyles.card}`}>
+      <h3 className={blockStyles.title}>{link.title}</h3>
+
+      <a
+        href={link.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center text-sm text-blue-600 dark:text-blue-400 mb-2 hover:underline"
+      >
+        <span className="flex items-center gap-1.5">
+          <Link2 className="w-3.5 h-3.5" />
+          {formatUrl(link.url)}
+        </span>
+      </a>
 
       {link.description && (
         <p className={blockStyles.description}>{link.description}</p>
       )}
 
-      <div className="mt-auto pt-4 flex items-center justify-between">
-        <span className={`${blockStyles.metaText} mt-4 truncate`}>
-          {link.url}
-        </span>
+      <div className="mt-3 flex items-center gap-2">
+        {renderVisibilityBadge()}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between">
         <BlockStats stats={stats} />
       </div>
-    </a>
+    </div>
   );
 }

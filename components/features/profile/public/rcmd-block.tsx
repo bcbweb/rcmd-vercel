@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { RCMD } from "@/types";
 import Image from "next/image";
 import { blockStyles, BlockStats } from "@/components/common";
-import { MapPin, Link, DollarSign } from "lucide-react";
+import { MapPin, Link, DollarSign, Globe, EyeOff } from "lucide-react";
 import { imageLoader } from "@/utils/image";
 
 // Type for our state - what we save in the component
@@ -212,6 +212,27 @@ export default function RCMDBlock({ blockId, preloadedData }: RCMDBlockProps) {
     stats.push({ value: rcmd.click_count, label: "clicks" });
   }
 
+  // Render visibility badge
+  const renderVisibilityBadge = () => {
+    if (!rcmd) return null;
+
+    if (rcmd.visibility === "public") {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
+          <Globe className="h-3 w-3" />
+          <span>Public</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full">
+          <EyeOff className="h-3 w-3" />
+          <span>Private</span>
+        </div>
+      );
+    }
+  };
+
   return (
     <div className={`${blockStyles.container} ${blockStyles.card}`}>
       {rcmd.featured_image && (
@@ -271,29 +292,29 @@ export default function RCMDBlock({ blockId, preloadedData }: RCMDBlockProps) {
         <p className={blockStyles.description}>{rcmd.description}</p>
       )}
 
-      {/* Tags with improved styling */}
+      {/* Tags */}
       {rcmd.tags && rcmd.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 my-3">
-          {rcmd.tags.map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium"
-            >
-              #{tag}
-            </span>
-          ))}
+        <div className="mt-2 mb-3">
+          <div className="flex flex-wrap gap-1.5">
+            {rcmd.tags.map((tag) => (
+              <span
+                key={tag}
+                className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
-      <div className="mt-auto pt-4 flex items-center justify-between border-t border-gray-100 dark:border-gray-700 mt-3">
-        <div className="flex items-center gap-2">
-          <span className={blockStyles.tag}>{rcmd.visibility}</span>
-          <span className={blockStyles.metaText}>
-            {rcmd.created_at
-              ? new Date(rcmd.created_at).toLocaleDateString()
-              : "Unknown date"}
-          </span>
-        </div>
+      {/* Display visibility badge */}
+      <div className="mt-2 mb-3 flex items-center gap-2">
+        {renderVisibilityBadge()}
+      </div>
+
+      {/* Stats */}
+      <div className="mt-4">
         <BlockStats stats={stats} />
       </div>
     </div>

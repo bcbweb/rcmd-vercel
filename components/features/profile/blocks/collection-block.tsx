@@ -6,6 +6,8 @@ import { formatDistance } from "date-fns";
 import { useModalStore } from "@/stores/modal-store";
 import { BlockActions, blockStyles } from "@/components/common";
 import { GenericCarousel, RCMDCard } from "@/components/common/carousel";
+import { EyeOff, Globe } from "lucide-react";
+import { confirmDelete } from "@/utils/confirm";
 
 // Extended block type to include _collection property
 interface ExtendedCollectionBlock {
@@ -127,7 +129,38 @@ export default function CollectionBlock({
   ]);
 
   // We use this function in the BlockActions component
-  const handleDeleteCollection = onDelete;
+  const handleDeleteCollection = () => {
+    if (!onDelete) return;
+
+    confirmDelete({
+      title: "Delete Collection",
+      description: `Are you sure you want to delete "${collection.name}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        if (onDelete) {
+          await onDelete();
+        }
+      },
+    });
+  };
+
+  // Prepare visibility badge
+  const renderVisibilityBadge = () => {
+    if (collection.visibility === "public") {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
+          <Globe className="h-3 w-3" />
+          <span>Public</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full">
+          <EyeOff className="h-3 w-3" />
+          <span>Private</span>
+        </div>
+      );
+    }
+  };
 
   if (isLoading) {
     return (
@@ -171,7 +204,9 @@ export default function CollectionBlock({
         </p>
       )}
 
-      <div className="flex items-center gap-2 mt-auto mb-3 text-sm">
+      <div className="flex items-center flex-wrap gap-2 mt-1 mb-3">
+        {renderVisibilityBadge()}
+
         <span className={blockStyles.metaText}>
           {collection.collection_items?.length || 0} item
           {collection.collection_items?.length !== 1 ? "s" : ""}

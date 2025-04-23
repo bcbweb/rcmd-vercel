@@ -1,22 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { RCMD, RCMDBlockType } from "@/types";
-import { MapPin, Link, DollarSign } from "lucide-react";
+import React, { useState, useCallback, useEffect } from "react";
+import type { RCMD, RCMDBlockType } from "@/types";
+import { Image as ImageIcon, EyeOff, Globe } from "lucide-react";
+import Image from "next/image";
+import { formatDistance } from "date-fns";
 import { useModalStore } from "@/stores/modal-store";
 import { BlockActions, blockStyles } from "@/components/common";
 import { createClient } from "@/utils/supabase/client";
-import Image from "next/image";
-import { BlockSkeleton } from "@/components/common";
-import { imageLoader } from "@/utils/image";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
+import { useRCMDStore } from "@/stores/rcmd-store";
+import { confirmDelete } from "@/utils/confirm";
 
-interface RCMDBlockProps {
+export interface RCMDBlockProps {
   rcmdBlock: RCMDBlockType;
   onDelete?: () => void;
   onSave?: (updatedBlock: Partial<RCMDBlockType>) => void;
@@ -34,12 +29,14 @@ export default function RCMDBlock({
   const supabase = createClient();
   const [rcmd, setRCMD] = useState<RCMD | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const {
     setIsRCMDModalOpen,
     setOnModalSuccess,
     setIsRCMDEditMode,
     setRCMDToEdit,
   } = useModalStore();
+  const { deleteRCMD } = useRCMDStore();
 
   const fetchRCMD = useCallback(async () => {
     try {
@@ -52,6 +49,17 @@ export default function RCMDBlock({
 
       if (error) throw error;
       setRCMD(data);
+
+      // If we have a featured image, get the URL
+      if (data.featured_image) {
+        const { data: imageData } = await supabase.storage
+          .from("rcmd-images")
+          .createSignedUrl(data.featured_image, 600);
+
+        if (imageData) {
+          setImageUrl(imageData.signedUrl);
+        }
+      }
     } catch (err) {
       console.error("Error fetching rcmd:", err);
     } finally {
@@ -83,185 +91,196 @@ export default function RCMDBlock({
     setIsRCMDModalOpen(true);
   };
 
-  const formatLocation = (location: unknown): string | null => {
-    if (!location) return null;
+  const handleDelete = () => {
+    if (!rcmdBlock?.id || !rcmd) return;
 
-    if (typeof location === "string") {
-      try {
-        const parsed = JSON.parse(location);
-        return formatLocation(parsed);
-      } catch {
-        return location;
-      }
-    }
-
-    if (
-      typeof location === "object" &&
-      location !== null &&
-      "address" in location &&
-      typeof location.address === "string"
-    ) {
-      return location.address;
-    }
-
-    if (
-      typeof location === "object" &&
-      location !== null &&
-      "city" in location &&
-      typeof location.city === "string"
-    ) {
-      if ("state" in location && typeof location.state === "string") {
-        return `${location.city}, ${location.state}`;
-      }
-      return location.city;
-    }
-
-    return typeof location === "object" && location !== null
-      ? Object.values(location).filter(Boolean).join(", ")
-      : String(location);
+    confirmDelete({
+      title: "Delete RCMD",
+      description: `Are you sure you want to delete "${rcmd.title}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          await deleteRCMD(rcmdBlock.id);
+          if (onDelete) onDelete();
+        } catch (error) {
+          console.error("Error deleting rcmd:", error);
+        }
+      },
+    });
   };
 
-  const formatPriceRange = (priceRange: unknown): string | null => {
-    if (!priceRange) return null;
+  // Format location
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formatLocation = (location: any) => {
+    if (!location) return "";
 
-    if (typeof priceRange === "string") {
-      try {
-        const parsed = JSON.parse(priceRange);
-        return formatPriceRange(parsed);
-      } catch {
-        return priceRange;
+    // Handle string location
+    if (typeof location === "string")
+      return location.split(", ").slice(0, 2).join(", ");
+
+    // Handle JSON location object
+    if (typeof location === "object") {
+      // Extract city and state if available
+      if (location.city) {
+        return location.state
+          ? `${location.city}, ${location.state}`
+          : location.city;
+      }
+
+      // Otherwise join all non-empty values
+      return Object.values(location)
+        .filter(Boolean)
+        .join(", ")
+        .split(", ")
+        .slice(0, 2)
+        .join(", ");
+    }
+
+    return String(location);
+  };
+
+  // Format price range
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formatPriceRange = (priceRange: any) => {
+    if (!priceRange) return "";
+
+    // Handle string price range
+    if (typeof priceRange === "string") return priceRange;
+
+    // Handle JSON price range object
+    if (typeof priceRange === "object") {
+      const currency = priceRange.currency || "$";
+
+      if (priceRange.min && priceRange.max) {
+        return `${currency}${priceRange.min} - ${currency}${priceRange.max}`;
+      } else if (priceRange.min) {
+        return `From ${currency}${priceRange.min}`;
+      } else if (priceRange.max) {
+        return `Up to ${currency}${priceRange.max}`;
       }
     }
 
-    if (typeof priceRange === "object" && priceRange !== null) {
-      const pr = priceRange as Record<string, unknown>;
-      const currency = "currency" in pr ? String(pr.currency || "$") : "$";
+    return String(priceRange);
+  };
 
-      if ("min" in pr && "max" in pr && pr.min && pr.max) {
-        return `${currency}${pr.min} - ${currency}${pr.max}`;
-      } else if ("min" in pr && pr.min) {
-        return `From ${currency}${pr.min}`;
-      } else if ("max" in pr && pr.max) {
-        return `Up to ${currency}${pr.max}`;
-      }
+  // Render visibility badge
+  const renderVisibilityBadge = () => {
+    if (!rcmd) return null;
+
+    if (rcmd.visibility === "public") {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
+          <Globe className="h-3 w-3" />
+          <span>Public</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full">
+          <EyeOff className="h-3 w-3" />
+          <span>Private</span>
+        </div>
+      );
     }
-
-    return null;
   };
 
   if (isLoading) {
-    return <BlockSkeleton hasImage={true} lines={3} />;
+    return (
+      <div
+        className={`${blockStyles.container} ${blockStyles.card} animate-pulse`}
+      >
+        <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+      </div>
+    );
   }
 
   if (!rcmd) return null;
 
   return (
     <div
-      className={`${noBorder ? "" : blockStyles.container} ${blockStyles.card} relative pt-12`}
+      className={`${noBorder ? "" : blockStyles.container} ${
+        blockStyles.card
+      } relative pt-12`}
     >
       <div className="absolute top-2 right-2 z-10">
         <BlockActions
           isEditMode={false}
           onEdit={hideEdit ? undefined : handleEdit}
-          onDelete={onDelete}
+          onDelete={handleDelete}
           onSave={() => {}}
           onCancel={() => {}}
         />
       </div>
 
-      {rcmd.featured_image && (
-        <div className="relative w-full h-48 mb-4 rounded-md overflow-hidden">
+      {/* Featured Image */}
+      {imageUrl ? (
+        <div className="relative aspect-video w-full mb-4 rounded-lg overflow-hidden">
           <Image
-            src={rcmd.featured_image}
-            alt={rcmd.title || "Featured image"}
+            src={imageUrl}
+            alt={rcmd.title}
             fill
             className="object-cover"
-            loader={imageLoader}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
+        </div>
+      ) : (
+        <div className="flex items-center justify-center w-full h-40 bg-gray-200 dark:bg-gray-800 mb-4 rounded-lg">
+          <ImageIcon className="h-10 w-10 text-gray-400" />
         </div>
       )}
 
       <h3 className={blockStyles.title}>{rcmd.title}</h3>
 
-      {/* Location */}
-      {rcmd.location && (
-        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-2">
-          <span className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5" />
-            {formatLocation(rcmd.location)}
-          </span>
-        </div>
-      )}
-
-      {/* URL */}
-      {rcmd.url && (
-        <div className="flex items-center text-xs text-blue-600 dark:text-blue-400 mb-2">
-          <span className="flex items-center gap-1.5 truncate">
-            <Link className="w-3.5 h-3.5" />
-            <a
-              href={rcmd.url || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="truncate hover:underline"
-            >
-              {rcmd.url?.replace(/^https?:\/\/(www\.)?/, "")}
-            </a>
-          </span>
-        </div>
-      )}
-
-      {/* Price Range */}
-      {rcmd.price_range && (
-        <div className="flex items-center text-xs text-gray-600 dark:text-gray-400 mb-2">
-          <span className="flex items-center gap-1.5">
-            <DollarSign className="w-3.5 h-3.5" />
-            {formatPriceRange(rcmd.price_range)}
-          </span>
-        </div>
-      )}
-
       {rcmd.description && (
         <p className={blockStyles.description}>{rcmd.description}</p>
       )}
 
-      {/* Tags */}
-      {rcmd.tags && rcmd.tags.length > 0 && (
-        <div className="mt-2 mb-3">
-          <div className="flex flex-wrap gap-1.5">
-            {rcmd.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium"
-              >
-                #{tag}
+      <div className="mt-3 flex flex-wrap gap-2 items-center">
+        {rcmd.tags && rcmd.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {rcmd.tags.map((tag: string, idx: number) => (
+              <span key={idx} className={blockStyles.tag}>
+                {tag}
               </span>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {rcmd.visibility === "private" && (
-        <div className="mt-2">
-          <TooltipProvider delayDuration={100}>
-            <Tooltip defaultOpen={false}>
-              <TooltipTrigger asChild>
-                <span
-                  className={blockStyles.tag}
-                  title="This block won't be visible on your public page unless visibility is changed to public"
-                >
-                  private
-                </span>
-              </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                className="bg-gray-900 text-white text-xs p-2"
-              >
-                This is only visible to you
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+      <div className="mt-2">
+        {(rcmd.location || rcmd.price_range) && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+            {rcmd.location && (
+              <span className={blockStyles.metaText}>
+                {formatLocation(rcmd.location)}
+              </span>
+            )}
+            {rcmd.location && rcmd.price_range && (
+              <span className="text-gray-300 dark:text-gray-700">•</span>
+            )}
+            {rcmd.price_range && (
+              <span className={blockStyles.metaText}>
+                {formatPriceRange(rcmd.price_range)}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          {renderVisibilityBadge()}
+          <span className={blockStyles.metaText}>
+            {formatDistance(
+              new Date(rcmd.created_at || Date.now()),
+              new Date(),
+              {
+                addSuffix: true,
+              }
+            )}
+          </span>
         </div>
-      )}
+      </div>
     </div>
   );
 }

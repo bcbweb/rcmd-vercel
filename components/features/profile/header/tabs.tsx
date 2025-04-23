@@ -230,6 +230,7 @@ export function ProfileTabs({
   }, [userId, localDefaultPageId, localDefaultPageType]);
 
   // Function to handle page context menu options
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handlePageMenu = (
     page: CustomPage,
     action: "rename" | "delete" | "default"
@@ -316,16 +317,6 @@ export function ProfileTabs({
                   )}
                 </span>
               </Link>
-
-              {/* Optional: Add context menu for page operations */}
-              <div className="hidden group-hover:block absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 shadow-lg rounded-md p-1 z-10">
-                <button
-                  onClick={() => handlePageMenu(page, "default")}
-                  className="block w-full text-left px-3 py-1 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-sm"
-                >
-                  Set as default
-                </button>
-              </div>
             </div>
           );
         })}

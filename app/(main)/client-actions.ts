@@ -5,9 +5,9 @@ import { useAuthStore } from "@/stores/auth-store";
 
 export const signOutClient = async () => {
   const supabase = createClient();
-  const { setUserId } = useAuthStore.getState();
+  const { setUnauthenticated } = useAuthStore.getState();
 
   await supabase.auth.signOut();
-  setUserId(null);
+  setUnauthenticated();
   window.location.href = "/sign-in";
 };

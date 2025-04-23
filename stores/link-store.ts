@@ -18,7 +18,7 @@ interface LinkStore {
   ) => Promise<Link | null>;
   fetchLinks: (userId?: string) => Promise<void>;
   deleteLink: (id: string, skipConfirmation?: boolean) => Promise<void>;
-  updateLink: (id: string, updates: Partial<Link>) => Promise<void>;
+  updateLink: (id: string, updates: Partial<Link>) => Promise<Link | null>;
 }
 
 export const useLinkStore = create<LinkStore>((set, get) => ({
@@ -136,7 +136,7 @@ export const useLinkStore = create<LinkStore>((set, get) => ({
         ),
       }));
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("links")
         .update({
           ...updates,
@@ -148,6 +148,9 @@ export const useLinkStore = create<LinkStore>((set, get) => ({
       if (error) throw error;
 
       set({ isLoading: false });
+
+      // Return the updated link if available
+      return data?.[0] as Link;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to update link";

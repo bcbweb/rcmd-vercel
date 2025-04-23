@@ -452,6 +452,7 @@ export type Database = {
           id: string
           name: string
           owner_id: string | null
+          profile_id: string | null
           updated_at: string | null
           visibility: Database["public"]["Enums"]["rcmd_visibility"] | null
         }
@@ -461,6 +462,7 @@ export type Database = {
           id?: string
           name: string
           owner_id?: string | null
+          profile_id?: string | null
           updated_at?: string | null
           visibility?: Database["public"]["Enums"]["rcmd_visibility"] | null
         }
@@ -470,10 +472,19 @@ export type Database = {
           id?: string
           name?: string
           owner_id?: string | null
+          profile_id?: string | null
           updated_at?: string | null
           visibility?: Database["public"]["Enums"]["rcmd_visibility"] | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "collections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       creator_followers: {
         Row: {
@@ -1281,9 +1292,27 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: Json
       }
+      delete_collection: {
+        Args: { p_id: string }
+        Returns: Json
+      }
       delete_profile_page: {
         Args: { page_id: string }
         Returns: undefined
+      }
+      get_public_collections_for_profile: {
+        Args: { profile_id_param: string }
+        Returns: {
+          id: string
+          owner_id: string
+          profile_id: string
+          name: string
+          description: string
+          visibility: string
+          created_at: string
+          updated_at: string
+          items: Json
+        }[]
       }
       get_public_links_for_profile: {
         Args: { profile_id_param: string }
@@ -1561,6 +1590,30 @@ export type Database = {
       reorder_profile_blocks: {
         Args: { p_profile_id: string; p_block_id: string; p_new_order: number }
         Returns: boolean
+      }
+      toggle_link_visibility: {
+        Args: { p_link_id: string; p_visibility?: string }
+        Returns: {
+          click_count: number
+          created_at: string
+          creator_id: string | null
+          description: string | null
+          id: string
+          is_sponsored: boolean
+          like_count: number
+          monetization_enabled: boolean
+          owner_id: string
+          profile_id: string | null
+          save_count: number
+          share_count: number
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          url: string
+          view_count: number
+          visibility: string
+        }
       }
       toggle_rcmd_like: {
         Args: { rcmd_id: string }

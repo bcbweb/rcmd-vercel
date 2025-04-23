@@ -2,6 +2,7 @@ import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
 import { createClient } from "@/utils/supabase/server";
 import { RootAuthInitializer } from "@/components/features/auth";
+import { AuthProvider } from "@/components/common/providers";
 import "../globals.css";
 
 // Determine the base URL for metadata and Open Graph/Twitter images
@@ -32,6 +33,11 @@ export default async function FeedRootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  console.log(
+    "Feed layout - Auth user:",
+    user ? `User ID: ${user.id}` : "No user found"
+  );
+
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>
       <body className="bg-black">
@@ -41,8 +47,12 @@ export default async function FeedRootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <RootAuthInitializer initialSession={{ userId: user?.id || null }} />
-          {children}
+          <AuthProvider serverUserId={user?.id || null}>
+            <RootAuthInitializer
+              initialSession={{ userId: user?.id || null }}
+            />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

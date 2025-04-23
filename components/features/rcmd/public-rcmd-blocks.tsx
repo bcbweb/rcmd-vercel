@@ -13,8 +13,11 @@ export default function PublicRCMDBlocks({ rcmds }: Props) {
   // Early return if no RCMDs
   if (!rcmds || rcmds.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-        No recommendations found
+      <div className="p-8 text-center border rounded-lg shadow-sm">
+        <h2 className="text-xl font-semibold mb-2">No recommendations found</h2>
+        <p className="text-muted-foreground">
+          No public recommendations have been shared yet. Check back later!
+        </p>
       </div>
     );
   }

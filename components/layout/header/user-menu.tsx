@@ -45,12 +45,15 @@ export function AuthButtons({ className = "" }: { className?: string }) {
 }
 
 export default function UserMenu() {
-  const { userId, isInitialized } = useAuthStore();
+  const { status, userId } = useAuthStore();
   const { profile, fetchProfile } = useProfileStore();
 
   useEffect(() => {
     if (userId && !profile) {
-      fetchProfile(userId);
+      console.log("UserMenu - Fetching profile for userId:", userId);
+      fetchProfile(userId).catch((err) => {
+        console.error("UserMenu - Error fetching profile:", err);
+      });
     }
   }, [userId, profile, fetchProfile]);
 
@@ -58,12 +61,24 @@ export default function UserMenu() {
     return name?.substring(0, 2).toUpperCase() ?? "U";
   };
 
-  // Don't render anything until we know the auth state
-  if (!isInitialized) {
-    return null;
+  // Show a loading placeholder until auth is determined
+  if (status === "idle" || status === "loading") {
+    return (
+      <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse"></div>
+    );
   }
 
-  if (!userId) {
+  // Show auth buttons for unauthenticated users
+  if (status === "unauthenticated") {
+    return (
+      <div className="hidden md:block">
+        <AuthButtons />
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (status === "error") {
     return (
       <div className="hidden md:block">
         <AuthButtons />

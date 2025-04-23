@@ -233,11 +233,11 @@ export default async function ProfileRCMDsPage({ params }: { params: Params }) {
             <div className="mt-8 w-full">
               <div className="p-8 text-center border rounded-lg shadow-sm">
                 <h2 className="text-xl font-semibold mb-2">
-                  No recommendations yet
+                  No recommendations found
                 </h2>
                 <p className="text-muted-foreground">
-                  {profile.first_name} hasn't shared any recommendations yet.
-                  Check back later!
+                  {profile.first_name} hasn't shared any public recommendations
+                  yet. Check back later!
                 </p>
               </div>
             </div>

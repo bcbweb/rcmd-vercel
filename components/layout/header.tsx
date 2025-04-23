@@ -5,11 +5,20 @@ import { MainNav } from "./main-nav";
 import { mainNavItems } from "@/config/navigation";
 import UserMenu, { AuthButtons } from "./header/user-menu";
 import { useAuthStore } from "@/stores/auth-store";
+import { useEffect } from "react";
 
 export default function Header() {
   // Access auth store to determine whether to show auth buttons
   // reusing the same store that UserMenu uses
-  const { userId, isInitialized } = useAuthStore();
+  const { status, userId } = useAuthStore();
+  const shouldShowAuthButtons = status === "unauthenticated";
+
+  // Log auth status changes
+  useEffect(() => {
+    console.log(
+      `Header - Auth status: ${status}, User ID: ${userId || "none"}`
+    );
+  }, [status, userId]);
 
   return (
     <header className="sticky top-0 border-b relative z-50 bg-white dark:bg-gray-900 shadow-sm">
@@ -39,7 +48,7 @@ export default function Header() {
             <MainNav
               items={mainNavItems}
               authButtons={
-                !userId && isInitialized ? (
+                shouldShowAuthButtons ? (
                   <AuthButtons className="flex-col items-start gap-4" />
                 ) : null
               }

@@ -12,8 +12,11 @@ export default function PublicLinkBlocks({ links }: Props) {
   // Early return if no links
   if (!links || links.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-        No links found
+      <div className="p-8 text-center border rounded-lg shadow-sm">
+        <h2 className="text-xl font-semibold mb-2">No links found</h2>
+        <p className="text-muted-foreground">
+          No public links have been shared yet. Check back later!
+        </p>
       </div>
     );
   }

@@ -73,12 +73,15 @@ export const signInAction = async (formData: FormData) => {
     .eq("auth_user_id", data.user.id)
     .single();
 
+  // Add a query parameter to indicate this is a redirect from sign-in
+  // This helps middleware avoid premature redirects
+
   // Redirect based on onboarding status
   if (!profile?.is_onboarded) {
-    return redirect("/protected/onboarding");
+    return redirect("/protected/onboarding?from=signin");
   }
 
-  return redirect("/protected/profile");
+  return redirect("/protected/profile?from=signin");
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {

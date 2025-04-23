@@ -1,41 +1,58 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useAuthStore } from '@/stores/auth-store';
-import { useProfileStore } from '@/stores/profile-store';
-import { createClient } from "@/utils/supabase/client";
+import { useEffect, useState } from "react";
+import { useAuthStore } from "@/stores/auth-store";
+import { useProfileStore } from "@/stores/profile-store";
 
 export function RootAuthInitializer({
-  initialSession
+  initialSession,
 }: {
-  initialSession: { userId: string | null; };
+  initialSession: { userId: string | null };
 }) {
-  const { setUserId } = useAuthStore();
-  const { fetchProfile, clearProfile } = useProfileStore();
+  const { userId, status, setAuthenticated, setUnauthenticated } =
+    useAuthStore();
+  const { fetchProfile } = useProfileStore();
+  const [authInitialized, setAuthInitialized] = useState(false);
 
+  // Handle initial auth state from server
   useEffect(() => {
-    // Set initial state
-    setUserId(initialSession.userId);
+    if (authInitialized) return;
+
+    console.log(
+      "RootAuthInitializer: Initializing with session",
+      initialSession
+    );
+
+    // Set initial state based on server-side session
     if (initialSession.userId) {
-      fetchProfile(initialSession.userId);
+      console.log("Setting authenticated with userId:", initialSession.userId);
+      setAuthenticated(initialSession.userId);
+    } else {
+      console.log("Setting unauthenticated - no userId in session");
+      setUnauthenticated();
     }
 
-    // Subscribe to auth changes
-    const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setUserId(null);
-        clearProfile();
-      } else if (session?.user?.id) {
-        setUserId(session.user.id);
-        await fetchProfile(session.user.id);
-      }
-    });
+    setAuthInitialized(true);
+  }, [initialSession, setAuthenticated, setUnauthenticated, authInitialized]);
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [initialSession.userId, setUserId, fetchProfile, clearProfile]);
+  // Fetch profile when auth is complete
+  useEffect(() => {
+    // Only fetch profile when we have a confirmed authenticated status
+    if (status !== "authenticated" || !userId) {
+      return;
+    }
+
+    console.log("RootAuthInitializer: Fetching profile for user:", userId);
+
+    // Fetch the profile
+    fetchProfile(userId)
+      .then((result) => {
+        console.log("RootAuthInitializer: Profile fetch complete:", result);
+      })
+      .catch((err) => {
+        console.error("RootAuthInitializer: Error fetching profile:", err);
+      });
+  }, [status, userId, fetchProfile]);
 
   return null;
 }

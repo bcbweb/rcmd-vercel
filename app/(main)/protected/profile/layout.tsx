@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ProfileHeader } from "@/components/features/profile/header";
 import { useAuthStore } from "@/stores/auth-store";
 import { useProfileStore } from "@/stores/profile-store";
+import { ProfileInitializing } from "@/components/loading-states/profile-initializing";
 
 export default function ProfileLayout({
   children,
@@ -12,10 +13,16 @@ export default function ProfileLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const userId = useAuthStore((state) => state.userId);
-  const isInitialized = useAuthStore((state) => state.isInitialized);
-  const { profile, socialLinks, pages, isLoading, fetchProfile, fetchPages } =
-    useProfileStore();
+  const { userId, status } = useAuthStore();
+  const {
+    profile,
+    socialLinks,
+    pages,
+    isLoading,
+    fetchProfile,
+    fetchPages,
+    initialized,
+  } = useProfileStore();
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   // Refs to prevent infinite reloads
@@ -63,15 +70,30 @@ export default function ProfileLayout({
     [userId, fetchProfile, fetchPages, router, setIsPageLoading]
   );
 
-  // Initial profile load - only load when userId or isInitialized changes
-  // Don't trigger on every render or lastFetchTimestamp change
+  // Initial profile load - only load when userId or authentication status changes
   useEffect(() => {
-    if (!isInitialized) {
+    if (status !== "authenticated" || !userId) {
       return;
     }
 
     loadProfile(true); // force the initial load
-  }, [userId, isInitialized, loadProfile]);
+  }, [userId, status, loadProfile]);
+
+  // Log status for debugging
+  useEffect(() => {
+    console.log(
+      "Profile layout - auth status:",
+      status,
+      "userId:",
+      userId,
+      "profile init:",
+      initialized,
+      "isLoading:",
+      isLoading,
+      "isPageLoading:",
+      isPageLoading
+    );
+  }, [status, userId, initialized, isLoading, isPageLoading]);
 
   // Keep monitor for stuck loading state but remove the console.log
   useEffect(() => {
@@ -79,58 +101,21 @@ export default function ProfileLayout({
 
     // Set a reasonable timeout (5 seconds) to detect stuck loading state
     const timeoutId = setTimeout(() => {
-      // No action needed, this is just a safety measure
-      // If we have a profile but loading state is stuck, the UI will still render
+      // If still loading after timeout, force set page loading to false
+      if (isPageLoading) {
+        setIsPageLoading(false);
+      }
     }, 5000);
 
     return () => clearTimeout(timeoutId);
-  }, [isLoading, profile]);
+  }, [isLoading, isPageLoading]);
 
-  // Show loading screen while page is initializing
-  if (isPageLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="flex flex-col items-center">
-          <div className="text-lg">Loading...</div>
-          <div className="text-sm text-gray-500 mt-2">
-            Initializing your profile
-          </div>
-        </div>
-      </div>
-    );
+  // If still initializing auth or profile, show the same initializing component as the main layout
+  if (status !== "authenticated" || !initialized || isPageLoading) {
+    return <ProfileInitializing />;
   }
 
-  // Show error if user is not authenticated
-  if (!userId) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="flex flex-col items-center">
-          <div className="text-lg">Authentication error</div>
-          <div className="text-sm text-gray-500 mt-2">
-            User not found or session expired
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Only show loading if we don't have a profile yet
-  // This prevents a stuck loading state when returning to the tab
-  if (isLoading && !profile) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="flex flex-col items-center">
-          <div className="text-lg">Loading profile...</div>
-          <div className="text-sm text-gray-500 mt-2">
-            Fetching your latest data
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // If we have a profile, render it even if isLoading is true
-  // This ensures we don't get stuck on a loading screen
+  // If we have a profile, render it
   if (profile) {
     return (
       <div className="w-full max-w-7xl mx-auto py-8 px-4">
@@ -156,10 +141,6 @@ export default function ProfileLayout({
     );
   }
 
-  // Fallback loading state - should rarely hit this
-  return (
-    <div className="flex justify-center items-center min-h-screen">
-      <div className="text-lg">Loading profile data...</div>
-    </div>
-  );
+  // If we're authenticated but don't have a profile, use the ProfileInitializing component
+  return <ProfileInitializing />;
 }

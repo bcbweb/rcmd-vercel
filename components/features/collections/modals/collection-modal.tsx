@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useModalStore } from "@/stores/modal-store";
 import { useCollectionStore } from "@/stores/collection-store";
 import { useRCMDStore } from "@/stores/rcmd-store";
+import { useProfileStore } from "@/stores/profile-store";
 import { Search } from "lucide-react";
 import type { RCMDVisibility } from "@/types";
 import RCMDPicker from "../rcmd-picker";
@@ -20,6 +21,7 @@ export default function CollectionModal() {
   const { insertCollection, updateCollection, isLoading } =
     useCollectionStore();
   const { rcmds } = useRCMDStore();
+  const { profile } = useProfileStore();
 
   // Collection metadata
   const [name, setName] = useState("");
@@ -108,6 +110,7 @@ export default function CollectionModal() {
           visibility,
           rcmdIds,
           linkIds: [], // No links in this version
+          profile_id: profile?.id,
         });
         console.log(
           "🔍 CollectionModal: Collection created successfully",

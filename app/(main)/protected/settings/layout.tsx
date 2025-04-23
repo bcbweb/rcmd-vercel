@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Spinner } from "@/components/ui/spinner";
 import { useProfileStore } from "@/stores/profile-store";
+import { ProfileInitializing } from "@/components/loading-states/profile-initializing";
 
 export default function SettingsLayout({
   children,
@@ -16,20 +16,20 @@ export default function SettingsLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { userId, isInitialized } = useAuthStore();
-  const { profile, fetchProfile } = useProfileStore();
+  const { userId, status } = useAuthStore();
+  const { profile, fetchProfile, initialized } = useProfileStore();
   const [layoutLoading, setLayoutLoading] = useState(true);
 
   useEffect(() => {
     // Authentication check
-    if (isInitialized && !userId) {
+    if (status === "unauthenticated") {
       router.push("/sign-in");
       return;
     }
 
     // Only fetch profile data once when needed
     const initialize = async () => {
-      if (isInitialized && userId && !profile) {
+      if (status === "authenticated" && userId && !profile) {
         try {
           await fetchProfile(userId);
         } catch (error) {
@@ -37,27 +37,37 @@ export default function SettingsLayout({
         }
       }
 
-      // When initialization is complete, allow rendering the layout
-      if (isInitialized) {
+      // When authentication is determined and profile is initialized, allow rendering the layout
+      if (status !== "idle" && status !== "loading" && initialized) {
         setLayoutLoading(false);
       }
     };
 
     initialize();
-  }, [userId, profile, fetchProfile, router, isInitialized]);
+  }, [userId, profile, fetchProfile, router, status, initialized]);
+
+  // Log state for debugging
+  useEffect(() => {
+    console.log(
+      "Settings layout - auth status:",
+      status,
+      "userId:",
+      userId,
+      "profile init:",
+      initialized,
+      "layoutLoading:",
+      layoutLoading
+    );
+  }, [status, userId, initialized, layoutLoading]);
 
   const navItems = [
     { name: "Edit profile", href: "/protected/settings/profile" },
     { name: "Account management", href: "/protected/settings/account" },
   ];
 
-  // Only show loading spinner during initial layout load
-  if (layoutLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Spinner className="h-8 w-8" />
-      </div>
-    );
+  // Show the same initializing component as other layouts
+  if (status !== "authenticated" || !initialized || layoutLoading) {
+    return <ProfileInitializing />;
   }
 
   return (

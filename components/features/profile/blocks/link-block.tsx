@@ -2,12 +2,13 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import type { Link, LinkBlockType } from "@/types";
-import { Link2 } from "lucide-react";
+import { Link2, EyeOff, Globe } from "lucide-react";
 import { formatDistance } from "date-fns";
 import { useModalStore } from "@/stores/modal-store";
 import { BlockActions, blockStyles } from "@/components/common";
 import { createClient } from "@/utils/supabase/client";
 import { useLinkStore } from "@/stores/link-store";
+import { confirmDelete } from "@/utils/confirm";
 
 export interface LinkBlockProps {
   linkBlock: LinkBlockType;
@@ -77,15 +78,21 @@ export default function LinkBlock({
     setIsLinkModalOpen(true);
   };
 
-  const handleDelete = async () => {
-    if (!linkBlock?.id) return;
+  const handleDelete = () => {
+    if (!linkBlock?.id || !link) return;
 
-    try {
-      await deleteLink(linkBlock.id);
-      if (onDelete) onDelete();
-    } catch (error) {
-      console.error("Error deleting link:", error);
-    }
+    confirmDelete({
+      title: "Delete Link",
+      description: `Are you sure you want to delete "${link.title}"? This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          await deleteLink(linkBlock.id);
+          if (onDelete) onDelete();
+        } catch (error) {
+          console.error("Error deleting link:", error);
+        }
+      },
+    });
   };
 
   // Format the URL for display
@@ -95,6 +102,27 @@ export default function LinkBlock({
       return urlObj.hostname;
     } catch {
       return url;
+    }
+  };
+
+  // Render visibility badge
+  const renderVisibilityBadge = () => {
+    if (!link) return null;
+
+    if (link.visibility === "public") {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
+          <Globe className="h-3 w-3" />
+          <span>Public</span>
+        </div>
+      );
+    } else {
+      return (
+        <div className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full">
+          <EyeOff className="h-3 w-3" />
+          <span>Private</span>
+        </div>
+      );
     }
   };
 
@@ -147,7 +175,7 @@ export default function LinkBlock({
 
       <div className="flex items-center justify-between mt-2">
         <div className="flex items-center gap-2">
-          <span className={blockStyles.tag}>{link.visibility}</span>
+          {renderVisibilityBadge()}
           <span className={blockStyles.metaText}>
             {formatDistance(new Date(linkBlock.created_at), new Date(), {
               addSuffix: true,
