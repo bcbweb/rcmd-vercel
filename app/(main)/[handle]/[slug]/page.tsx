@@ -248,9 +248,9 @@ export default async function ProfileCustomPage({
               pages={formattedPages}
               defaultPage={formattedDefaultPage}
               pageBlocks={allPageBlocks}
-              rcmdBlocks={rcmdBlocks}
-              linkBlocks={linkBlocks}
-              collectionBlocks={collectionBlocks}
+              rcmdBlocks={rcmds || []}
+              linkBlocks={links || []}
+              collectionBlocks={collections || []}
               defaultPageType={profile.default_page_type || "custom"}
             />
           </div>

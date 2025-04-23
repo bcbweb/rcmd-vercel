@@ -22,12 +22,14 @@ interface RCMDBlockProps {
 
 export default function RCMDBlock({ blockId, preloadedData }: RCMDBlockProps) {
   const [rcmdBlock, setRcmdBlock] = useState<RCMDBlockData | null>(null);
-  const [isLoading, setIsLoading] = useState(!preloadedData);
+  const [isLoading, setIsLoading] = useState(
+    !preloadedData || !preloadedData.rcmds
+  );
   const [error, setError] = useState<Error | null>(null);
 
   // Add debug log to check if preloaded data is received
   useEffect(() => {
-    console.log(`RCMD Block (${blockId}) - Preloaded data structure:`, {
+    console.log(`RCMDBlock (${blockId}) - Preloaded data structure:`, {
       hasPreloadedData: !!preloadedData,
       preloadedDataKeys: preloadedData ? Object.keys(preloadedData) : [],
       hasRcmdBlocksProp: preloadedData?.rcmd_blocks !== undefined,
@@ -46,19 +48,58 @@ export default function RCMDBlock({ blockId, preloadedData }: RCMDBlockProps) {
     async function fetchRcmdBlock() {
       try {
         setIsLoading(true);
+        setError(null);
         const supabase = createClient();
 
         console.log(`Fetching RCMD block data for blockId: ${blockId}`);
-        const { data, error } = await supabase
+        // First try to get the rcmd_blocks entry
+        let { data, error } = await supabase
           .from("rcmd_blocks")
           .select(`*, rcmds (*)`)
           .eq("profile_block_id", blockId)
           .single();
 
-        if (error) throw error;
-        if (!data || !data.rcmds) throw new Error("RCMD block not found");
+        // If that fails, try to get the profile_block directly
+        if (error || !data) {
+          console.log(`No rcmd_blocks found, getting profile_block directly`);
+          const { data: profileBlock, error: profileBlockError } =
+            await supabase
+              .from("profile_blocks")
+              .select(`*`)
+              .eq("id", blockId)
+              .single();
+
+          if (profileBlockError) throw profileBlockError;
+          if (!profileBlock) throw new Error("Profile block not found");
+
+          // If we have an entity_id, try to get the RCMD directly
+          if (profileBlock.entity_id) {
+            const { data: rcmdData, error: rcmdError } = await supabase
+              .from("rcmds")
+              .select(`*`)
+              .eq("id", profileBlock.entity_id)
+              .single();
+
+            if (rcmdError) throw rcmdError;
+            if (!rcmdData) throw new Error("RCMD not found");
+
+            console.log(`Found RCMD directly:`, rcmdData);
+            setRcmdBlock({
+              id: blockId,
+              rcmds: rcmdData as RCMD,
+            });
+            setIsLoading(false);
+            return;
+          } else {
+            throw new Error("Profile block has no entity_id");
+          }
+        }
 
         console.log(`Received RCMD block data:`, data);
+        if (!data.rcmds) {
+          throw new Error("RCMD data missing from RCMD block");
+        }
+
         setRcmdBlock({
           id: data.id,
           rcmds: data.rcmds as RCMD,
@@ -71,44 +112,70 @@ export default function RCMDBlock({ blockId, preloadedData }: RCMDBlockProps) {
       }
     }
 
-    if (preloadedData) {
-      // If we have preloaded data, try to extract the RCMD data
+    // Handler for processing preloaded data
+    function processPreloadedData() {
       try {
-        if (preloadedData.rcmds) {
+        // Direct rcmds property - most straightforward
+        if (
+          preloadedData?.rcmds &&
+          typeof preloadedData.rcmds === "object" &&
+          preloadedData.rcmds !== null
+        ) {
           console.log(`Using preloaded data with direct rcmds property`);
           setRcmdBlock({
             id:
               typeof preloadedData.id === "string" ? preloadedData.id : blockId,
             rcmds: preloadedData.rcmds as RCMD,
           });
-        } else if (
-          preloadedData.rcmd_blocks &&
+          setIsLoading(false);
+          return true;
+        }
+
+        // Nested rcmd_blocks structure
+        if (
+          preloadedData?.rcmd_blocks &&
           typeof preloadedData.rcmd_blocks === "object"
         ) {
-          // Handle the case where rcmd_blocks is the container with rcmds
           const rcmdBlocksObj = preloadedData.rcmd_blocks as Record<
             string,
             unknown
           >;
-          if (rcmdBlocksObj.rcmds) {
+          if (rcmdBlocksObj.rcmds && typeof rcmdBlocksObj.rcmds === "object") {
             console.log(`Using rcmds from nested rcmd_blocks property`);
             setRcmdBlock({
-              id: blockId,
+              id:
+                typeof preloadedData.id === "string"
+                  ? preloadedData.id
+                  : blockId,
               rcmds: rcmdBlocksObj.rcmds as RCMD,
             });
+            setIsLoading(false);
+            return true;
           }
         }
+
+        // If we get here, we couldn't process the preloaded data
+        console.log(
+          `Unable to extract RCMD data from preloaded data, will fetch`
+        );
+        return false;
       } catch (err) {
         console.error("Error processing preloaded data:", err);
+        return false;
+      }
+    }
+
+    // Main logic flow
+    if (preloadedData) {
+      const success = processPreloadedData();
+      if (!success) {
         // Fall back to fetching if preloaded data doesn't work
         fetchRcmdBlock();
       }
-      setIsLoading(false);
-      return;
+    } else {
+      // If no preloaded data, fetch from API
+      fetchRcmdBlock();
     }
-
-    // If no preloaded data, fetch from API
-    fetchRcmdBlock();
   }, [blockId, preloadedData]);
 
   const formatLocation = (location: unknown): string | null => {
@@ -196,7 +263,20 @@ export default function RCMDBlock({ blockId, preloadedData }: RCMDBlockProps) {
       error,
       rcmdBlock,
     });
-    return null;
+
+    // Instead of returning null, show an error state
+    return (
+      <div
+        className={`${blockStyles.container} ${blockStyles.card} border-red-300 bg-red-50 dark:bg-red-900/20`}
+      >
+        <div className="p-4 text-center text-red-600 dark:text-red-400">
+          <p className="font-medium">Unable to load RCMD</p>
+          <p className="text-sm mt-1 text-red-500 dark:text-red-300">
+            {error ? error.message : "RCMD data is missing or invalid"}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const rcmd = rcmdBlock.rcmds;

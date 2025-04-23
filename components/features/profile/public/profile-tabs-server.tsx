@@ -27,6 +27,13 @@ interface ProfileTabsServerProps {
   defaultPageType?: string;
 }
 
+// Define a more specific extended block type
+interface ExtendedProfileBlock extends ProfileBlockType {
+  entity_id?: string;
+  rcmds?: RCMD;
+  [key: string]: unknown;
+}
+
 export default function ProfileTabsServer({
   handle,
   pages,
@@ -264,11 +271,30 @@ export default function ProfileTabsServer({
         {pages &&
           pages.map((page) => (
             <TabsContent key={page.id} value={page.id} className="space-y-4">
-              {pageBlocks && page && pageBlocks[page.id]?.length > 0 ? (
-                <PublicProfileBlocks blocks={pageBlocks[page.id]} />
+              {pageBlocks && pageBlocks[page.id]?.length > 0 ? (
+                <PublicProfileBlocks
+                  blocks={pageBlocks[page.id].map((block) => {
+                    // For RCMD blocks, add the actual RCMD entity data if available
+                    if (block.type === "rcmd") {
+                      const extendedBlock = block as ExtendedProfileBlock;
+                      if (extendedBlock.entity_id) {
+                        const rcmd = rcmdBlocks.find(
+                          (r) => r.id === extendedBlock.entity_id
+                        );
+                        if (rcmd) {
+                          return {
+                            ...extendedBlock,
+                            rcmds: rcmd,
+                          };
+                        }
+                      }
+                    }
+                    return block;
+                  })}
+                />
               ) : (
                 <div className="text-center py-10 text-gray-500">
-                  This profile doesn't have any content on this page yet.
+                  This page doesn't have any content yet.
                 </div>
               )}
             </TabsContent>

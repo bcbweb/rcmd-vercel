@@ -11,6 +11,7 @@ import type { ProfileBlockType } from "@/types";
 // Define a generic extended block type for type safe operations
 interface ExtendedProfileBlock extends ProfileBlockType {
   rcmd_blocks?: Record<string, unknown>;
+  rcmds?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -52,6 +53,7 @@ export default function PublicProfileBlocks({
         id: block.id,
         type: block.type,
         hasRcmdBlocks: "rcmd_blocks" in block,
+        hasRcmds: "rcmds" in block,
         keys: Object.keys(block),
       });
     });
@@ -61,33 +63,41 @@ export default function PublicProfileBlocks({
     <div className="space-y-8">
       {blocks.map((block) => {
         // Extract preloaded data if available
-        let preloadedData: ExtendedProfileBlock | undefined = undefined;
+        let preloadedData: Record<string, unknown> | undefined = undefined;
 
         if (block.type === "rcmd") {
           console.log(`Processing RCMD block ID ${block.id}:`, block);
+          const typedBlock = block as ExtendedProfileBlock;
 
-          if ("rcmd_blocks" in block) {
-            // For the nested structure where rcmd_blocks contains the RCMD data
-            const typedBlock = block as ExtendedProfileBlock;
-            const rcmdBlocksData = typedBlock.rcmd_blocks;
-
-            if (rcmdBlocksData && typeof rcmdBlocksData === "object") {
-              preloadedData = {
-                ...typedBlock,
-                // Pass through the nested rcmd data
-                rcmd_blocks: rcmdBlocksData,
-              };
-              console.log(
-                `Block has rcmd_blocks structure, preloaded data:`,
-                preloadedData
-              );
-            }
-          } else {
-            // For the flattened structure or to let the RCMDBlock component fetch its own data
+          // First try with rcmd_blocks property
+          if (
+            typedBlock.rcmd_blocks &&
+            typeof typedBlock.rcmd_blocks === "object"
+          ) {
+            preloadedData = {
+              id: block.id,
+              rcmd_blocks: typedBlock.rcmd_blocks,
+            };
+            console.log(`Using rcmd_blocks data:`, preloadedData);
+          }
+          // Next try with rcmds property - direct RCMD entity
+          else if (typedBlock.rcmds && typeof typedBlock.rcmds === "object") {
+            preloadedData = {
+              id: block.id,
+              rcmds: typedBlock.rcmds,
+            };
+            console.log(`Using rcmds data:`, preloadedData);
+          }
+          // Finally, if both are missing, create a minimal preloaded data
+          else {
             console.log(
-              `Block does NOT have rcmd_blocks property, using as is`
+              `Block does NOT have rcmd_blocks or rcmds property, using minimal data`
             );
-            preloadedData = block as ExtendedProfileBlock;
+            preloadedData = {
+              id: block.id,
+              // Empty but defined to trigger client-side fetching
+              rcmds: null,
+            };
           }
         }
 
