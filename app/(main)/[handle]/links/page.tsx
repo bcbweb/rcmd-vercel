@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import PublicLinkBlocks from "@/components/features/links/public-link-blocks";
 
 // Set revalidation period for ISR (60 seconds for more frequent updates)
@@ -185,6 +186,29 @@ export default async function ProfileLinksPage({ params }: { params: Params }) {
                 )}
               </header>
 
+              {/* Simple static navigation bar */}
+              <div className="mt-8 mb-6">
+                <nav className="flex justify-center">
+                  <div className="p-1 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center gap-1 shadow-sm">
+                    <Link href={`/${handle}/rcmds`}>
+                      <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                        RCMDs
+                      </div>
+                    </Link>
+                    <Link href={`/${handle}/links`}>
+                      <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-white dark:bg-gray-700 shadow-sm">
+                        Links
+                      </div>
+                    </Link>
+                    <Link href={`/${handle}/collections`}>
+                      <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                        Collections
+                      </div>
+                    </Link>
+                  </div>
+                </nav>
+              </div>
+
               <div className="mt-8 w-full">
                 <div className="p-8 text-center border rounded-lg shadow-sm">
                   <h2 className="text-xl font-semibold mb-2">No links yet</h2>
@@ -289,9 +313,34 @@ export default async function ProfileLinksPage({ params }: { params: Params }) {
               )}
             </header>
 
-            <div className="mt-8 w-full">
-              {/* Use PublicLinkBlocks component */}
-              <PublicLinkBlocks links={links} />
+            {/* Simple static navigation bar */}
+            <div className="mt-8 mb-6">
+              <nav className="flex justify-center">
+                <div className="p-1 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center gap-1 shadow-sm">
+                  <Link href={`/${handle}/rcmds`}>
+                    <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                      RCMDs
+                    </div>
+                  </Link>
+                  <Link href={`/${handle}/links`}>
+                    <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-white dark:bg-gray-700 shadow-sm">
+                      Links
+                    </div>
+                  </Link>
+                  <Link href={`/${handle}/collections`}>
+                    <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                      Collections
+                    </div>
+                  </Link>
+                </div>
+              </nav>
+            </div>
+
+            <div className="w-full">
+              <div className="max-w-3xl mx-auto">
+                {/* Use PublicLinkBlocks component */}
+                <PublicLinkBlocks links={links} />
+              </div>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import PublicCollectionBlocks from "@/components/features/collections/public-collection-blocks";
 import type { CollectionWithItems } from "@/types";
 
@@ -172,6 +173,29 @@ export default async function ProfileCollectionsPage({
                 )}
               </header>
 
+              {/* Simple static navigation bar */}
+              <div className="mt-8 mb-6">
+                <nav className="flex justify-center">
+                  <div className="p-1 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center gap-1 shadow-sm">
+                    <Link href={`/${handle}/rcmds`}>
+                      <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                        RCMDs
+                      </div>
+                    </Link>
+                    <Link href={`/${handle}/links`}>
+                      <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                        Links
+                      </div>
+                    </Link>
+                    <Link href={`/${handle}/collections`}>
+                      <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-white dark:bg-gray-700 shadow-sm">
+                        Collections
+                      </div>
+                    </Link>
+                  </div>
+                </nav>
+              </div>
+
               <div className="mt-8 w-full">
                 <div className="p-8 text-center border rounded-lg shadow-sm">
                   <h2 className="text-xl font-semibold mb-2">
@@ -278,9 +302,33 @@ export default async function ProfileCollectionsPage({
               )}
             </header>
 
-            <div className="mt-8 w-full">
-              {/* Pass the collections directly to the PublicCollectionBlocks component */}
-              <PublicCollectionBlocks collections={collections} />
+            {/* Simple static navigation bar */}
+            <div className="mt-8 mb-6">
+              <nav className="flex justify-center">
+                <div className="p-1 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center gap-1 shadow-sm">
+                  <Link href={`/${handle}/rcmds`}>
+                    <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                      RCMDs
+                    </div>
+                  </Link>
+                  <Link href={`/${handle}/links`}>
+                    <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors hover:bg-gray-200 dark:hover:bg-gray-700">
+                      Links
+                    </div>
+                  </Link>
+                  <Link href={`/${handle}/collections`}>
+                    <div className="px-4 py-2 rounded-full text-sm font-medium transition-colors bg-white dark:bg-gray-700 shadow-sm">
+                      Collections
+                    </div>
+                  </Link>
+                </div>
+              </nav>
+            </div>
+
+            <div className="mt-4 w-full">
+              <div className="max-w-3xl mx-auto">
+                <PublicCollectionBlocks collections={collections} />
+              </div>
             </div>
           </div>
         </div>

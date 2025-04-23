@@ -53,7 +53,7 @@ export default function RCMDBlock({ blockId, preloadedData }: RCMDBlockProps) {
 
         console.log(`Fetching RCMD block data for blockId: ${blockId}`);
         // First try to get the rcmd_blocks entry
-        let { data, error } = await supabase
+        const { data, error } = await supabase
           .from("rcmd_blocks")
           .select(`*, rcmds (*)`)
           .eq("profile_block_id", blockId)
