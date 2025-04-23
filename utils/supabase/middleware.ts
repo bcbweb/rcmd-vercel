@@ -5,8 +5,6 @@ import { type NextRequest, NextResponse } from "next/server";
 const recentChecks = new Map<string, { time: number; hasCookies: boolean }>();
 
 export const updateSession = async (request: NextRequest) => {
-  // This `try/catch` block is only here for the interactive tutorial.
-  // Feel free to remove once you have Supabase connected.
   try {
     // Create an unmodified response
     let response = NextResponse.next({
@@ -73,17 +71,6 @@ export const updateSession = async (request: NextRequest) => {
       hasCookies: !!authCookie,
     });
 
-    // DEBUG: Log authentication information
-    if (request.nextUrl.pathname.startsWith("/protected")) {
-      console.log("Middleware: Protected route access - Auth check", {
-        pathname: request.nextUrl.pathname,
-        hasCookies: !!authCookie,
-        hasUser: !!user,
-        isSignInRedirect,
-        timestamp: new Date().toISOString(),
-      });
-    }
-
     // MUCH MORE CONSERVATIVE approach to redirecting from protected routes:
     // Only redirect if:
     // 1. We're on a protected route
@@ -104,9 +91,6 @@ export const updateSession = async (request: NextRequest) => {
         ) // Increased time window
       )
     ) {
-      console.log(
-        "Middleware: Redirecting to sign-in, no auth cookie or user found for protected route"
-      );
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
@@ -118,9 +102,6 @@ export const updateSession = async (request: NextRequest) => {
         isSignInRedirect &&
         request.nextUrl.pathname.startsWith("/protected")
       ) {
-        console.log(
-          "Middleware: Skipping redirect, already on protected route after sign-in"
-        );
         return response;
       }
 
@@ -129,7 +110,6 @@ export const updateSession = async (request: NextRequest) => {
       if (isSignInRedirect) {
         redirectUrl.searchParams.set("from", "signin");
       }
-      console.log("Middleware: Redirecting to profile from home page");
       return NextResponse.redirect(redirectUrl);
     }
 
@@ -138,7 +118,6 @@ export const updateSession = async (request: NextRequest) => {
     console.error("Middleware error:", e);
     // If you are here, a Supabase client could not be created!
     // This is likely because you have not set up environment variables.
-    // Check out http://localhost:3000 for Next Steps.
     return NextResponse.next({
       request: {
         headers: request.headers,

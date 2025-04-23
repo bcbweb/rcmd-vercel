@@ -24,9 +24,12 @@ interface Profile {
 }
 
 export default async function ProfileLinksPage({ params }: { params: Params }) {
-  console.log("Starting fetch for handle:", params.handle);
   // Await the params destructuring to ensure it's ready
   const { handle } = await Promise.resolve(params);
+
+  console.log("Starting fetch for handle:", handle);
+
+  // Create server-side supabase client
   const supabase = await createClient();
 
   // Fetch the profile data with default page information

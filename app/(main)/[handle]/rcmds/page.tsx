@@ -1,50 +1,56 @@
 import { createClient } from "@/utils/supabase/server";
-import type { Metadata } from "next";
 import type { RCMD } from "@/types";
 import Image from "next/image";
 import PublicRCMDBlocks from "@/components/features/rcmd/public-rcmd-blocks";
+import { notFound } from "next/navigation";
 
 // Set revalidation period (reduced to 60 seconds for more frequent updates)
 export const revalidate = 60;
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { handle: string };
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Params }) {
+  // Await the params destructuring to ensure it's ready
+  const { handle } = await Promise.resolve(params);
+
   return {
-    title: `${params.handle}'s Recommendations | RCMD`,
-    description: `Check out all the recommendations from ${params.handle} on RCMD. Food, drinks, products, and more.`,
+    title: `${handle}'s Recommendations | RCMD`,
+    description: `Check out all the recommendations from ${handle} on RCMD. Food, drinks, products, and more.`,
   };
 }
 
 type Params = { handle: string };
 
 export default async function ProfileRCMDsPage({ params }: { params: Params }) {
+  // Await the params destructuring to ensure it's ready
+  const { handle } = await Promise.resolve(params);
+
+  console.log("Fetching data for handle:", handle);
+
+  // Create server-side supabase client
   const supabase = await createClient();
 
-  console.log("Fetching data for handle:", params.handle);
-
-  // Get profile by handle
+  // Fetch profile info first
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("*")
-    .eq("handle", params.handle)
+    .select(
+      `
+      id, 
+      handle, 
+      first_name, 
+      last_name, 
+      bio, 
+      location, 
+      interests, 
+      tags, 
+      profile_picture_url, 
+      cover_image
+    `
+    )
+    .eq("handle", handle)
     .single();
 
-  if (profileError) {
-    console.error(
-      "Error fetching profile:",
-      profileError.message,
-      profileError.code,
-      profileError.details
-    );
-    return <div className="container">Profile not found</div>;
-  }
-
-  if (!profile) {
-    console.error("No profile found for handle:", params.handle);
-    return <div className="container">Profile not found</div>;
+  if (profileError || !profile) {
+    console.error("No profile found for handle:", handle);
+    return notFound();
   }
 
   console.log(

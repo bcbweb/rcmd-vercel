@@ -16,7 +16,6 @@ export function ProfileInitializing() {
 
     if (status === "authenticated" && userId && profileError) {
       timeoutId = setTimeout(() => {
-        console.log("Auto-retrying profile fetch...");
         retryFetch(userId);
       }, 2000);
     }

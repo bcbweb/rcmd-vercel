@@ -43,7 +43,6 @@ export const useAuthStore = create<AuthState>()(
         },
 
         setAuthenticated: (userId: string) => {
-          console.log("Auth Store: Setting authenticated with userId:", userId);
           const timestamp = Date.now();
           set({
             userId,
@@ -62,13 +61,9 @@ export const useAuthStore = create<AuthState>()(
           // If we authenticated recently (last 10 seconds), don't unauthenticate
           // This prevents race conditions during initialization
           if (state.status === "authenticated" && timeSinceAuth < 10000) {
-            console.log(
-              "Auth Store: Ignoring unauthenticated request - too soon after auth"
-            );
             return;
           }
 
-          console.log("Auth Store: Setting unauthenticated");
           set({
             userId: null,
             status: "unauthenticated",
@@ -91,7 +86,6 @@ export const useAuthStore = create<AuthState>()(
 
         // This bypasses all checks and directly sets auth state - useful for server-provided auth
         forceServerAuth: (userId: string) => {
-          console.log("Auth Store: FORCE SERVER AUTH with userId:", userId);
           const timestamp = Date.now();
           set({
             userId,
@@ -115,19 +109,12 @@ export const useAuthStore = create<AuthState>()(
         storage: {
           getItem: (name) => {
             const storedValue = localStorage.getItem(name);
-            console.log(
-              "Auth storage: Reading from storage",
-              name,
-              storedValue ? "found" : "not found"
-            );
             return storedValue ? JSON.parse(storedValue) : null;
           },
           setItem: (name, value) => {
-            console.log("Auth storage: Writing to storage", name);
             localStorage.setItem(name, JSON.stringify(value));
           },
           removeItem: (name) => {
-            console.log("Auth storage: Removing from storage", name);
             localStorage.removeItem(name);
           },
         },

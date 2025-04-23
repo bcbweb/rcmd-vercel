@@ -33,10 +33,6 @@ export default function ProtectedLayout({
     // Double-check authentication with Supabase directly
     const verifySession = async () => {
       try {
-        console.log(
-          "Protected layout - Verifying session directly with Supabase",
-          { userId, status }
-        );
         const supabase = createClient();
         const { data, error } = await supabase.auth.getSession();
 
@@ -47,13 +43,8 @@ export default function ProtectedLayout({
         }
 
         if (data.session) {
-          console.log(
-            "Protected layout - Session found directly from Supabase!",
-            data.session.user.id
-          );
           // If we have a session but auth store doesn't match, update it
           if (data.session.user.id && (!userId || status !== "authenticated")) {
-            console.log("Updating auth store with verified session");
             setAuthenticated(data.session.user.id);
           }
         }
@@ -71,7 +62,6 @@ export default function ProtectedLayout({
     // Set a timeout to avoid waiting forever for session verification
     loadingTimeout.current = setTimeout(() => {
       if (!sessionVerified.current) {
-        console.log("Session verification timeout - continuing anyway");
         sessionVerified.current = true;
         setIsVerifyingSession(false);
       }
@@ -84,24 +74,6 @@ export default function ProtectedLayout({
     };
   }, [userId, status, setAuthenticated, isVerifyingSession]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log(
-      "Protected layout - auth status:",
-      status,
-      "userId:",
-      userId,
-      "profile init:",
-      initialized,
-      "isSignInRedirect:",
-      isSignInRedirect,
-      "sessionVerified:",
-      sessionVerified.current,
-      "isVerifyingSession:",
-      isVerifyingSession
-    );
-  }, [status, userId, initialized, isSignInRedirect, isVerifyingSession]);
-
   // If authenticated but profile not yet initialized,
   // try to fetch the profile
   useEffect(() => {
@@ -112,7 +84,6 @@ export default function ProtectedLayout({
     }
   }, [status, userId, initialized, fetchProfile]);
 
-  // Show initializing screen while loading
   // But add a timeout to avoid an infinite loading state
   useEffect(() => {
     // If we're still loading after 10 seconds, log the issue

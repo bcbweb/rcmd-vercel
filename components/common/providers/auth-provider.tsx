@@ -35,13 +35,11 @@ export function AuthProvider({
   useEffect(() => {
     // Only run this once and make sure we apply the server state immediately
     if (serverUserId) {
-      console.log("***FORCE SERVER AUTH*** User ID:", serverUserId);
       // Directly set authenticated without waiting
       forceServerAuth(serverUserId);
       lastAuthTime.current = Date.now();
     } else if (status === "idle") {
       // Only set to unauthenticated if we don't have a server user and we're still in idle state
-      console.log("***FORCE SERVER UNAUTH*** No server user ID");
       setUnauthenticated();
     }
   }, [serverUserId, forceServerAuth, setUnauthenticated, status]);
@@ -58,8 +56,6 @@ export function AuthProvider({
   useEffect(() => {
     // Run on first mount and when authentication state changes
     const verifySession = async () => {
-      console.log("Running session verification check");
-
       // Don't duplicate checks in a session since the Supabase auth is already verified on server
       if (sessionChecked && userId) {
         return;
@@ -78,9 +74,6 @@ export function AuthProvider({
 
         // If we have a session but our auth store doesn't reflect it, fix that
         if (data.session?.user?.id && status !== "authenticated") {
-          console.log(
-            "Session found but not in auth store - updating auth store"
-          );
           setAuthenticated(data.session.user.id);
           lastAuthTime.current = Date.now();
         }
@@ -123,30 +116,20 @@ export function AuthProvider({
 
     // Don't redirect if we just came from sign-in
     if (isSignInRedirect) {
-      console.log("Skipping redirect - this is a sign-in redirect");
       return;
     }
 
     // Don't redirect too frequently after authentication
     if (Date.now() - lastAuthTime.current < 10000) {
-      console.log("Skipping redirect - authentication was too recent");
       return;
     }
 
     // Add a longer delay to allow auth state to stabilize
     const redirectTimeout = setTimeout(() => {
-      console.log(
-        "Checking for redirect needs - status:",
-        status,
-        "pathname:",
-        pathname
-      );
-
       // Handle the redirect to profile area if on sign-in page
       if (status === "authenticated" && pathname.startsWith("/sign-in")) {
         redirectAttempts.current += 1;
         setIsRedirecting(true);
-        console.log("Redirecting to protected area after sign in");
         router.push("/protected/profile");
       }
       // EVEN MORE CAUTIOUS redirect to sign-in only if:
@@ -165,7 +148,6 @@ export function AuthProvider({
       ) {
         redirectAttempts.current += 1;
         setIsRedirecting(true);
-        console.log("Redirecting to sign in page");
         router.push("/sign-in");
       }
     }, 3000); // Increased delay from 2000 to 3000ms to allow more time for state to stabilize
@@ -186,10 +168,6 @@ export function AuthProvider({
     const initializeAuth = async () => {
       // Skip if we already have auth information from the server
       if (userId || status !== "idle") {
-        console.log("Skipping client auth - we already have auth info", {
-          status,
-          userId,
-        });
         return;
       }
 
@@ -198,7 +176,6 @@ export function AuthProvider({
         console.time("authInitialization");
 
         const supabase = createClient();
-        console.log("AuthProvider - Getting session from client...");
         const {
           data: { session },
           error,
@@ -210,11 +187,9 @@ export function AuthProvider({
         }
 
         if (session) {
-          console.log("AuthProvider - Client session found:", session.user.id);
           setAuthenticated(session.user.id);
           lastAuthTime.current = Date.now();
         } else {
-          console.log("AuthProvider - No client session found");
           setUnauthenticated();
         }
 
@@ -224,11 +199,6 @@ export function AuthProvider({
         const {
           data: { subscription },
         } = supabase.auth.onAuthStateChange((event, session) => {
-          console.log(
-            "Auth state changed:",
-            event,
-            session ? `User: ${session.user.id}` : "No session"
-          );
           if (event === "SIGNED_IN" && session) {
             setAuthenticated(session.user.id);
             lastAuthTime.current = Date.now();

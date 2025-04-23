@@ -1304,11 +1304,11 @@ export type Database = {
         Args: { profile_id_param: string }
         Returns: {
           id: string
-          owner_id: string
-          profile_id: string
           name: string
           description: string
-          visibility: string
+          owner_id: string
+          profile_id: string
+          visibility: Database["public"]["Enums"]["rcmd_visibility"]
           created_at: string
           updated_at: string
           items: Json
