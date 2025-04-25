@@ -17,6 +17,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Use output: 'standalone' for better compatibility with Vercel and other platforms
+  output: "standalone",
   images: {
     remotePatterns: [
       // Wildcard for development environment

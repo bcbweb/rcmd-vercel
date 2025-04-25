@@ -918,6 +918,7 @@ export type Database = {
           profile_picture_url: string | null
           tags: string[] | null
           updated_at: string | null
+          view_count: number | null
         }
         Insert: {
           auth_user_id: string
@@ -937,6 +938,7 @@ export type Database = {
           profile_picture_url?: string | null
           tags?: string[] | null
           updated_at?: string | null
+          view_count?: number | null
         }
         Update: {
           auth_user_id?: string
@@ -956,6 +958,7 @@ export type Database = {
           profile_picture_url?: string | null
           tags?: string[] | null
           updated_at?: string | null
+          view_count?: number | null
         }
         Relationships: [
           {
@@ -1288,6 +1291,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      debug_profile_info: {
+        Args: { profile_id_param: string }
+        Returns: Json
+      }
       debug_profile_pages: {
         Args: { p_profile_id: string }
         Returns: Json
@@ -1299,6 +1306,14 @@ export type Database = {
       delete_profile_page: {
         Args: { page_id: string }
         Returns: undefined
+      }
+      does_function_exist: {
+        Args: { function_name: string }
+        Returns: boolean
+      }
+      function_exists_by_name: {
+        Args: { function_name: string }
+        Returns: boolean
       }
       get_public_collections_for_profile: {
         Args: { profile_id_param: string }
@@ -1367,6 +1382,10 @@ export type Database = {
           view_count: number
           visibility: Database["public"]["Enums"]["rcmd_visibility"] | null
         }[]
+      }
+      increment_profile_view: {
+        Args: { profile_id: string }
+        Returns: undefined
       }
       insert_block_with_order: {
         Args: { p_profile_id: string; p_content: Json; p_type: string }
@@ -1590,6 +1609,12 @@ export type Database = {
       reorder_profile_blocks: {
         Args: { p_profile_id: string; p_block_id: string; p_new_order: number }
         Returns: boolean
+      }
+      safe_function_call: {
+        Args:
+          | { function_name: string; param_value?: string }
+          | { function_name: string; params?: Json }
+        Returns: Json
       }
       toggle_link_visibility: {
         Args: { p_link_id: string; p_visibility?: string }

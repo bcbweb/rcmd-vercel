@@ -1,3 +1,12 @@
+// Add these directives at the top of the file
+export const dynamic = "force-dynamic";
+export const dynamicParams = true;
+
+// Optional: Define generateStaticParams if you want to pre-render specific pages
+export async function generateStaticParams() {
+  return [];
+}
+
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";

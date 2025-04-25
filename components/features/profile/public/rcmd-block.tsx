@@ -27,155 +27,108 @@ export default function RCMDBlock({ blockId, preloadedData }: RCMDBlockProps) {
   );
   const [error, setError] = useState<Error | null>(null);
 
-  // Add debug log to check if preloaded data is received
+  // Log the preloaded data we received
   useEffect(() => {
-    console.log(`RCMDBlock (${blockId}) - Preloaded data structure:`, {
-      hasPreloadedData: !!preloadedData,
-      preloadedDataKeys: preloadedData ? Object.keys(preloadedData) : [],
-      hasRcmdBlocksProp: preloadedData?.rcmd_blocks !== undefined,
-      hasRcmdsProp: preloadedData?.rcmds !== undefined,
-      rcmdBlocksType: preloadedData?.rcmd_blocks
-        ? typeof preloadedData.rcmd_blocks
-        : "undefined",
-      rcmdsType: preloadedData?.rcmds
-        ? typeof preloadedData.rcmds
-        : "undefined",
-    });
+    console.log(
+      `[RCMDBlock ${blockId}] Received preloaded data:`,
+      preloadedData
+    );
   }, [blockId, preloadedData]);
 
   useEffect(() => {
-    // Define the fetch function inside the effect to avoid dependency issues
-    async function fetchRcmdBlock() {
+    // If we have preloaded RCMD data, use it directly
+    if (preloadedData?.rcmds && typeof preloadedData.rcmds === "object") {
+      console.log(`[RCMDBlock ${blockId}] Using directly provided rcmds data`);
+      setRcmdBlock({
+        id: blockId,
+        rcmds: preloadedData.rcmds as RCMD,
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // Define fetch functions outside conditionals to avoid strict mode errors
+    async function fetchRcmdById(entityId: string) {
       try {
         setIsLoading(true);
-        setError(null);
         const supabase = createClient();
 
-        console.log(`Fetching RCMD block data for blockId: ${blockId}`);
-        // First try to get the rcmd_blocks entry
         const { data, error } = await supabase
-          .from("rcmd_blocks")
-          .select(`*, rcmds (*)`)
-          .eq("profile_block_id", blockId)
+          .from("rcmds")
+          .select(`*`)
+          .eq("id", entityId)
           .single();
 
-        // If that fails, try to get the profile_block directly
-        if (error || !data) {
-          console.log(`No rcmd_blocks found, getting profile_block directly`);
-          const { data: profileBlock, error: profileBlockError } =
-            await supabase
-              .from("profile_blocks")
-              .select(`*`)
-              .eq("id", blockId)
-              .single();
-
-          if (profileBlockError) throw profileBlockError;
-          if (!profileBlock) throw new Error("Profile block not found");
-
-          // If we have an entity_id, try to get the RCMD directly
-          if (profileBlock.entity_id) {
-            const { data: rcmdData, error: rcmdError } = await supabase
-              .from("rcmds")
-              .select(`*`)
-              .eq("id", profileBlock.entity_id)
-              .single();
-
-            if (rcmdError) throw rcmdError;
-            if (!rcmdData) throw new Error("RCMD not found");
-
-            console.log(`Found RCMD directly:`, rcmdData);
-            setRcmdBlock({
-              id: blockId,
-              rcmds: rcmdData as RCMD,
-            });
-            setIsLoading(false);
-            return;
-          } else {
-            throw new Error("Profile block has no entity_id");
-          }
-        }
-
-        console.log(`Received RCMD block data:`, data);
-        if (!data.rcmds) {
-          throw new Error("RCMD data missing from RCMD block");
-        }
+        if (error) throw error;
+        if (!data) throw new Error("RCMD not found");
 
         setRcmdBlock({
-          id: data.id,
-          rcmds: data.rcmds as RCMD,
+          id: blockId,
+          rcmds: data as RCMD,
         });
       } catch (err) {
-        console.error("Error fetching RCMD block:", err);
+        console.error(`[RCMDBlock ${blockId}] Error fetching RCMD:`, err);
         setError(err instanceof Error ? err : new Error(String(err)));
       } finally {
         setIsLoading(false);
       }
     }
 
-    // Handler for processing preloaded data
-    function processPreloadedData() {
+    // If we have entity_id, fetch the RCMD
+    if (preloadedData?.entity_id) {
+      const entityId = preloadedData.entity_id as string;
+      console.log(
+        `[RCMDBlock ${blockId}] Fetching RCMD by entity_id: ${entityId}`
+      );
+      fetchRcmdById(entityId);
+      return;
+    }
+
+    // Otherwise, fetch using the block ID
+    async function fetchRcmdBlock() {
       try {
-        // Direct rcmds property - most straightforward
-        if (
-          preloadedData?.rcmds &&
-          typeof preloadedData.rcmds === "object" &&
-          preloadedData.rcmds !== null
-        ) {
-          console.log(`Using preloaded data with direct rcmds property`);
-          setRcmdBlock({
-            id:
-              typeof preloadedData.id === "string" ? preloadedData.id : blockId,
-            rcmds: preloadedData.rcmds as RCMD,
-          });
-          setIsLoading(false);
-          return true;
+        setIsLoading(true);
+        const supabase = createClient();
+
+        // Try to get the profile_block directly to find entity_id
+        const { data: profileBlock, error: profileBlockError } = await supabase
+          .from("profile_blocks")
+          .select(`*`)
+          .eq("id", blockId)
+          .single();
+
+        if (profileBlockError || !profileBlock) {
+          throw profileBlockError || new Error("Profile block not found");
         }
 
-        // Nested rcmd_blocks structure
-        if (
-          preloadedData?.rcmd_blocks &&
-          typeof preloadedData.rcmd_blocks === "object"
-        ) {
-          const rcmdBlocksObj = preloadedData.rcmd_blocks as Record<
-            string,
-            unknown
-          >;
-          if (rcmdBlocksObj.rcmds && typeof rcmdBlocksObj.rcmds === "object") {
-            console.log(`Using rcmds from nested rcmd_blocks property`);
-            setRcmdBlock({
-              id:
-                typeof preloadedData.id === "string"
-                  ? preloadedData.id
-                  : blockId,
-              rcmds: rcmdBlocksObj.rcmds as RCMD,
-            });
-            setIsLoading(false);
-            return true;
+        // If we have entity_id, fetch the RCMD
+        if (profileBlock.entity_id) {
+          const { data: rcmdData, error: rcmdError } = await supabase
+            .from("rcmds")
+            .select(`*`)
+            .eq("id", profileBlock.entity_id)
+            .single();
+
+          if (rcmdError || !rcmdData) {
+            throw rcmdError || new Error("RCMD not found");
           }
+
+          setRcmdBlock({
+            id: blockId,
+            rcmds: rcmdData as RCMD,
+          });
+        } else {
+          throw new Error("Profile block has no entity_id");
         }
-
-        // If we get here, we couldn't process the preloaded data
-        console.log(
-          `Unable to extract RCMD data from preloaded data, will fetch`
-        );
-        return false;
       } catch (err) {
-        console.error("Error processing preloaded data:", err);
-        return false;
+        console.error(`[RCMDBlock ${blockId}] Error:`, err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setIsLoading(false);
       }
     }
 
-    // Main logic flow
-    if (preloadedData) {
-      const success = processPreloadedData();
-      if (!success) {
-        // Fall back to fetching if preloaded data doesn't work
-        fetchRcmdBlock();
-      }
-    } else {
-      // If no preloaded data, fetch from API
-      fetchRcmdBlock();
-    }
+    fetchRcmdBlock();
   }, [blockId, preloadedData]);
 
   const formatLocation = (location: unknown): string | null => {

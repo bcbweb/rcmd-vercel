@@ -67,41 +67,6 @@ export default function ProfileTabs({
     propDefaultPageId || null
   );
 
-  // Add a clear, prominent debug log for collections default
-  console.log(
-    "%c COLLECTIONS DEFAULT CHECK",
-    "background: #ff0; color: #000; font-size: 16px",
-    {
-      defaultPageType,
-      defaultPageId,
-      propDefaultPageType,
-      propDefaultPageId,
-      isCollectionsDefault:
-        propDefaultPageType === "collection" ||
-        defaultPageType === "collection",
-    }
-  );
-
-  // Log incoming props
-  if (process.env.NODE_ENV === "development") {
-    console.log("[ProfileTabs] Received props:", {
-      profileId,
-      defaultBlocksCount: defaultBlocks?.length,
-      activePage,
-      propDefaultPage,
-      propActiveTab,
-      propDefaultPageType,
-      propDefaultPageId,
-    });
-
-    // Force log the default page type to directly check its value
-    console.log("DEFAULT PAGE TYPE DIRECT CHECK:", {
-      defaultPageType: propDefaultPageType,
-      defaultPageId: propDefaultPageId,
-      defaultPageAfterState: defaultPageType,
-    });
-  }
-
   // Generate URLs for different tabs
   const getTabUrl = (tabKey: string) => {
     if (tabKey === "rcmds" || tabKey === "links" || tabKey === "collections") {
@@ -127,112 +92,174 @@ export default function ProfileTabs({
   // Fetch all profile pages
   useEffect(() => {
     async function fetchProfilePages() {
-      console.log("fetchProfilePages running with:", {
-        propDefaultPage,
-        activePage,
-        profileId,
-      });
-
       // Always fetch all pages for this profile to ensure we have all titles
       setIsLoading(true);
       const supabase = createClient();
 
       try {
-        // Fetch all pages for this profile
+        console.log(`[ProfileTabs] Fetching pages for profile: ${profileId}`);
+
+        // First attempt - direct from browser
         const { data: pagesData, error: pagesError } = await supabase
           .from("profile_pages")
-          .select("*")
+          .select("id, name, slug, profile_id, created_at")
           .eq("profile_id", profileId)
           .order("created_at", { ascending: true });
 
-        if (pagesError) throw pagesError;
+        if (pagesError) {
+          console.warn(
+            "[ProfileTabs] Error fetching profile pages:",
+            pagesError
+          );
 
-        console.log("Fetched pages data:", pagesData);
+          // Second attempt - try via API
+          console.log("[ProfileTabs] Attempting API fallback for pages");
+          try {
+            const response = await fetch(
+              `/api/test-pages?profileId=${profileId}`
+            );
+            const apiData = await response.json();
 
-        if (pagesData && pagesData.length > 0) {
-          // IMPORTANT: Always set all pages properly
-          if (pagesData.length === 1) {
-            // If only one page, it's the default
-            setDefaultPage(pagesData[0]);
-            setPages([]);
-          } else if (pagesData.length > 1) {
-            // First page is default, all others are shown in tabs
-            setDefaultPage(pagesData[0]);
-            setPages(pagesData.slice(1));
-          }
+            if (apiData.success && apiData.pages) {
+              console.log(
+                `[ProfileTabs] API returned ${apiData.pages.length} pages`
+              );
 
-          // If we have defaultBlocks from the parent, assign them to the appropriate page
-          if (defaultBlocks.length > 0) {
-            // If we have an active page, that's the one receiving blocks
-            if (activePage) {
-              setPageBlocks((prev) => ({
-                ...prev,
-                [activePage.id]: defaultBlocks,
-              }));
-            } else if (propDefaultPage) {
-              // If we have a prop default page, assign blocks to it
-              setPageBlocks((prev) => ({
-                ...prev,
-                [propDefaultPage.id]: defaultBlocks,
-              }));
-            } else if (pagesData[0]) {
-              // Otherwise assign to first page
-              setPageBlocks((prev) => ({
-                ...prev,
-                [pagesData[0].id]: defaultBlocks,
-              }));
+              // Process the pages from the API
+              if (apiData.pages.length > 0) {
+                // Define type for page data from API response
+                interface APIPageData {
+                  id: string;
+                  name: string;
+                  slug: string;
+                  profile_id: string;
+                  created_at: string;
+                  [key: string]: unknown;
+                }
+
+                // If we have a default page from props, use it
+                if (propDefaultPage) {
+                  setDefaultPage(propDefaultPage);
+
+                  // Filter out the default page from the other pages list
+                  const otherPages = apiData.pages.filter(
+                    (page: APIPageData) => page.id !== propDefaultPage.id
+                  );
+                  setPages(
+                    otherPages.map((page: APIPageData) => ({
+                      id: page.id,
+                      name: page.name,
+                      slug: page.slug,
+                      profile_id: page.profile_id,
+                    })) as ProfilePage[]
+                  );
+                } else {
+                  // No default page in props, use the first page as default
+                  const firstPage = apiData.pages[0] as APIPageData;
+                  const convertedFirstPage: ProfilePage = {
+                    id: firstPage.id,
+                    name: firstPage.name,
+                    slug: firstPage.slug,
+                    profile_id: firstPage.profile_id,
+                  };
+
+                  setDefaultPage(convertedFirstPage);
+
+                  const otherPages = apiData.pages
+                    .slice(1)
+                    .map((page: APIPageData) => ({
+                      id: page.id,
+                      name: page.name,
+                      slug: page.slug,
+                      profile_id: page.profile_id,
+                    })) as ProfilePage[];
+
+                  setPages(otherPages);
+                }
+              }
+            } else {
+              console.error("[ProfileTabs] API fallback failed:", apiData);
+              throw new Error("Both direct query and API fallback failed");
             }
+          } catch (apiError) {
+            console.error("[ProfileTabs] API error:", apiError);
+            throw apiError;
           }
+        } else {
+          console.log(
+            `[ProfileTabs] Found ${pagesData?.length || 0} pages directly`
+          );
 
-          // Set active tab based on props or current path
-          if (propActiveTab) {
-            setActiveTab(propActiveTab);
-          } else {
-            const currentPath = pathname.split("/");
+          // Process the pages from the direct query
+          if (pagesData && pagesData.length > 0) {
+            // If we have a default page from props, use it
+            if (propDefaultPage) {
+              setDefaultPage(propDefaultPage);
 
-            // Check if we're on a tab path like /[handle]/rcmds
-            if (currentPath.length > 2) {
-              const tabSlug = currentPath[2];
+              // Filter out the default page from the other pages list
+              const otherPages = pagesData.filter(
+                (page) => page.id !== propDefaultPage.id
+              );
+              setPages(otherPages);
+            } else {
+              // No default page in props, use the first page as default
+              setDefaultPage(pagesData[0]);
+              setPages(pagesData.slice(1));
+            }
 
-              if (
-                tabSlug === "rcmds" ||
-                tabSlug === "links" ||
-                tabSlug === "collections"
-              ) {
-                setActiveTab(tabSlug);
-              } else {
-                // We're on a page slug, find the matching page
-                const matchingPage = pagesData.find(
-                  (page) => page.slug === tabSlug
-                );
-                if (matchingPage) {
-                  setActiveTab(matchingPage.id);
-                } else if (propDefaultPage) {
+            // Set active tab based on props or current path
+            if (propActiveTab) {
+              setActiveTab(propActiveTab);
+            } else {
+              const currentPath = pathname.split("/");
+
+              // Check if we're on a tab path like /[handle]/rcmds
+              if (currentPath.length > 2) {
+                const tabSlug = currentPath[2];
+
+                if (
+                  tabSlug === "rcmds" ||
+                  tabSlug === "links" ||
+                  tabSlug === "collections"
+                ) {
+                  setActiveTab(tabSlug);
+                } else {
+                  // We're on a page slug, find the matching page
+                  const matchingPage = pagesData.find(
+                    (page) => page.slug === tabSlug
+                  );
+                  if (matchingPage) {
+                    setActiveTab(matchingPage.id);
+                  } else if (propDefaultPage) {
+                    setActiveTab(propDefaultPage.id);
+                  } else {
+                    // Fallback to first page if no matching page found
+                    setActiveTab(pagesData[0].id);
+                  }
+                }
+              } else if (currentPath.length === 2 && currentPath[1]) {
+                // We're on the handle path (default page)
+                if (propDefaultPage) {
                   setActiveTab(propDefaultPage.id);
                 } else {
-                  // Fallback to first page if no matching page found
+                  setActiveTab(pagesData[0].id);
+                }
+              } else {
+                // Fallback to default page
+                if (propDefaultPage) {
+                  setActiveTab(propDefaultPage.id);
+                } else {
                   setActiveTab(pagesData[0].id);
                 }
               }
-            } else if (currentPath.length === 2 && currentPath[1]) {
-              // We're on the handle path (default page)
-              if (propDefaultPage) {
-                setActiveTab(propDefaultPage.id);
-              } else {
-                setActiveTab(pagesData[0].id);
-              }
-            } else {
-              // Fallback to default page
-              if (propDefaultPage) {
-                setActiveTab(propDefaultPage.id);
-              } else {
-                setActiveTab(pagesData[0].id);
-              }
             }
+          } else {
+            console.log("[ProfileTabs] No pages found for profile");
           }
         }
       } catch (error) {
-        console.error("Error fetching profile pages:", error);
+        console.error("[ProfileTabs] Error in fetchProfilePages:", error);
+        // Continue with default values
       } finally {
         setIsLoading(false);
       }
@@ -279,6 +306,8 @@ export default function ProfileTabs({
       const supabase = createClient();
 
       try {
+        console.log(`[ProfileTabs] Fetching content for tab: ${activeTab}`);
+
         if (isPageTab) {
           // Fetch blocks for the specific page
           const { data, error } = await supabase
@@ -288,7 +317,15 @@ export default function ProfileTabs({
             .eq("page_id", activeTab)
             .order("display_order", { ascending: true });
 
-          if (error) throw error;
+          if (error) {
+            console.error(`[ProfileTabs] Error fetching page blocks:`, error);
+            throw error;
+          }
+
+          console.log(
+            `[ProfileTabs] Found ${data?.length || 0} blocks for page ${activeTab}`
+          );
+
           setPageBlocks((prev) => ({
             ...prev,
             [activeTab]: data || [],
@@ -302,6 +339,10 @@ export default function ProfileTabs({
                 ? "link"
                 : "collection";
 
+          console.log(
+            `[ProfileTabs] Fetching ${blockType} blocks for profile ${profileId}`
+          );
+
           const { data, error } = await supabase
             .from("profile_blocks")
             .select("*")
@@ -309,7 +350,17 @@ export default function ProfileTabs({
             .eq("type", blockType)
             .order("display_order", { ascending: true });
 
-          if (error) throw error;
+          if (error) {
+            console.error(
+              `[ProfileTabs] Error fetching ${blockType} blocks:`,
+              error
+            );
+            throw error;
+          }
+
+          console.log(
+            `[ProfileTabs] Found ${data?.length || 0} ${blockType} blocks`
+          );
 
           if (activeTab === "rcmds") {
             setRcmdBlocks(data || []);
@@ -320,7 +371,8 @@ export default function ProfileTabs({
           }
         }
       } catch (error) {
-        console.error(`Error fetching content for tab ${activeTab}:`, error);
+        console.error("[ProfileTabs] Error in fetchPageContent:", error);
+        // Handle error silently
       } finally {
         setContentLoading(false);
       }
@@ -344,46 +396,109 @@ export default function ProfileTabs({
 
       const supabase = createClient();
       try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("default_page_type, default_page_id")
-          .eq("id", profileId)
-          .single();
+        // Use our new safe function call to check if debug_profile_info exists
+        console.log(
+          "[ProfileTabs] Testing safe_function_call for profile info",
+          profileId
+        );
+        const { data: safeFunctionResult, error: safeFunctionError } =
+          await supabase.rpc("safe_function_call", {
+            function_name: "debug_profile_info",
+            param_value: profileId,
+          });
 
-        if (error) {
-          console.error("Error fetching profile default page info:", error);
-          return;
-        }
+        if (!safeFunctionError && safeFunctionResult?.success) {
+          console.log(
+            "[ProfileTabs] Successfully used debug_profile_info function"
+          );
+          // If debug data was returned, use it
+          const debugData = safeFunctionResult.result;
 
-        if (data) {
-          setDefaultPageType(data.default_page_type || null);
-          setDefaultPageId(data.default_page_id || null);
+          if (debugData && debugData.profile) {
+            setDefaultPageType(debugData.profile.default_page_type || null);
+            setDefaultPageId(debugData.profile.default_page_id || null);
+
+            // Log debug data
+            console.log("[ProfileTabs] Debug profile info:", debugData);
+          }
+        } else {
+          // Fall back to regular query
+          console.log(
+            "[ProfileTabs] Using regular profile query fallback",
+            safeFunctionError ||
+              (safeFunctionResult ? "Function call failed" : "No result")
+          );
+
+          const { data } = await supabase
+            .from("profiles")
+            .select("default_page_type, default_page_id")
+            .eq("id", profileId)
+            .single();
+
+          if (data) {
+            setDefaultPageType(data.default_page_type || null);
+            setDefaultPageId(data.default_page_id || null);
+          }
         }
-      } catch (error) {
-        console.error("Error in fetchProfileInfo:", error);
+      } catch (err) {
+        console.error("[ProfileTabs] Error fetching profile info:", err);
+        // Handle error silently
       }
     }
 
     fetchProfileInfo();
   }, [profileId, propDefaultPageType, propDefaultPageId]);
 
+  // NEW: Add a specific useEffect to forcibly fetch all pages
   useEffect(() => {
-    // Debug logs
-    if (
-      typeof window !== "undefined" &&
-      process.env.NODE_ENV === "development"
-    ) {
-      if (defaultPage?.name) {
-        console.log("Rendering default page tab:", defaultPage.name);
+    const fetchAllPages = async () => {
+      if (profileId && !isLoading && pages.length === 0 && defaultPage) {
+        try {
+          const supabase = createClient();
+          const { data } = await supabase
+            .from("profile_pages")
+            .select("id, name, slug, profile_id, created_at")
+            .eq("profile_id", profileId)
+            .order("created_at", { ascending: true });
+
+          if (data && data.length > 0) {
+            if (defaultPage) {
+              // Filter out the default page we already have
+              const otherPages = data.filter(
+                (page) => page.id !== defaultPage.id
+              );
+
+              // Directly set pages state with these pages
+              if (otherPages.length > 0) {
+                // Add proper types for fetched profile pages
+                interface FetchedPage {
+                  id: string;
+                  name: string;
+                  slug: string;
+                  profile_id: string;
+                  created_at: string;
+                }
+
+                // Convert fetched pages to ProfilePage type
+                const typedPages = otherPages.map((page: FetchedPage) => ({
+                  id: page.id,
+                  name: page.name,
+                  slug: page.slug,
+                  profile_id: page.profile_id,
+                })) as ProfilePage[];
+
+                setPages(typedPages);
+              }
+            }
+          }
+        } catch {
+          // Handle error silently
+        }
       }
-      if (pages.length > 0) {
-        console.log(
-          "Pages state for tabs:",
-          pages.map((p) => p.name)
-        );
-      }
-    }
-  }, [defaultPage, pages]);
+    };
+
+    fetchAllPages();
+  }, [profileId, isLoading, pages.length, defaultPage]);
 
   if (isLoading) {
     return (
@@ -449,7 +564,9 @@ export default function ProfileTabs({
             </Link>
           ))
         ) : (
-          <div className="text-xs text-gray-500 py-1">No custom pages.</div>
+          <div className="text-xs text-gray-500 py-1">
+            No custom pages found (count: {pages.length}).
+          </div>
         )}
 
         {/* Content type tabs */}

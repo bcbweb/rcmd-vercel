@@ -8,15 +8,17 @@ import ImageBlock from "./image-block";
 import CollectionBlock from "./collection-block";
 import type { ProfileBlockType } from "@/types";
 
-// Define a generic extended block type for type safe operations
-interface ExtendedProfileBlock extends ProfileBlockType {
-  rcmd_blocks?: Record<string, unknown>;
+// Create an interface that matches what we're receiving in blocks which
+// includes the entity_id and rcmds properties that might not be in the standard ProfileBlockType
+type EnhancedProfileBlock = ProfileBlockType & {
+  entity_id?: string;
   rcmds?: Record<string, unknown>;
+  rcmd_blocks?: Record<string, unknown>;
   [key: string]: unknown;
-}
+};
 
 interface PublicProfileBlocksProps {
-  blocks: ProfileBlockType[];
+  blocks: (ProfileBlockType | EnhancedProfileBlock)[];
 }
 
 // Loading placeholder
@@ -41,22 +43,31 @@ export default function PublicProfileBlocks({
 }: PublicProfileBlocksProps) {
   // Add debugging for the blocks
   useEffect(() => {
-    console.log("PublicProfileBlocks received blocks:", blocks);
+    console.log("[PublicProfileBlocks] Received blocks:", blocks);
 
     // Check for RCMD blocks specifically
     const rcmdBlocks = blocks.filter((block) => block.type === "rcmd");
-    console.log(`Found ${rcmdBlocks.length} RCMD blocks:`, rcmdBlocks);
+    console.log(`[PublicProfileBlocks] Found ${rcmdBlocks.length} RCMD blocks`);
 
-    // Log each RCMD block's structure
-    rcmdBlocks.forEach((block, index) => {
-      console.log(`RCMD block ${index + 1} structure:`, {
+    // Log each RCMD block's structure (but limit to first 3 to avoid console spam)
+    rcmdBlocks.slice(0, 3).forEach((block, index) => {
+      const enhancedBlock = block as EnhancedProfileBlock;
+      console.log(`[PublicProfileBlocks] RCMD block ${index + 1} structure:`, {
         id: block.id,
         type: block.type,
         hasRcmdBlocks: "rcmd_blocks" in block,
         hasRcmds: "rcmds" in block,
+        hasEntityId: "entity_id" in block,
+        entityId: enhancedBlock.entity_id || null,
         keys: Object.keys(block),
       });
     });
+
+    if (rcmdBlocks.length > 3) {
+      console.log(
+        `[PublicProfileBlocks] Plus ${rcmdBlocks.length - 3} more RCMD blocks...`
+      );
+    }
   }, [blocks]);
 
   return (
@@ -66,32 +77,61 @@ export default function PublicProfileBlocks({
         let preloadedData: Record<string, unknown> | undefined = undefined;
 
         if (block.type === "rcmd") {
-          console.log(`Processing RCMD block ID ${block.id}:`, block);
-          const typedBlock = block as ExtendedProfileBlock;
+          console.log(
+            `[PublicProfileBlocks] Processing RCMD block ID ${block.id}`
+          );
+          const enhancedBlock = block as EnhancedProfileBlock;
+
+          // Always include entity_id if available
+          const baseData: Record<string, unknown> = {
+            id: block.id,
+          };
+
+          if (enhancedBlock.entity_id) {
+            baseData.entity_id = enhancedBlock.entity_id;
+          }
 
           // First try with rcmd_blocks property
           if (
-            typedBlock.rcmd_blocks &&
-            typeof typedBlock.rcmd_blocks === "object"
+            enhancedBlock.rcmd_blocks &&
+            typeof enhancedBlock.rcmd_blocks === "object"
           ) {
             preloadedData = {
-              id: block.id,
-              rcmd_blocks: typedBlock.rcmd_blocks,
+              ...baseData,
+              rcmd_blocks: enhancedBlock.rcmd_blocks,
             };
-            console.log(`Using rcmd_blocks data:`, preloadedData);
+            console.log(
+              `[PublicProfileBlocks] Using rcmd_blocks data for block ${block.id}`
+            );
           }
           // Next try with rcmds property - direct RCMD entity
-          else if (typedBlock.rcmds && typeof typedBlock.rcmds === "object") {
+          else if (
+            enhancedBlock.rcmds &&
+            typeof enhancedBlock.rcmds === "object"
+          ) {
             preloadedData = {
-              id: block.id,
-              rcmds: typedBlock.rcmds,
+              ...baseData,
+              rcmds: enhancedBlock.rcmds,
             };
-            console.log(`Using rcmds data:`, preloadedData);
-          }
-          // Finally, if both are missing, create a minimal preloaded data
-          else {
             console.log(
-              `Block does NOT have rcmd_blocks or rcmds property, using minimal data`
+              `[PublicProfileBlocks] Using rcmds data for block ${block.id}`
+            );
+          }
+          // If we have entity_id but no data, pass the entity_id for direct fetch
+          else if (enhancedBlock.entity_id) {
+            preloadedData = {
+              ...baseData,
+              // Null but defined to trigger client-side fetching
+              rcmds: null,
+            };
+            console.log(
+              `[PublicProfileBlocks] Using entity_id for block ${block.id}: ${enhancedBlock.entity_id}`
+            );
+          }
+          // Finally, if everything is missing, create a minimal preloaded data
+          else {
+            console.warn(
+              `[PublicProfileBlocks] Block ${block.id} does NOT have rcmd_blocks, rcmds, or entity_id properties`
             );
             preloadedData = {
               id: block.id,
