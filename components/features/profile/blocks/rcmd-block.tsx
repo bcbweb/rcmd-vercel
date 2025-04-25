@@ -52,12 +52,36 @@ export default function RCMDBlock({
 
       // If we have a featured image, get the URL
       if (data.featured_image) {
-        const { data: imageData } = await supabase.storage
-          .from("rcmd-images")
-          .createSignedUrl(data.featured_image, 600);
+        console.log("RCMD featured_image path:", data.featured_image);
 
-        if (imageData) {
-          setImageUrl(imageData.signedUrl);
+        // Check if the featured_image is already a full URL
+        if (data.featured_image.startsWith("http")) {
+          // If it's already a URL, use it directly
+          console.log("Using direct URL:", data.featured_image);
+          setImageUrl(data.featured_image);
+        } else {
+          // Otherwise, create a signed URL from the path
+          try {
+            const { data: imageData } = await supabase.storage
+              .from("content")
+              .createSignedUrl(data.featured_image, 600);
+
+            if (imageData) {
+              console.log("RCMD image signed URL:", imageData.signedUrl);
+              setImageUrl(imageData.signedUrl);
+            } else {
+              console.error(
+                "No signed URL returned for image:",
+                data.featured_image
+              );
+            }
+          } catch (error) {
+            console.error("Error creating signed URL:", error);
+            // Fallback to try using the path directly with the storage URL
+            const storageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/content/${data.featured_image}`;
+            console.log("Using fallback storage URL:", storageUrl);
+            setImageUrl(storageUrl);
+          }
         }
       }
     } catch (err) {
@@ -217,13 +241,15 @@ export default function RCMDBlock({
       {/* Featured Image */}
       {imageUrl ? (
         <div className="relative aspect-video w-full mb-4 rounded-lg overflow-hidden">
-          <Image
-            src={imageUrl}
-            alt={rcmd.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
+          <div style={{ height: "100%", width: "100%" }}>
+            <Image
+              src={imageUrl}
+              alt={rcmd.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          </div>
         </div>
       ) : (
         <div className="flex items-center justify-center w-full h-40 bg-gray-200 dark:bg-gray-800 mb-4 rounded-lg">

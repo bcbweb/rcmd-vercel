@@ -65,7 +65,7 @@ export function MetadataPreviewImage({
   // Use fill layout or fixed dimensions
   if (fill) {
     return (
-      <div className={`relative ${className || ""}`}>
+      <div className={`relative h-full w-full ${className || ""}`}>
         <Image
           src={finalSrc}
           alt={alt}
@@ -93,3 +93,6 @@ export function MetadataPreviewImage({
     />
   );
 }
+
+// Add default export for better compatibility
+export default MetadataPreviewImage;

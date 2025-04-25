@@ -12,7 +12,7 @@ import Script from "next/script";
 import { RCMDType, RCMDVisibility } from "@/types";
 import { toast } from "sonner";
 import { imageLoader } from "@/utils/image";
-import { MetadataPreviewImage } from "@/components/common/MetadataPreviewImage";
+import MetadataPreviewImage from "@/components/common/MetadataPreviewImage";
 
 // Fix TypeScript declarations for Google Maps
 declare global {
@@ -1107,14 +1107,21 @@ export default function RCMDModal() {
                         loader={imageLoader}
                       />
                     ) : metadataImageUrl || rcmdToEdit?.featured_image ? (
-                      <MetadataPreviewImage
-                        src={
-                          metadataImageUrl || rcmdToEdit?.featured_image || ""
-                        }
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                      />
+                      (() => {
+                        const imageSrc =
+                          metadataImageUrl || rcmdToEdit?.featured_image || "";
+                        console.log("Image preview source:", imageSrc);
+                        return (
+                          <div style={{ height: "100%", width: "100%" }}>
+                            <MetadataPreviewImage
+                              src={imageSrc}
+                              alt="Preview"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        );
+                      })()
                     ) : (
                       <div className="flex items-center justify-center h-full text-gray-400">
                         <svg
