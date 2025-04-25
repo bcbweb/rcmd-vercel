@@ -1,11 +1,55 @@
 "use client";
 
 import type { Link } from "@/types";
-import { ExternalLink, Calendar } from "lucide-react";
-import { formatDistance } from "date-fns";
+import Image from "next/image";
+import { ExternalLink } from "lucide-react";
 
 interface Props {
   links: Link[];
+}
+
+// Function to get domain and icon for a link
+function getDomain(url: string): string {
+  if (!url) return "";
+  try {
+    const domain = new URL(url).hostname;
+    return domain.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+// Gets an icon URL for a known service
+function getLinkIconUrl(url: string): string {
+  if (!url) return "";
+
+  const domain = getDomain(url).toLowerCase();
+
+  // Check for common domains
+  if (domain.includes("amazon")) {
+    return "/images/icons/amazon-logo.png";
+  }
+  if (domain.includes("instagram")) {
+    return "/images/icons/instagram-logo.png";
+  }
+  if (domain.includes("twitter") || domain.includes("x.com")) {
+    return "/images/icons/twitter-logo.png";
+  }
+  if (domain.includes("youtube")) {
+    return "/images/icons/youtube-logo.png";
+  }
+  if (domain.includes("facebook")) {
+    return "/images/icons/facebook-logo.png";
+  }
+  if (domain.includes("tiktok")) {
+    return "/images/icons/tiktok-logo.png";
+  }
+  if (domain.includes("linkedin")) {
+    return "/images/icons/linkedin-logo.png";
+  }
+
+  // For any other domain, return empty string
+  return "";
 }
 
 export default function PublicLinkBlocks({ links }: Props) {
@@ -22,62 +66,68 @@ export default function PublicLinkBlocks({ links }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {links.map((link) => (
-          <div
+    <div className="space-y-6">
+      {links.map((link, index) => {
+        const domain = getDomain(link.url);
+        const iconUrl = getLinkIconUrl(link.url);
+        const isEven = index % 2 === 0;
+
+        return (
+          <a
             key={link.id}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow duration-200"
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
           >
-            <div className="p-4">
-              <h3 className="text-lg font-medium line-clamp-1 mb-2">
-                {link.title}
-              </h3>
-
-              {link.description && (
-                <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">
-                  {link.description}
-                </p>
-              )}
-
-              <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
-                {link.url && (
-                  <div className="flex items-center gap-1">
-                    <ExternalLink className="h-3 w-3" />
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 truncate max-w-[150px]"
-                    >
-                      {link.url.startsWith("http")
-                        ? new URL(link.url).hostname
-                        : link.url}
-                    </a>
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800 transition-all hover:shadow-md">
+              <div
+                className={`flex flex-col sm:flex-row ${isEven ? "" : "sm:flex-row-reverse"}`}
+              >
+                {/* Image/Icon side */}
+                <div className="sm:w-1/2 flex items-center justify-center p-8 bg-gray-50 dark:bg-gray-800">
+                  <div className="relative w-32 h-32 flex items-center justify-center">
+                    {iconUrl ? (
+                      <Image
+                        src={iconUrl}
+                        alt={domain}
+                        width={200}
+                        height={200}
+                        className="object-contain"
+                        onError={(e) => {
+                          // Fallback to domain text if image fails to load
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="text-6xl font-bold text-gray-400 dark:text-gray-600 text-center uppercase">
+                        {domain.charAt(0)}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
 
-                {link.created_at && (
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>
-                      {formatDistance(new Date(link.created_at), new Date(), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                  </div>
-                )}
-
-                {link.type && link.type !== "other" && (
-                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">
-                    {link.type}
-                  </span>
-                )}
+                {/* Text side */}
+                <div className="sm:w-1/2 p-8 flex flex-col justify-center">
+                  <h2 className="text-2xl font-medium text-gray-800 dark:text-gray-200">
+                    {link.title || domain}
+                  </h2>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400">
+                    {link.description || `Visit ${domain}`}
+                  </p>
+                  {/* URL display - hidden for now but code kept for later conditional logic */}
+                  {false && (
+                    <div className="mt-4 flex items-center text-sm text-gray-500 dark:text-gray-400">
+                      <ExternalLink className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">{link.url}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          </a>
+        );
+      })}
     </div>
   );
 }
