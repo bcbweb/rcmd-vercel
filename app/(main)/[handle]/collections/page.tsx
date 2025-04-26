@@ -77,11 +77,45 @@ export default async function ProfileCollectionsPage({
 
     const collections = collectionsData.map((item: CollectionData) => {
       const { items, ...rest } = item;
+
+      // Log the raw data structure for debugging
+      console.log(`Collection ${rest.id} raw data:`, {
+        itemsType: typeof items,
+        itemsLength: items
+          ? Array.isArray(items)
+            ? items.length
+            : "Not an array"
+          : "undefined",
+      });
+
       return {
         ...rest,
         collection_items: items ? JSON.parse(JSON.stringify(items)) : [],
       };
     }) as CollectionWithItems[];
+
+    // Log the transformed collections for debugging
+    console.log(`Transformed ${collections.length} collections with items`);
+    if (collections.length > 0) {
+      const sampleCollection = collections[0];
+      console.log(
+        `Sample collection ${sampleCollection.id} has ${sampleCollection.collection_items?.length || 0} items`
+      );
+      if (
+        sampleCollection.collection_items &&
+        sampleCollection.collection_items.length > 0
+      ) {
+        const sampleItem = sampleCollection.collection_items[0];
+        console.log(
+          `Sample item: ${JSON.stringify({
+            id: sampleItem.id,
+            type: sampleItem.item_type,
+            hasRcmd: !!sampleItem.rcmd,
+            rcmdId: sampleItem.rcmd_id,
+          })}`
+        );
+      }
+    }
 
     // If we have zero collections, show a friendly message
     if (!collections || collections.length === 0) {

@@ -105,7 +105,8 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         .order("created_at", { ascending: false });
 
       if (userId) {
-        query = query.eq("owner_id", userId);
+        // Support both profile_id and legacy owner_id
+        query = query.or(`profile_id.eq.${userId},owner_id.eq.${userId}`);
       } else {
         const {
           data: { user },
@@ -114,13 +115,29 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         if (userError) throw userError;
         if (!user) throw new Error("No user found");
 
-        query = query.eq("owner_id", user.id);
+        // First try to find profile_id from profiles table
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("auth_id", user.id)
+          .single();
+
+        if (profileData && profileData.id) {
+          // If profile exists, use profile_id
+          console.log("Using profile_id for RCMDs query:", profileData.id);
+          query = query.eq("profile_id", profileData.id);
+        } else {
+          // Fall back to owner_id for backward compatibility
+          console.log("No profile found, falling back to owner_id:", user.id);
+          query = query.eq("owner_id", user.id);
+        }
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
+      console.log(`Found ${data?.length || 0} RCMDs`);
       set({ rcmds: data || [], isLoading: false });
     } catch (error) {
       const errorMessage =

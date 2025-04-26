@@ -20,8 +20,24 @@ export default function CollectionModal() {
 
   const { insertCollection, updateCollection, isLoading } =
     useCollectionStore();
-  const { rcmds } = useRCMDStore();
+  const { rcmds, fetchRCMDs } = useRCMDStore();
   const { profile } = useProfileStore();
+
+  // Fetch RCMDs when modal opens
+  useEffect(() => {
+    if (isCollectionModalOpen && profile?.id) {
+      console.log("CollectionModal: Fetching RCMDs for profile:", profile.id);
+      fetchRCMDs(profile.id);
+    }
+  }, [isCollectionModalOpen, profile, fetchRCMDs]);
+
+  // Add debug logging
+  useEffect(() => {
+    if (isCollectionModalOpen) {
+      console.log("CollectionModal: Current profile:", profile);
+      console.log(`CollectionModal: Available RCMDs: ${rcmds.length}`, rcmds);
+    }
+  }, [isCollectionModalOpen, profile, rcmds]);
 
   // Collection metadata
   const [name, setName] = useState("");

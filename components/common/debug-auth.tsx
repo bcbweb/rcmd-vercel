@@ -16,6 +16,7 @@ export default function DebugAuth() {
   } = useAuthStore();
   const { profile, initialized, fetchProfile } = useProfileStore();
   const [showDetails, setShowDetails] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [serverUserIdInput, setServerUserIdInput] = useState<string>(
     userId || ""
   );
@@ -53,18 +54,40 @@ export default function DebugAuth() {
     }
   };
 
+  // Show toggle button even when the rest is hidden
+  if (!isVisible) {
+    return (
+      <button
+        onClick={() => setIsVisible(true)}
+        className="fixed bottom-0 right-0 bg-black/80 text-white p-1 text-xs z-50 rounded-tl-md opacity-50 hover:opacity-100"
+      >
+        Debug
+      </button>
+    );
+  }
+
   return (
     <div className="fixed bottom-0 right-0 bg-black/80 text-white p-2 text-xs z-50 max-w-[300px] rounded-tl-md">
       <div className="flex justify-between items-center">
         <h3 className="font-bold">Auth Debug</h3>
-        <Button
-          onClick={() => setShowDetails(!showDetails)}
-          size="sm"
-          variant="outline"
-          className="text-[10px] h-5 py-0 px-1 text-white border-white hover:text-white"
-        >
-          {showDetails ? "Hide" : "Details"}
-        </Button>
+        <div className="flex space-x-1">
+          <Button
+            onClick={() => setShowDetails(!showDetails)}
+            size="sm"
+            variant="outline"
+            className="text-[10px] h-5 py-0 px-1 text-white border-white hover:text-white"
+          >
+            {showDetails ? "Hide" : "Details"}
+          </Button>
+          <Button
+            onClick={() => setIsVisible(false)}
+            size="sm"
+            variant="outline"
+            className="text-[10px] h-5 py-0 px-1 text-white border-white hover:text-white"
+          >
+            Close
+          </Button>
+        </div>
       </div>
       <div className="mt-1 space-y-1">
         <p>

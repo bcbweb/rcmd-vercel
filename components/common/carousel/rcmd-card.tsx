@@ -124,12 +124,18 @@ export default function RCMDCard({
         onClick={() => onView?.(rcmd.id)}
       >
         <Image
-          src={rcmd.featured_image || "/placeholder-image.jpg"}
+          src={rcmd.featured_image || "/images/default-image.jpg"}
           alt={rcmd.title}
           fill
           sizes="(max-width: 768px) 90vw, (max-width: 1200px) 45vw, 30vw"
           className="object-cover"
           priority
+          onError={(e) => {
+            // Fallback to default image on error
+            const imgElement = e.currentTarget as HTMLImageElement;
+            imgElement.src = "/images/default-image.jpg";
+            console.log("Image load error, using fallback for:", rcmd.id);
+          }}
         />
         {rcmd.is_sponsored && (
           <div className="absolute top-3 right-3">

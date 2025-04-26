@@ -6,6 +6,8 @@ import { CollectionWithItems } from "@/types";
 import { blockStyles } from "@/components/common";
 import { formatDistance } from "date-fns";
 import { GenericCarousel, RCMDCard } from "@/components/common/carousel";
+import Link from "next/link";
+import { Eye } from "lucide-react";
 
 interface CollectionBlockProps {
   blockId: string;
@@ -95,6 +97,17 @@ export default function CollectionBlock({ blockId }: CollectionBlockProps) {
           <GenericCarousel items={rcmdCards} cardsPerView={2} />
         </div>
       )}
+
+      {/* View Full Collection Link */}
+      <div className="mt-4 text-center">
+        <Link
+          href={`/collections/${collection.id}`}
+          className="inline-flex items-center justify-center px-4 py-2 text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors"
+        >
+          <Eye className="mr-1 h-4 w-4" />
+          View full collection
+        </Link>
+      </div>
     </div>
   );
 }
