@@ -17,4 +17,8 @@ When carrying out tasks related to the following platforms, please always try us
 
 Other notes:
 - Use Supabase MCP to apply migrations rather than asking me to do so.
+- The prompt "fbe" means "run `bun run build` and fix build errors"
+- Remember to use modern Next.js syntax where `params` should be awaited before using its properties. (Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis)
+- Always prefix debug or trace statments with "[DEBUG]" so we can easily find and remove them later.
+
 

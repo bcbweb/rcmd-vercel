@@ -18,6 +18,71 @@ export interface LinkBlockProps {
   hideEdit?: boolean;
 }
 
+// Simple version for public display that takes a direct Link object
+export interface SimpleLinkBlockProps {
+  link: Link;
+  mode: "public";
+  className?: string;
+}
+
+export function SimpleLinkBlock({
+  link,
+  mode,
+  className = "",
+}: SimpleLinkBlockProps) {
+  // Use mode to conditionally apply different styles
+  const isPublic = mode === "public";
+
+  // Format the URL for display
+  const formatUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch {
+      return url;
+    }
+  };
+
+  return (
+    <div
+      className={`${blockStyles.container} ${blockStyles.card} ${
+        isPublic ? "public-mode" : ""
+      } ${className}`}
+    >
+      <h3 className={blockStyles.title}>{link.title}</h3>
+
+      {/* URL */}
+      <a
+        href={link.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center text-sm text-blue-600 dark:text-blue-400 mb-2 hover:underline"
+      >
+        <span className="flex items-center gap-1.5">
+          <Link2 className="w-3.5 h-3.5" />
+          {formatUrl(link.url)}
+        </span>
+      </a>
+
+      {link.description && (
+        <p className={blockStyles.description}>{link.description}</p>
+      )}
+
+      <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center gap-2">
+          {link.created_at && (
+            <span className={blockStyles.metaText}>
+              {formatDistance(new Date(link.created_at), new Date(), {
+                addSuffix: true,
+              })}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LinkBlock({
   linkBlock,
   onDelete,

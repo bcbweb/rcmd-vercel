@@ -20,6 +20,177 @@ export interface RCMDBlockProps {
   hideEdit?: boolean;
 }
 
+// Simple version for public display that takes a direct RCMD object
+export interface SimpleRCMDBlockProps {
+  rcmd: RCMD;
+  mode: "public";
+  className?: string;
+}
+
+export function SimpleRCMDBlock({
+  rcmd,
+  mode,
+  className = "",
+}: SimpleRCMDBlockProps) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  // Use mode to conditionally apply different styles
+  const isPublic = mode === "public";
+
+  // Set image URL based on featured_image
+  useEffect(() => {
+    if (!rcmd.featured_image) return;
+
+    // Check if it's already a full URL
+    if (rcmd.featured_image.startsWith("http")) {
+      setImageUrl(rcmd.featured_image);
+    } else {
+      // For simplicity, we'll use the path directly with the storage URL
+      const storageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/content/${rcmd.featured_image}`;
+      setImageUrl(storageUrl);
+    }
+  }, [rcmd.featured_image]);
+
+  // Format location
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formatLocation = (location: any) => {
+    if (!location) return "";
+
+    // Handle string location
+    if (typeof location === "string")
+      return location.split(", ").slice(0, 2).join(", ");
+
+    // Handle JSON location object
+    if (typeof location === "object") {
+      // Extract city and state if available
+      if (location.city) {
+        return location.state
+          ? `${location.city}, ${location.state}`
+          : location.city;
+      }
+
+      // Otherwise join all non-empty values
+      return Object.values(location)
+        .filter(Boolean)
+        .join(", ")
+        .split(", ")
+        .slice(0, 2)
+        .join(", ");
+    }
+
+    return String(location);
+  };
+
+  // Format price range
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formatPriceRange = (priceRange: any) => {
+    if (!priceRange) return "";
+
+    // Handle string price range
+    if (typeof priceRange === "string") return priceRange;
+
+    // Handle JSON price range object
+    if (typeof priceRange === "object") {
+      const currency = priceRange.currency || "$";
+
+      if (priceRange.min && priceRange.max) {
+        return `${currency}${priceRange.min} - ${currency}${priceRange.max}`;
+      } else if (priceRange.min) {
+        return `From ${currency}${priceRange.min}`;
+      } else if (priceRange.max) {
+        return `Up to ${currency}${priceRange.max}`;
+      }
+    }
+
+    return String(priceRange);
+  };
+
+  return (
+    <div
+      className={`${blockStyles.container} ${blockStyles.card} ${
+        isPublic ? "public-mode" : ""
+      } ${className}`}
+    >
+      {/* Featured Image */}
+      {imageUrl ? (
+        <div className="relative aspect-video w-full mb-4 rounded-lg overflow-hidden">
+          <div style={{ height: "100%", width: "100%" }}>
+            <RCMDLink rcmd={rcmd}>
+              <Image
+                src={imageUrl}
+                alt={rcmd.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            </RCMDLink>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center w-full h-40 bg-gray-200 dark:bg-gray-800 mb-4 rounded-lg">
+          <ImageIcon className="h-10 w-10 text-gray-400" />
+        </div>
+      )}
+
+      <h3 className={blockStyles.title}>
+        <RCMDLink rcmd={rcmd} className="hover:underline">
+          {rcmd.title}
+        </RCMDLink>
+      </h3>
+
+      {rcmd.description && (
+        <p className={blockStyles.description}>{rcmd.description}</p>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2 items-center">
+        {rcmd.tags && rcmd.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {rcmd.tags.map((tag: string, idx: number) => (
+              <span key={idx} className={blockStyles.tag}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2">
+        {(rcmd.location || rcmd.price_range) && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+            {rcmd.location && (
+              <span className={blockStyles.metaText}>
+                {formatLocation(rcmd.location)}
+              </span>
+            )}
+            {rcmd.location && rcmd.price_range && (
+              <span className="text-gray-300 dark:text-gray-700">•</span>
+            )}
+            {rcmd.price_range && (
+              <span className={blockStyles.metaText}>
+                {formatPriceRange(rcmd.price_range)}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          {rcmd.created_at && (
+            <span className={blockStyles.metaText}>
+              {formatDistance(
+                new Date(rcmd.created_at || Date.now()),
+                new Date(),
+                {
+                  addSuffix: true,
+                }
+              )}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RCMDBlock({
   rcmdBlock,
   onDelete,

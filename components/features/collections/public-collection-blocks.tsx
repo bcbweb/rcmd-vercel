@@ -5,6 +5,7 @@ import { Calendar, Box, Eye } from "lucide-react";
 import { formatDistance } from "date-fns";
 import Link from "next/link";
 import { CompactCarousel, RCMDCard } from "@/components/common/carousel";
+import { getShortIdFromUUID } from "@/lib/utils/short-id";
 
 interface Props {
   collections: CollectionWithItems[];
@@ -180,7 +181,7 @@ export default function PublicCollectionBlocks({ collections }: Props) {
                 </div>
                 <div className="mt-4">
                   <Link
-                    href={`/collections/${collection.id}`}
+                    href={`/collection/${getShortIdFromUUID(collection.id)}`}
                     className="inline-flex items-center text-sm text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     <Eye className="mr-1 h-4 w-4" />

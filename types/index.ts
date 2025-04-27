@@ -1,23 +1,24 @@
 import type { Database } from "./supabase";
-import type { Tables } from "./supabase";
 
-type Tables = Database["public"]["Tables"];
+// Use schema types from Database
+type PublicSchema = Database["public"];
+type TableTypes = PublicSchema["Tables"];
 
 // Re-export common types with cleaner names
-export type Profile = Tables["profiles"]["Row"];
-export type Creator = Tables["creators"]["Row"];
-export type Business = Tables["businesses"]["Row"];
-export type RCMD = Tables["rcmds"]["Row"];
-export type Link = Tables["links"]["Row"];
-export type Collection = Tables["collections"]["Row"];
-export type CollectionItem = Tables["collection_items"]["Row"];
-export type ProfileBlockType = Tables["profile_blocks"]["Row"];
-export type ProfilePage = Tables["profile_pages"]["Row"];
-export type TextBlockType = Tables["text_blocks"]["Row"];
-export type ImageBlockType = Tables["image_blocks"]["Row"];
-export type LinkBlockType = Tables["link_blocks"]["Row"];
-export type RCMDBlockType = Tables["rcmd_blocks"]["Row"];
-export type CollectionBlockType = Tables["collection_blocks"]["Row"];
+export type Profile = TableTypes["profiles"]["Row"];
+export type Creator = TableTypes["creators"]["Row"];
+export type Business = TableTypes["businesses"]["Row"];
+export type RCMD = TableTypes["rcmds"]["Row"];
+export type Link = TableTypes["links"]["Row"];
+export type Collection = TableTypes["collections"]["Row"];
+export type CollectionItem = TableTypes["collection_items"]["Row"];
+export type ProfileBlockType = TableTypes["profile_blocks"]["Row"];
+export type ProfilePage = TableTypes["profile_pages"]["Row"];
+export type TextBlockType = TableTypes["text_blocks"]["Row"];
+export type ImageBlockType = TableTypes["image_blocks"]["Row"];
+export type LinkBlockType = TableTypes["link_blocks"]["Row"];
+export type RCMDBlockType = TableTypes["rcmd_blocks"]["Row"];
+export type CollectionBlockType = TableTypes["collection_blocks"]["Row"];
 
 // Custom composite types
 export type CollectionBlockWithCollection = CollectionBlockType & {
@@ -48,23 +49,18 @@ export interface LinkMetadata {
   url?: string;
 }
 
+// Extended types for Collection items with their related data
+export interface EnhancedCollectionItem extends CollectionItem {
+  // Old property names for backward compatibility
+  rcmd?: RCMD | null;
+  link?: Link | null;
+  // New property names from updated query
+  rcmds?: RCMD | null;
+  links?: Link | null;
+}
+
 export interface CollectionWithItems extends Collection {
-  collection_items?: Array<{
-    id: string;
-    collection_id: string;
-    item_type: "rcmd" | "link";
-    rcmd_id?: {
-      id: string;
-      [key: string]: any;
-    };
-    link_id?: {
-      id: string;
-      [key: string]: any;
-    };
-    rcmds?: RCMD;
-    rcmd?: RCMD;
-    created_at: string;
-  }>;
+  collection_items?: EnhancedCollectionItem[];
 }
 
 // Enums (if you need them in your frontend)
@@ -75,18 +71,18 @@ export enum BusinessStatus {
   Closed = "closed",
 }
 
-export type RCMDType = Database["public"]["Enums"]["rcmd_type"];
-export type RCMDVisibility = Database["public"]["Enums"]["rcmd_visibility"];
+export type RCMDType = PublicSchema["Enums"]["rcmd_type"];
+export type RCMDVisibility = PublicSchema["Enums"]["rcmd_visibility"];
 
-// Augmented types with additional properties
-export interface RCMDEntity extends RCMD {
-  profile_id?: string;
-}
+// Augmented types with additional properties - using type instead of interface to avoid conflicts
+export type RCMDEntity = RCMD & {
+  custom_profile_id?: string;
+};
 
-export interface LinkEntity extends Link {
-  profile_id?: string;
-}
+export type LinkEntity = Link & {
+  custom_profile_id?: string;
+};
 
-export interface CollectionEntity extends Collection {
-  profile_id?: string;
-}
+export type CollectionEntity = Collection & {
+  custom_profile_id?: string;
+};
