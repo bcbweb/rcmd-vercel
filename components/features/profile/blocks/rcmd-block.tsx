@@ -10,6 +10,7 @@ import { BlockActions, blockStyles } from "@/components/common";
 import { createClient } from "@/utils/supabase/client";
 import { useRCMDStore } from "@/stores/rcmd-store";
 import { confirmDelete } from "@/utils/confirm";
+import { RCMDLink } from "@/components/features/rcmd/rcmd-link";
 
 export interface RCMDBlockProps {
   rcmdBlock: RCMDBlockType;
@@ -242,13 +243,15 @@ export default function RCMDBlock({
       {imageUrl ? (
         <div className="relative aspect-video w-full mb-4 rounded-lg overflow-hidden">
           <div style={{ height: "100%", width: "100%" }}>
-            <Image
-              src={imageUrl}
-              alt={rcmd.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
+            <RCMDLink rcmd={rcmd}>
+              <Image
+                src={imageUrl}
+                alt={rcmd.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+            </RCMDLink>
           </div>
         </div>
       ) : (
@@ -257,7 +260,11 @@ export default function RCMDBlock({
         </div>
       )}
 
-      <h3 className={blockStyles.title}>{rcmd.title}</h3>
+      <h3 className={blockStyles.title}>
+        <RCMDLink rcmd={rcmd} className="hover:underline">
+          {rcmd.title}
+        </RCMDLink>
+      </h3>
 
       {rcmd.description && (
         <p className={blockStyles.description}>{rcmd.description}</p>

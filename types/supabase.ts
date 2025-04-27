@@ -1317,17 +1317,7 @@ export type Database = {
       }
       get_public_collections_for_profile: {
         Args: { profile_id_param: string }
-        Returns: {
-          id: string
-          name: string
-          description: string
-          owner_id: string
-          profile_id: string
-          visibility: Database["public"]["Enums"]["rcmd_visibility"]
-          created_at: string
-          updated_at: string
-          items: Json
-        }[]
+        Returns: Json[]
       }
       get_public_links_for_profile: {
         Args: { profile_id_param: string }

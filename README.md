@@ -37,3 +37,44 @@ The RPC function `insert_rcmd_block` requires exactly two parameters in this ord
 2. `p_rcmd_id` - The RCMD ID to add
 
 The page_id is determined internally by the function by selecting the first page associated with the profile.
+
+## Short URLs for RCMDs
+
+RCMDs now support short, shareable URLs using a compact ID format. Instead of using the full UUID in the URL, we use a compressed format that's more user-friendly.
+
+### Example:
+
+Original UUID: `123e4567-e89b-12d3-a456-426614174000`  
+Short URL: `/rcmd/4gEjWTfqB7`
+
+### How it works:
+
+1. The system encodes UUIDs to a base62 format for URL-friendly, shorter IDs
+2. RCMDs are accessible via `/rcmd/[shortId]` routes
+3. All RCMDCard components automatically use the short format when linking to RCMDs
+
+### Implementation:
+
+- Utility functions are in `lib/utils/short-id.ts`
+- Main RCMD page is implemented at `app/rcmd/[id]/page.tsx`
+- RCMDCard component in carousel uses the short link format
+
+### Usage:
+
+```jsx
+import { getRCMDShortLink } from "@/components/features/rcmd/rcmd-link";
+
+// Generate a short link URL from a RCMD's UUID
+const shortLink = getRCMDShortLink(rcmd.id);
+```
+
+You can also use the RCMDLink component to generate links to RCMDs:
+
+```jsx
+import { RCMDLink } from "@/components/features/rcmd/rcmd-link";
+
+// In your component
+<RCMDLink rcmd={rcmd} className="hover:underline">
+  View this RCMD
+</RCMDLink>;
+```

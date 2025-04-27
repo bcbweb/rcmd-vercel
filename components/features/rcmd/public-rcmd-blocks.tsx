@@ -2,8 +2,9 @@
 
 import type { RCMD } from "@/types";
 import Image from "next/image";
-import { MapPin, Link, Calendar } from "lucide-react";
+import { MapPin, Link as LinkIcon, Calendar } from "lucide-react";
 import { formatDistance } from "date-fns";
+import { RCMDLink } from "./rcmd-link";
 
 interface Props {
   rcmds: RCMD[];
@@ -32,18 +33,22 @@ export default function PublicRCMDBlocks({ rcmds }: Props) {
           >
             {rcmd.featured_image && (
               <div className="w-full aspect-video relative">
-                <Image
-                  src={rcmd.featured_image}
-                  alt={rcmd.title || "RCMD Image"}
-                  className="object-cover"
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
+                <RCMDLink rcmd={rcmd}>
+                  <Image
+                    src={rcmd.featured_image}
+                    alt={rcmd.title || "RCMD Image"}
+                    className="object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                </RCMDLink>
               </div>
             )}
             <div className="p-4">
               <h3 className="text-lg font-medium line-clamp-1 mb-2">
-                {rcmd.title}
+                <RCMDLink rcmd={rcmd} className="hover:underline">
+                  {rcmd.title}
+                </RCMDLink>
               </h3>
 
               {rcmd.description && (
@@ -68,7 +73,7 @@ export default function PublicRCMDBlocks({ rcmds }: Props) {
 
                 {rcmd.url && (
                   <div className="flex items-center gap-1">
-                    <Link className="h-3 w-3" />
+                    <LinkIcon className="h-3 w-3" />
                     <a
                       href={rcmd.url}
                       target="_blank"

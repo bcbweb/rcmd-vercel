@@ -1,19 +1,19 @@
 "use client";
 
 import Image from "next/image";
+import NextLink from "next/link";
 import {
   Heart,
   Bookmark,
   Share2,
   MapPin,
-  Link,
+  Link as LinkIcon,
   DollarSign,
-  Clock,
   Eye,
 } from "lucide-react";
-
 import type { RCMD, RCMDType } from "@/types";
 import { formatDistanceToNow } from "date-fns";
+import { getRCMDShortLink } from "@/components/features/rcmd/rcmd-link";
 
 interface RCMDCardProps {
   rcmd: RCMD;
@@ -30,8 +30,18 @@ export default function RCMDCard({
   onShare,
   onView,
 }: RCMDCardProps) {
+  // Get the short URL for this RCMD
+  const shortLink = getRCMDShortLink(rcmd.id);
+
+  // Handle view action
+  const handleView = (e: React.MouseEvent) => {
+    if (onView) {
+      e.preventDefault();
+      onView(rcmd.id);
+    }
+  };
+
   const getTypeIcon = (type: RCMDType) => {
-    // const typeClasses = "w-5 h-5";
     switch (type) {
       case "other":
         return "👽";
@@ -91,77 +101,88 @@ export default function RCMDCard({
     if (!priceRange) return null;
 
     if (typeof priceRange === "string") {
+      // For strings like "$" or "$$" directly
+      if (/^(\$+)$/.test(priceRange)) {
+        return priceRange;
+      }
+
+      // For numeric strings
+      if (/^\d+$/.test(priceRange)) {
+        return "$".repeat(Math.min(parseInt(priceRange, 10), 4));
+      }
+
+      // Try to parse JSON
       try {
         const parsed = JSON.parse(priceRange);
         return formatPriceRange(parsed);
       } catch {
-        // If parsing fails, return the raw string
         return priceRange;
       }
     }
 
-    if (typeof priceRange === "object" && priceRange !== null) {
-      const pr = priceRange as Record<string, unknown>;
-      const currency = "currency" in pr ? String(pr.currency || "$") : "$";
-
-      if ("min" in pr && "max" in pr && pr.min && pr.max) {
-        return `${currency}${pr.min} - ${currency}${pr.max}`;
-      } else if ("min" in pr && pr.min) {
-        return `From ${currency}${pr.min}`;
-      } else if ("max" in pr && pr.max) {
-        return `Up to ${currency}${pr.max}`;
-      }
+    if (typeof priceRange === "number") {
+      return "$".repeat(Math.min(priceRange, 4));
     }
 
-    return null;
+    return typeof priceRange === "object" && priceRange !== null
+      ? JSON.stringify(priceRange)
+      : String(priceRange);
   };
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden transform transition-transform duration-200 hover:shadow-md">
       {/* Image Section */}
-      <div
-        className="relative w-full aspect-video cursor-pointer"
-        onClick={() => onView?.(rcmd.id)}
-      >
-        <Image
-          src={rcmd.featured_image || "/images/default-image.jpg"}
-          alt={rcmd.title}
-          fill
-          sizes="(max-width: 768px) 90vw, (max-width: 1200px) 45vw, 30vw"
-          className="object-cover"
-          priority
-          onError={(e) => {
-            // Fallback to default image on error
-            const imgElement = e.currentTarget as HTMLImageElement;
-            imgElement.src = "/images/default-image.jpg";
-            console.log("Image load error, using fallback for:", rcmd.id);
-          }}
-        />
-        {rcmd.is_sponsored && (
-          <div className="absolute top-3 right-3">
-            <span className="px-2 py-1 bg-yellow-400 text-black rounded-full text-xs font-medium">
-              Sponsored
+      <NextLink href={shortLink} onClick={handleView}>
+        <div className="relative w-full aspect-video cursor-pointer">
+          <Image
+            src={rcmd.featured_image || "/images/default-image.jpg"}
+            alt={rcmd.title}
+            fill
+            sizes="(max-width: 768px) 90vw, (max-width: 1200px) 45vw, 30vw"
+            className="object-cover"
+            priority
+            onError={(e) => {
+              // Fallback to default image on error
+              const imgElement = e.currentTarget as HTMLImageElement;
+              imgElement.src = "/images/default-image.jpg";
+              console.log("Image load error, using fallback for:", rcmd.id);
+            }}
+          />
+
+          {rcmd.is_sponsored && (
+            <div className="absolute top-3 right-3">
+              <span className="px-2 py-1 bg-yellow-400 text-black rounded-full text-xs font-medium">
+                Sponsored
+              </span>
+            </div>
+          )}
+
+          <div className="absolute top-3 left-3">
+            <span className="px-2 py-1 bg-black/60 backdrop-blur-sm text-white rounded-full text-xs">
+              {getTypeIcon(rcmd.type)} {rcmd.type}
             </span>
           </div>
-        )}
-        <div className="absolute top-3 left-3">
-          <span className="px-2 py-1 bg-black/60 backdrop-blur-sm text-white rounded-full text-xs">
-            {getTypeIcon(rcmd.type)} {rcmd.type}
-          </span>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-          <div className="flex items-center text-white gap-2">
-            <Eye className="w-3.5 h-3.5" />
-            <span className="text-xs">{rcmd.view_count || 0} views</span>
+
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+            <div className="flex items-center text-white gap-2">
+              <Eye className="w-3.5 h-3.5" />
+              <span className="text-xs">{rcmd.view_count || 0} views</span>
+            </div>
           </div>
         </div>
-      </div>
+      </NextLink>
 
       {/* Content Section */}
       <div className="p-4 flex-1 flex flex-col">
-        <h3 className="text-lg font-semibold dark:text-white mb-1.5 line-clamp-1">
-          {rcmd.title}
-        </h3>
+        <NextLink
+          href={shortLink}
+          className="hover:underline"
+          onClick={handleView}
+        >
+          <h3 className="text-lg font-semibold dark:text-white mb-1.5 line-clamp-1">
+            {rcmd.title}
+          </h3>
+        </NextLink>
 
         {/* Location - Displayed below title */}
         {rcmd.location && (
@@ -177,7 +198,7 @@ export default function RCMDCard({
         {rcmd.url && (
           <div className="flex items-center text-xs text-blue-600 dark:text-blue-400 mb-2">
             <span className="flex items-center gap-1.5 truncate hover:underline">
-              <Link className="w-3.5 h-3.5" />
+              <LinkIcon className="w-3.5 h-3.5" />
               <a
                 href={rcmd.url}
                 target="_blank"
@@ -209,7 +230,7 @@ export default function RCMDCard({
         )}
 
         {/* Tags - Improved visibility */}
-        {rcmd.tags && rcmd.tags.length > 0 && (
+        {rcmd.tags && Array.isArray(rcmd.tags) && rcmd.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3 mt-auto">
             {rcmd.tags.slice(0, 3).map((tag) => (
               <span
@@ -229,54 +250,48 @@ export default function RCMDCard({
 
         {/* Stats and Actions */}
         <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mt-auto pt-2 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-3">
+          {/* Stats */}
+          <div className="flex items-center">
+            <span>
+              {formatDistanceToNow(new Date(rcmd.created_at || Date.now()), {
+                addSuffix: true,
+              })}
+            </span>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center space-x-3">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onLike?.(rcmd.id);
               }}
-              className="flex items-center gap-1 hover:text-red-500"
+              className="p-1 hover:text-red-500"
+              aria-label="Like"
             >
-              <Heart
-                className="w-4 h-4"
-                fill={rcmd.like_count ? "#000000" : "none"}
-                color={rcmd.like_count ? "#ef4444" : "currentColor"}
-              />
-              {rcmd.like_count || 0}
+              <Heart className="w-4 h-4" />
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onSave?.(rcmd.id);
               }}
-              className="flex items-center gap-1 hover:text-blue-500"
+              className="p-1 hover:text-blue-500"
+              aria-label="Save"
             >
-              <Bookmark
-                className="w-4 h-4"
-                fill={rcmd.save_count ? "#000000" : "none"}
-                color={rcmd.save_count ? "#3b82f6" : "currentColor"}
-              />
-              {rcmd.save_count || 0}
+              <Bookmark className="w-4 h-4" />
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onShare?.(rcmd.id);
               }}
-              className="flex items-center gap-1 hover:text-green-500"
+              className="p-1 hover:text-green-500"
+              aria-label="Share"
             >
               <Share2 className="w-4 h-4" />
-              {rcmd.share_count || 0}
             </button>
           </div>
-          {rcmd.created_at && (
-            <span className="flex items-center gap-1 text-xs">
-              <Clock className="w-3.5 h-3.5" />
-              {formatDistanceToNow(new Date(rcmd.created_at), {
-                addSuffix: true,
-              })}
-            </span>
-          )}
         </div>
       </div>
     </div>
