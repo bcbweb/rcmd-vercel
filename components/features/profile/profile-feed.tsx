@@ -1,14 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { Profile } from "@/types";
-import Link from "next/link";
-
-const ITEMS_PER_PAGE = 3;
 
 interface ProfileFeedProps {
   currentHandle: string;
@@ -16,107 +13,45 @@ interface ProfileFeedProps {
 
 export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
   const router = useRouter();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const observerTarget = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  const fetchProfiles = useCallback(
-    async (isInitial: boolean = false) => {
-      if (isLoading) return;
+  useEffect(() => {
+    async function fetchProfile() {
+      if (!currentHandle) return;
 
       setIsLoading(true);
-
-      const baseSelect = `*`;
-
-      const createBaseQuery = () =>
-        supabase
-          .from("profiles")
-          .select(baseSelect)
-          .order("created_at", { ascending: false })
-          .limit(ITEMS_PER_PAGE);
+      setError(null);
 
       try {
-        let query = createBaseQuery();
+        console.log("[DEBUG] Fetching profile for handle:", currentHandle);
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("handle", currentHandle)
+          .single();
 
-        if (isInitial && currentHandle) {
-          // Get the current profile first
-          const { data: currentProfile } = await createBaseQuery()
-            .eq("handle", currentHandle)
-            .limit(1)
-            .single();
+        if (error) throw error;
 
-          // If found, create new query with timestamp condition
-          if (currentProfile) {
-            query = createBaseQuery().lte(
-              "created_at",
-              currentProfile.created_at
-            );
-          }
-        } else if (profiles.length > 0) {
-          // Pagination query
-          query = createBaseQuery().lt(
-            "created_at",
-            profiles[profiles.length - 1].created_at
-          );
-        }
-
-        const { data: newProfiles, error: fetchError } = await query;
-
-        if (fetchError) throw fetchError;
-
-        if (newProfiles) {
-          const profilesArray = Array.isArray(newProfiles)
-            ? newProfiles
-            : [newProfiles];
-          setProfiles((prev) =>
-            isInitial ? profilesArray : [...prev, ...profilesArray]
-          );
-          setHasMore(profilesArray.length === ITEMS_PER_PAGE);
+        if (data) {
+          console.log("[DEBUG] Found profile:", data);
+          setProfile(data);
         } else {
-          if (isInitial) setProfiles([]);
-          setHasMore(false);
+          console.log("[DEBUG] No profile found for handle:", currentHandle);
+          setError("Profile not found");
         }
       } catch (error) {
-        console.error("Error fetching profiles:", error);
-        setError("Error loading profiles");
-        setProfiles([]);
+        console.error("[DEBUG] Error fetching profile:", error);
+        setError("Error loading profile");
       } finally {
         setIsLoading(false);
       }
-    },
-    [currentHandle, isLoading, profiles, supabase]
-  );
-
-  useEffect(() => {
-    setProfiles([]); // Reset profiles when currentHandle changes
-    setHasMore(true); // Reset hasMore
-    fetchProfiles(true);
-  }, [currentHandle, fetchProfiles]);
-
-  // Intersection Observer setup
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasMore && !isLoading) {
-          fetchProfiles(false);
-        }
-      },
-      {
-        root: null,
-        rootMargin: "100px",
-        threshold: 0.1,
-      }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
     }
 
-    return () => observer.disconnect();
-  }, [hasMore, isLoading, fetchProfiles]);
+    fetchProfile();
+  }, [currentHandle, supabase]);
 
   if (error) {
     return (
@@ -134,6 +69,18 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
@@ -145,51 +92,42 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-lg font-semibold">Explore People</h1>
+          <h1 className="text-lg font-semibold">Profile</h1>
           <div className="w-10" />
         </div>
       </div>
 
-      {/* Feed Content */}
-      <div className="pt-14 pb-4 px-4 max-w-2xl mx-auto">
-        {profiles.map((profile, index) => (
-          <div key={profile.id} className="mb-8">
-            <Link href={`/${profile.handle}`} className="block">
-              <div className="relative aspect-square w-full mb-4">
-                <Image
-                  src={profile.profile_picture_url || "/default-avatar.png"}
-                  alt={profile.handle || ""}
-                  fill
-                  className="object-cover rounded-lg"
-                  priority={index < 2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <h2 className="text-xl font-bold">
-                  {profile.first_name} {profile.last_name}
-                </h2>
-                <p className="text-gray-400">@{profile.handle}</p>
-                {profile.bio && <p className="text-gray-400">{profile.bio}</p>}
-              </div>
-            </Link>
+      {/* Profile Content */}
+      <div className="pt-14 pb-20 px-4 max-w-2xl mx-auto">
+        <div className="min-h-[90vh] flex flex-col justify-center py-12">
+          <div className="relative aspect-square w-full mb-6 rounded-xl overflow-hidden shadow-lg">
+            <Image
+              src={profile.profile_picture_url || "/default-avatar.png"}
+              alt={profile.handle || ""}
+              fill
+              className="object-cover"
+              priority
+              sizes="(max-width: 768px) 100vw, 600px"
+            />
           </div>
-        ))}
 
-        {/* Observer target element */}
-        <div ref={observerTarget} className="h-10 -mt-10" aria-hidden="true" />
+          <div className="space-y-3">
+            <h2 className="text-2xl font-bold">
+              {profile.first_name} {profile.last_name}
+            </h2>
+            <p className="text-gray-400 text-lg">@{profile.handle}</p>
+            {profile.bio && <p className="text-gray-300 mt-2">{profile.bio}</p>}
 
-        {isLoading && (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            <div className="pt-4">
+              <button
+                className="inline-block bg-white/10 hover:bg-white/20 text-white px-5 py-2 rounded-full transition-colors"
+                onClick={() => router.push(`/${profile.handle}`)}
+              >
+                View Profile
+              </button>
+            </div>
           </div>
-        )}
-
-        {!hasMore && profiles.length > 0 && (
-          <div className="text-center text-gray-500 py-4">
-            No more profiles to load
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
