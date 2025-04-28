@@ -6,6 +6,26 @@ import { SimpleRCMDBlock } from "@/components/features/profile/blocks/rcmd-block
 import { SimpleLinkBlock } from "@/components/features/profile/blocks/link-block";
 import { formatDistance } from "date-fns";
 import { EnhancedCollectionItem } from "@/types";
+import Link from "next/link";
+
+// Extend collection type to include profile information
+interface CollectionWithProfile {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: string;
+  created_at: string;
+  updated_at: string;
+  profile_id: string;
+  profiles?: {
+    id: string;
+    handle: string;
+    first_name?: string | null;
+    last_name?: string | null;
+    profile_picture_url?: string | null;
+  };
+  collection_items?: EnhancedCollectionItem[];
+}
 
 export async function generateMetadata({
   params,
@@ -57,12 +77,19 @@ export default async function CollectionPage({
 
   const supabase = await createClient();
 
-  // Fetch collection with all related data
-  const { data: collection, error: fetchError } = await supabase
+  // Fetch collection with all related data, including profile information
+  const { data, error: fetchError } = await supabase
     .from("collections")
     .select(
       `
       *,
+      profiles!collections_profile_id_fkey (
+        id, 
+        handle,
+        first_name, 
+        last_name,
+        profile_picture_url
+      ),
       collection_items (
         *,
         rcmds:rcmd_id (*),
@@ -73,9 +100,12 @@ export default async function CollectionPage({
     .eq("id", uuid)
     .single();
 
-  if (fetchError || !collection) {
+  if (fetchError || !data) {
     return notFound();
   }
+
+  // Cast to our extended type
+  const collection = data as CollectionWithProfile;
 
   if (collection.visibility !== "public") {
     return notFound();
@@ -133,11 +163,25 @@ export default async function CollectionPage({
           </p>
         )}
 
-        {createdDate && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Created {createdDate}
-          </p>
-        )}
+        <div className="flex flex-wrap gap-4 text-sm">
+          {collection.profiles && (
+            <div className="text-gray-600 dark:text-gray-400">
+              By:{" "}
+              <Link
+                href={`/${collection.profiles.handle}`}
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {collection.profiles.handle}
+              </Link>
+            </div>
+          )}
+
+          {createdDate && (
+            <div className="text-gray-600 dark:text-gray-400">
+              Created {createdDate}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Recommendations Section */}
