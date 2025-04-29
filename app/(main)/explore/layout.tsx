@@ -8,7 +8,7 @@ export default function ExploreLayout({
 }) {
   return (
     <div className="container mx-auto py-6">
-      <Tabs defaultValue="people" className="mb-8">
+      <Tabs defaultValue="rcmds" className="mb-8">
         <TabsList>
           <Link href="/explore/rcmds">
             <TabsTrigger value="rcmds">RCMDs</TabsTrigger>

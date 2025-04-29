@@ -7,6 +7,7 @@ import { GridSkeleton } from "@/components/common";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import type { RCMD } from "@/types";
+import { getShortIdFromUUID } from "@/lib/utils/short-id";
 
 export default function RCMDsPage() {
   const router = useRouter();
@@ -42,7 +43,8 @@ export default function RCMDsPage() {
 
   const handleRCMDClick = (id: string | null) => {
     if (!id) return;
-    router.push(`/explore/rcmds/feed/${id}`);
+    const shortId = getShortIdFromUUID(id);
+    router.push(`/explore/rcmds/feed/${shortId}`);
   };
 
   return (

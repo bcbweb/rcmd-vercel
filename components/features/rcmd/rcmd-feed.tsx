@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import type { RCMDWithAuthor } from "@/types";
+import { getShortIdFromUUID, getUUIDFromShortId } from "@/lib/utils/short-id";
 
 interface RCMDFeedProps {
   currentId: string;
@@ -23,6 +24,11 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
 
   const fetchRcmdById = async (id: string) => {
     console.log("[DEBUG] Fetching RCMD for id:", id);
+    // Convert shortId to UUID if needed and ensure it's decoded
+    const decodedId = decodeURIComponent(id);
+    const uuid =
+      decodedId.length < 36 ? getUUIDFromShortId(decodedId) : decodedId;
+
     const { data: rcmd, error } = await supabase
       .from("rcmds")
       .select(
@@ -31,7 +37,7 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
         profiles!rcmds_profile_id_fkey (*)
       `
       )
-      .eq("id", id)
+      .eq("id", uuid)
       .single();
 
     if (error) {
@@ -145,10 +151,11 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
 
               // Update URL and fetch next RCMD if needed
               if (index > 0) {
+                const shortId = getShortIdFromUUID(currentRcmd.id);
                 window.history.replaceState(
                   null,
                   "",
-                  `/explore/rcmds/feed/${currentRcmd.id}`
+                  `/explore/rcmds/feed/${shortId}`
                 );
 
                 // Fetch another RCMD if we're near the end
@@ -306,7 +313,9 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
                   <div className="pt-4 flex space-x-3">
                     <button
                       className="inline-block bg-white/10 hover:bg-white/20 text-white px-5 py-2 rounded-full transition-colors"
-                      onClick={() => router.push(`/rcmd/${rcmd.id}`)}
+                      onClick={() =>
+                        router.push(`/rcmd/${getShortIdFromUUID(rcmd.id)}`)
+                      }
                     >
                       View RCMD
                     </button>
