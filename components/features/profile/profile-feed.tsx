@@ -117,72 +117,78 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
     loadProfiles();
   }, [currentHandle, fetchProfileByHandle, fetchNextProfile, viewedProfiles]);
 
-  // Track when profiles come into view
+  // Track when scroll snap completes
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
 
-    const observers = new Map();
+    function handleScrollEnd() {
+      // Get the scroll position and container height
+      const scrollTop = container.scrollTop;
+      const containerHeight = container.clientHeight;
 
-    // Create observers for each profile
-    profiles.forEach((profile, index) => {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
-              console.log("[DEBUG] Profile in view:", profile.handle);
-              setFocusedIndex(index);
-
-              // If we've scrolled to a new profile
-              if (index > 0 && index < profiles.length) {
-                console.log("[DEBUG] Viewing next profile:", profile.handle);
-
-                // Update URL to reflect current profile
-                window.history.replaceState(
-                  null,
-                  "",
-                  `/explore/people/feed/${profile.handle}`
-                );
-
-                // Fetch another profile to maintain the stack
-                fetchNextProfile().then((nextProfile) => {
-                  if (nextProfile?.handle) {
-                    viewedProfiles.add(nextProfile.handle);
-                    setProfiles((prevProfiles) => [
-                      ...prevProfiles,
-                      nextProfile,
-                    ]);
-                    console.log(
-                      "[DEBUG] Added new profile to stack:",
-                      nextProfile.handle
-                    );
-                  }
-                });
-              }
-            }
-          });
-        },
-        {
-          root: container,
-          threshold: 0.7, // Trigger when 70% of the profile is visible
-          rootMargin: "0px",
-        }
+      // Calculate which profile should be in view based on scroll position
+      const snapIndex = Math.round(scrollTop / containerHeight);
+      console.log(
+        "[DEBUG] Scroll ended. Position:",
+        scrollTop,
+        "Container height:",
+        containerHeight,
+        "Calculated index:",
+        snapIndex
       );
 
-      // Find the profile container element
-      const profileElement = container.children[index];
-      if (profileElement) {
-        observer.observe(profileElement);
-        observers.set(profile.handle, observer);
-      }
-    });
+      if (
+        snapIndex >= 0 &&
+        snapIndex < profiles.length &&
+        snapIndex !== focusedIndex
+      ) {
+        const currentProfile = profiles[snapIndex];
+        console.log("[DEBUG] Snapped to profile:", currentProfile.handle);
 
-    // Cleanup function
+        setFocusedIndex(snapIndex);
+
+        // If we've scrolled to a new profile
+        if (snapIndex > 0) {
+          // Update URL to reflect current profile
+          window.history.replaceState(
+            null,
+            "",
+            `/explore/people/feed/${currentProfile.handle}`
+          );
+
+          // Fetch another profile to maintain the stack
+          fetchNextProfile().then((nextProfile) => {
+            if (nextProfile?.handle) {
+              viewedProfiles.add(nextProfile.handle);
+              setProfiles((prevProfiles) => [...prevProfiles, nextProfile]);
+              console.log(
+                "[DEBUG] Added new profile to stack:",
+                nextProfile.handle
+              );
+            }
+          });
+        }
+      }
+    }
+
+    // Use scrollend event
+    container.addEventListener("scrollend", handleScrollEnd);
+
+    // Also listen for regular scroll end as fallback for older browsers
+    let scrollTimeout: NodeJS.Timeout;
+    function handleScroll() {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(handleScrollEnd, 150); // Wait for scroll to settle
+    }
+    container.addEventListener("scroll", handleScroll);
+
     return () => {
-      observers.forEach((observer) => observer.disconnect());
-      observers.clear();
+      container.removeEventListener("scrollend", handleScrollEnd);
+      container.removeEventListener("scroll", handleScroll);
+      clearTimeout(scrollTimeout);
     };
-  }, [profiles, fetchNextProfile, viewedProfiles]);
+  }, [profiles, fetchNextProfile, viewedProfiles, focusedIndex]);
 
   if (error) {
     return (
