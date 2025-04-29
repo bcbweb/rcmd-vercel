@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
@@ -13,45 +13,185 @@ interface ProfileFeedProps {
 
 export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const [viewedProfiles] = useState(new Set<string>());
   const supabase = createClient();
 
+  const fetchProfileByHandle = useCallback(async (handle: string) => {
+    console.log("[DEBUG] Fetching profile for handle:", handle);
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("handle", handle)
+      .single();
+
+    if (error) {
+      console.error("[DEBUG] Error fetching profile:", error);
+      return null;
+    }
+
+    return profile;
+  }, []);
+
+  const fetchNextProfile = useCallback(async () => {
+    console.log(
+      "[DEBUG] Fetching next profile. Already viewed:",
+      viewedProfiles
+    );
+    const { data: profiles, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .not(
+        "handle",
+        "in",
+        `(${Array.from(viewedProfiles)
+          .map((p: string) => `'${p}'`)
+          .join(",")})`
+      )
+      .limit(1)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[DEBUG] Error fetching next profile:", error);
+      return null;
+    }
+
+    if (!profiles || profiles.length === 0) {
+      console.log("[DEBUG] No more profiles to fetch");
+      return null;
+    }
+
+    return profiles[0];
+  }, [viewedProfiles]);
+
+  // Initial load of current and next profiles
   useEffect(() => {
-    async function fetchProfile() {
+    async function loadProfiles() {
       if (!currentHandle) return;
 
       setIsLoading(true);
       setError(null);
 
       try {
-        console.log("[DEBUG] Fetching profile for handle:", currentHandle);
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("handle", currentHandle)
-          .single();
-
-        if (error) throw error;
-
-        if (data) {
-          console.log("[DEBUG] Found profile:", data);
-          setProfile(data);
-        } else {
-          console.log("[DEBUG] No profile found for handle:", currentHandle);
+        // Fetch current profile
+        const currentProfile = await fetchProfileByHandle(currentHandle);
+        if (!currentProfile) {
           setError("Profile not found");
+          return;
         }
+
+        // Add current profile to viewed set
+        viewedProfiles.add(currentProfile.handle);
+
+        // Fetch two more profiles for preloading
+        const nextProfilePromises = [fetchNextProfile(), fetchNextProfile()];
+        const [first, second] = await Promise.all(nextProfilePromises);
+
+        const initialProfiles = [currentProfile];
+
+        if (first?.handle) {
+          initialProfiles.push(first);
+          viewedProfiles.add(first.handle);
+        }
+
+        if (second?.handle) {
+          initialProfiles.push(second);
+          viewedProfiles.add(second.handle);
+        }
+
+        console.log(
+          "[DEBUG] Initial profiles loaded:",
+          initialProfiles.map((p) => p.handle)
+        );
+        setProfiles(initialProfiles);
       } catch (error) {
-        console.error("[DEBUG] Error fetching profile:", error);
+        console.error("[DEBUG] Error loading profiles:", error);
         setError("Error loading profile");
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchProfile();
-  }, [currentHandle, supabase]);
+    loadProfiles();
+  }, [currentHandle, fetchProfileByHandle, fetchNextProfile, viewedProfiles]);
+
+  // Track when scroll snap completes
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    function handleScrollSnapChange(event: Event) {
+      console.log("[DEBUG] Scroll snap change detected");
+      // @ts-expect-error - SnapEvent is experimental
+      const snapTarget = event.snapTargetBlock;
+      console.log("[DEBUG] Snap target:", snapTarget);
+
+      // Find all profile containers
+      const profileContainers = Array.from(container.children).filter(
+        (child) =>
+          child instanceof HTMLElement &&
+          child.style.scrollSnapAlign === "start"
+      );
+
+      // Determine which profile is in view based on the snap target
+      if (snapTarget && profileContainers.length > 0) {
+        // Get the index of the snapped profile
+        const snapIndex = profileContainers.indexOf(snapTarget);
+        console.log("[DEBUG] Snap index:", snapIndex);
+
+        setFocusedIndex(snapIndex);
+
+        // If we've scrolled to a new profile
+        if (snapIndex > 0 && snapIndex < profiles.length) {
+          const currentProfile = profiles[snapIndex];
+          console.log("[DEBUG] Viewing next profile:", currentProfile.handle);
+
+          // Update URL to reflect current profile
+          window.history.replaceState(
+            null,
+            "",
+            `/explore/people/feed/${currentProfile.handle}`
+          );
+
+          // Fetch another profile to maintain the stack
+          fetchNextProfile().then((profile) => {
+            if (profile?.handle) {
+              viewedProfiles.add(profile.handle);
+              setProfiles((prevProfiles) => [...prevProfiles, profile]);
+              console.log(
+                "[DEBUG] Added new profile to stack:",
+                profile.handle
+              );
+            }
+          });
+        }
+      }
+    }
+
+    // Use scrollsnapchange event with fallback to scrollend
+    if ("onscrollsnapchange" in window) {
+      console.log("[DEBUG] Browser supports scrollsnapchange event");
+      container.addEventListener("scrollsnapchange", handleScrollSnapChange);
+    } else {
+      console.log("[DEBUG] Using scrollend fallback");
+      container.addEventListener("scrollend", handleScrollSnapChange);
+    }
+
+    return () => {
+      if ("onscrollsnapchange" in window) {
+        container.removeEventListener(
+          "scrollsnapchange",
+          handleScrollSnapChange
+        );
+      } else {
+        container.removeEventListener("scrollend", handleScrollSnapChange);
+      }
+    };
+  }, [profiles, fetchNextProfile, viewedProfiles]);
 
   if (error) {
     return (
@@ -77,58 +217,78 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
     );
   }
 
-  if (!profile) {
+  if (profiles.length === 0) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 py-3">
-          <button
-            onClick={() => router.push("/explore/people")}
-            className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-lg font-semibold">Profile</h1>
-          <div className="w-10" />
-        </div>
-      </div>
+    <div
+      ref={containerRef}
+      className="h-screen overflow-y-auto bg-black text-white"
+      style={{
+        scrollSnapType: "y mandatory",
+        scrollPaddingTop: "16px",
+        overscrollBehavior: "contain",
+      }}
+    >
+      {/* Floating Back Button */}
+      <button
+        onClick={() => router.push("/explore/people")}
+        className="fixed top-4 left-4 z-50 p-2 rounded-full bg-black/50 backdrop-blur-sm hover:bg-white/10 transition-colors"
+      >
+        <ArrowLeft className="w-6 h-6" />
+      </button>
 
-      {/* Profile Content */}
-      <div className="pt-14 pb-20 px-4 max-w-2xl mx-auto">
-        <div className="min-h-[90vh] flex flex-col justify-center py-12">
-          <div className="relative aspect-square w-full mb-6 rounded-xl overflow-hidden shadow-lg">
-            <Image
-              src={profile.profile_picture_url || "/default-avatar.png"}
-              alt={profile.handle || ""}
-              fill
-              className="object-cover"
-              priority
-              sizes="(max-width: 768px) 100vw, 600px"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <h2 className="text-2xl font-bold">
-              {profile.first_name} {profile.last_name}
-            </h2>
-            <p className="text-gray-400 text-lg">@{profile.handle}</p>
-            {profile.bio && <p className="text-gray-300 mt-2">{profile.bio}</p>}
-
-            <div className="pt-4">
-              <button
-                className="inline-block bg-white/10 hover:bg-white/20 text-white px-5 py-2 rounded-full transition-colors"
-                onClick={() => router.push(`/${profile.handle}`)}
+      {/* Profile Stack */}
+      {profiles.map((profile, index) => (
+        <div
+          key={profile.handle}
+          className="min-h-[50vh] max-h-[90vh] py-12"
+          style={{
+            scrollSnapAlign: "start",
+            scrollSnapStop: "always",
+          }}
+        >
+          <div className="px-4 max-w-2xl mx-auto h-full">
+            <div className="flex flex-col min-h-0">
+              <div
+                className="transition-opacity duration-300"
+                style={{ opacity: focusedIndex === index ? 1 : 0.3 }}
               >
-                View Profile
-              </button>
+                <div className="relative aspect-square w-full mb-6 rounded-xl overflow-hidden shadow-lg">
+                  <Image
+                    src={profile.profile_picture_url || "/default-avatar.png"}
+                    alt={profile.handle || ""}
+                    fill
+                    className="object-cover"
+                    priority={index === 0}
+                    sizes="(max-width: 768px) 100vw, 600px"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-bold">
+                    {profile.first_name} {profile.last_name}
+                  </h2>
+                  <p className="text-gray-400 text-lg">@{profile.handle}</p>
+                  {profile.bio && (
+                    <p className="text-gray-300 mt-2">{profile.bio}</p>
+                  )}
+
+                  <div className="pt-4">
+                    <button
+                      className="inline-block bg-white/10 hover:bg-white/20 text-white px-5 py-2 rounded-full transition-colors"
+                      onClick={() => router.push(`/${profile.handle}`)}
+                    >
+                      View Profile
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
