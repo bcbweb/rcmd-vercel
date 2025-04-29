@@ -42,12 +42,9 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
       "[DEBUG] Fetching next profile. Already viewed:",
       viewedProfiles
     );
-    const { data: profiles, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .not("handle", "in", Array.from(viewedProfiles))
-      .limit(1)
-      .order("created_at", { ascending: false });
+    const { data: profiles, error } = await supabase.rpc("get_random_profile", {
+      excluded_handles: Array.from(viewedProfiles),
+    });
 
     if (error) {
       console.error("[DEBUG] Error fetching next profile:", error);
@@ -80,28 +77,35 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
 
         // Add current profile to viewed set
         viewedProfiles.add(currentProfile.handle);
-
-        // Fetch two more profiles for preloading
-        const nextProfilePromises = [fetchNextProfile(), fetchNextProfile()];
-        const [first, second] = await Promise.all(nextProfilePromises);
-
-        const initialProfiles = [currentProfile];
-
-        if (first?.handle) {
-          initialProfiles.push(first);
-          viewedProfiles.add(first.handle);
-        }
-
-        if (second?.handle) {
-          initialProfiles.push(second);
-          viewedProfiles.add(second.handle);
-        }
-
         console.log(
-          "[DEBUG] Initial profiles loaded:",
-          initialProfiles.map((p) => p.handle)
+          "[DEBUG] Added current profile to viewed:",
+          currentProfile.handle
         );
+
+        // Initialize profiles array with current profile
+        const initialProfiles = [currentProfile];
         setProfiles(initialProfiles);
+
+        // Fetch first additional profile
+        const firstNext = await fetchNextProfile();
+        if (firstNext?.handle) {
+          viewedProfiles.add(firstNext.handle);
+          initialProfiles.push(firstNext);
+          setProfiles([...initialProfiles]);
+          console.log("[DEBUG] Added first next profile:", firstNext.handle);
+
+          // Only fetch second profile if we got the first one
+          const secondNext = await fetchNextProfile();
+          if (secondNext?.handle) {
+            viewedProfiles.add(secondNext.handle);
+            initialProfiles.push(secondNext);
+            setProfiles([...initialProfiles]);
+            console.log(
+              "[DEBUG] Added second next profile:",
+              secondNext.handle
+            );
+          }
+        }
       } catch (error) {
         console.error("[DEBUG] Error loading profiles:", error);
         setError("Error loading profile");
@@ -218,7 +222,7 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
   return (
     <div
       ref={containerRef}
-      className="h-screen overflow-y-auto bg-black text-white"
+      className="h-screen overflow-y-auto bg-black text-white [scroll-behavior:smooth] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] [transition-duration:150ms]"
       style={{
         scrollSnapType: "y mandatory",
         scrollPaddingTop: "16px",
