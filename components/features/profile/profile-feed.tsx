@@ -117,78 +117,104 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
     loadProfiles();
   }, [currentHandle, fetchProfileByHandle, fetchNextProfile, viewedProfiles]);
 
-  // Track when scroll snap completes
+  // Track when profiles enter/leave viewport
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
 
-    function handleScrollEnd() {
-      // Get the scroll position and container height
-      const scrollTop = container.scrollTop;
-      const containerHeight = container.clientHeight;
+    // Create observer to track which profiles are fully visible
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.95) {
+            const handle = entry.target.getAttribute("data-profile-handle");
+            const index = profiles.findIndex((p) => p.handle === handle);
 
-      // Calculate which profile should be in view based on scroll position
-      const snapIndex = Math.round(scrollTop / containerHeight);
-      console.log(
-        "[DEBUG] Scroll ended. Position:",
-        scrollTop,
-        "Container height:",
-        containerHeight,
-        "Calculated index:",
-        snapIndex
-      );
+            console.log(
+              "[DEBUG] Profile in view:",
+              handle,
+              "ratio:",
+              entry.intersectionRatio,
+              "index:",
+              index
+            );
 
-      if (
-        snapIndex >= 0 &&
-        snapIndex < profiles.length &&
-        snapIndex !== focusedIndex
-      ) {
-        const currentProfile = profiles[snapIndex];
-        console.log("[DEBUG] Snapped to profile:", currentProfile.handle);
-
-        setFocusedIndex(snapIndex);
-
-        // If we've scrolled to a new profile
-        if (snapIndex > 0) {
-          // Update URL to reflect current profile
-          window.history.replaceState(
-            null,
-            "",
-            `/explore/people/feed/${currentProfile.handle}`
-          );
-
-          // Fetch another profile to maintain the stack
-          fetchNextProfile().then((nextProfile) => {
-            if (nextProfile?.handle) {
-              viewedProfiles.add(nextProfile.handle);
-              setProfiles((prevProfiles) => [...prevProfiles, nextProfile]);
+            if (index !== -1 && index !== focusedIndex) {
+              const currentProfile = profiles[index];
               console.log(
-                "[DEBUG] Added new profile to stack:",
-                nextProfile.handle
+                "[DEBUG] Updating to profile:",
+                currentProfile.handle
               );
+
+              setFocusedIndex(index);
+
+              // Update URL and fetch next profile if needed
+              if (index > 0) {
+                window.history.replaceState(
+                  null,
+                  "",
+                  `/explore/people/feed/${currentProfile.handle}`
+                );
+
+                // Fetch another profile if we're near the end
+                if (index >= profiles.length - 2) {
+                  fetchNextProfile().then((nextProfile) => {
+                    if (nextProfile?.handle) {
+                      viewedProfiles.add(nextProfile.handle);
+                      setProfiles((prevProfiles) => [
+                        ...prevProfiles,
+                        nextProfile,
+                      ]);
+                      console.log(
+                        "[DEBUG] Added new profile to stack:",
+                        nextProfile.handle
+                      );
+                    }
+                  });
+                }
+              }
             }
-          });
-        }
+          }
+        });
+      },
+      {
+        root: container,
+        threshold: [0.95], // Trigger when profile is almost fully visible
+        rootMargin: "0px",
       }
-    }
+    );
 
-    // Use scrollend event
-    container.addEventListener("scrollend", handleScrollEnd);
-
-    // Also listen for regular scroll end as fallback for older browsers
-    let scrollTimeout: NodeJS.Timeout;
-    function handleScroll() {
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(handleScrollEnd, 150); // Wait for scroll to settle
-    }
-    container.addEventListener("scroll", handleScroll);
+    // Observe all profile elements
+    Array.from(container.children).forEach((child) => {
+      if (
+        child instanceof HTMLElement &&
+        child.hasAttribute("data-profile-handle")
+      ) {
+        observer.observe(child);
+      }
+    });
 
     return () => {
-      container.removeEventListener("scrollend", handleScrollEnd);
-      container.removeEventListener("scroll", handleScroll);
-      clearTimeout(scrollTimeout);
+      observer.disconnect();
     };
   }, [profiles, fetchNextProfile, viewedProfiles, focusedIndex]);
+
+  // Remove the previous scroll event listeners
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    // Keep a basic scroll handler just for debugging
+    function handleScroll() {
+      console.log("[DEBUG] Scroll position:", container.scrollTop);
+    }
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   if (error) {
     return (
@@ -240,6 +266,7 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
       {profiles.map((profile, index) => (
         <div
           key={profile.handle}
+          data-profile-handle={profile.handle}
           className="min-h-[50vh] max-h-[90vh] py-12"
           style={{
             scrollSnapAlign: "start",
