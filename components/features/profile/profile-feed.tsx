@@ -45,13 +45,7 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
     const { data: profiles, error } = await supabase
       .from("profiles")
       .select("*")
-      .not(
-        "handle",
-        "in",
-        `(${Array.from(viewedProfiles)
-          .map((p: string) => `'${p}'`)
-          .join(",")})`
-      )
+      .not("handle", "in", Array.from(viewedProfiles))
       .limit(1)
       .order("created_at", { ascending: false });
 

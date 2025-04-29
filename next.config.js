@@ -46,6 +46,17 @@ const nextConfig = {
         hostname: "dmhigtssxgoupibxazoe.supabase.co",
         pathname: "/**",
       },
+      // Supabase Storage
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+      // Image Services
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
       // Essential domains - Own sites
       {
         protocol: "https",
