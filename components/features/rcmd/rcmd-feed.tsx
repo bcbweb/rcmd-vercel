@@ -1,28 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowDown, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import type { RCMD } from "@/types";
-import Link from "next/link";
-
-// Number of items to load at once
-const ITEMS_PER_PAGE = 5;
-
-// Extended RCMD type that includes profiles
-interface RCMDWithProfile extends RCMD {
-  profiles?: {
-    id: string;
-    handle: string;
-    first_name?: string | null;
-    last_name?: string | null;
-    profile_picture_url?: string | null;
-    auth_user_id?: string | null;
-    bio?: string | null;
-  };
-}
+import type { RCMDWithAuthor } from "@/types";
 
 interface RCMDFeedProps {
   currentId: string;
@@ -30,175 +13,196 @@ interface RCMDFeedProps {
 
 export function RCMDFeed({ currentId }: RCMDFeedProps) {
   const router = useRouter();
-  const [rcmds, setRCMDs] = useState<RCMDWithProfile[]>([]);
+  const [rcmds, setRcmds] = useState<RCMDWithAuthor[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [currentFocusIndex, setCurrentFocusIndex] = useState(0);
-  const observerTarget = useRef<HTMLDivElement>(null);
-  const rcmdRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const [viewedRcmds] = useState(new Set<string>());
   const supabase = createClient();
 
-  // Fetch RCMDs from Supabase
-  const fetchRCMDs = useCallback(
-    async (isInitial: boolean = false) => {
-      if (isLoading) return;
+  const fetchRcmdById = async (id: string) => {
+    console.log("[DEBUG] Fetching RCMD for id:", id);
+    const { data: rcmd, error } = await supabase
+      .from("rcmds")
+      .select(
+        `
+        *,
+        profiles!rcmds_profile_id_fkey (*)
+      `
+      )
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      console.error("[DEBUG] Error fetching RCMD:", error);
+      return null;
+    }
+
+    return rcmd as RCMDWithAuthor;
+  };
+
+  const fetchNextRcmd = async () => {
+    console.log("[DEBUG] Fetching next RCMD. Already viewed:", viewedRcmds);
+    const { data: rcmds, error } = await supabase.rpc("get_random_rcmd", {
+      excluded_ids: Array.from(viewedRcmds).map(
+        (id) => id as unknown as string
+      ),
+    });
+
+    if (error) {
+      console.error("[DEBUG] Error fetching next RCMD:", error);
+      return null;
+    }
+
+    if (!rcmds || rcmds.length === 0) {
+      console.log("[DEBUG] No more RCMDs to fetch");
+      return null;
+    }
+
+    return rcmds[0] as RCMDWithAuthor;
+  };
+
+  // Initial load of current and next RCMDs
+  useEffect(() => {
+    async function loadRcmds() {
+      if (!currentId) return;
 
       setIsLoading(true);
-
-      const baseSelect = `
-      *,
-      profiles(
-        id,
-        auth_user_id,
-        handle,
-        first_name,
-        last_name,
-        profile_picture_url,
-        bio
-      )
-    `;
-
-      const createBaseQuery = () =>
-        supabase
-          .from("rcmds")
-          .select(baseSelect)
-          .eq("visibility", "public")
-          .order("created_at", { ascending: false })
-          .limit(ITEMS_PER_PAGE);
+      setError(null);
 
       try {
-        let query = createBaseQuery();
-
-        if (isInitial && currentId) {
-          // Get the current RCMD first
-          const { data: currentRCMD, error: rcmdError } =
-            await createBaseQuery().eq("id", currentId).limit(1).single();
-
-          if (rcmdError && rcmdError.code !== "PGRST116") {
-            // PGRST116 is the "not found" error, which we can handle
-            throw rcmdError;
-          }
-
-          // If found, create new query with timestamp condition
-          if (currentRCMD) {
-            query = createBaseQuery().lte("created_at", currentRCMD.created_at);
-          }
-        } else if (rcmds.length > 0) {
-          // Pagination query
-          query = createBaseQuery().lt(
-            "created_at",
-            rcmds[rcmds.length - 1].created_at
-          );
+        // Fetch current RCMD
+        const currentRcmd = await fetchRcmdById(currentId);
+        if (!currentRcmd) {
+          setError("RCMD not found");
+          return;
         }
 
-        const { data: newRCMDs, error: fetchError } = await query;
+        // Add current RCMD to viewed set
+        viewedRcmds.add(currentRcmd.id);
+        console.log("[DEBUG] Added current RCMD to viewed:", currentRcmd.id);
 
-        if (fetchError) throw fetchError;
+        // Initialize RCMDs array with current RCMD
+        const initialRcmds = [currentRcmd];
+        setRcmds(initialRcmds);
 
-        if (newRCMDs && newRCMDs.length > 0) {
-          const rcmdsArray = Array.isArray(newRCMDs) ? newRCMDs : [newRCMDs];
+        // Fetch first additional RCMD
+        const firstNext = await fetchNextRcmd();
+        if (firstNext?.id) {
+          viewedRcmds.add(firstNext.id);
+          initialRcmds.push(firstNext);
+          setRcmds([...initialRcmds]);
+          console.log("[DEBUG] Added first next RCMD:", firstNext.id);
 
-          // Filter duplicates
-          const existingIds = new Set(rcmds.map((r) => r.id));
-          const filteredNewRCMDs = rcmdsArray.filter(
-            (r) => !existingIds.has(r.id)
-          );
-
-          setRCMDs((prev) => {
-            const newState = isInitial
-              ? rcmdsArray
-              : [...prev, ...filteredNewRCMDs];
-            // Update refs array size
-            rcmdRefs.current = Array(newState.length).fill(null);
-            return newState;
-          });
-          setHasMore(rcmdsArray.length === ITEMS_PER_PAGE);
-        } else {
-          if (isInitial) setRCMDs([]);
-          setHasMore(false);
+          // Only fetch second RCMD if we got the first one
+          const secondNext = await fetchNextRcmd();
+          if (secondNext?.id) {
+            viewedRcmds.add(secondNext.id);
+            initialRcmds.push(secondNext);
+            setRcmds([...initialRcmds]);
+            console.log("[DEBUG] Added second next RCMD:", secondNext.id);
+          }
         }
       } catch (error) {
-        console.error("Error fetching RCMDs:", error);
-        setError("Error loading RCMDs");
+        console.error("[DEBUG] Error loading RCMDs:", error);
+        setError("Error loading RCMD");
       } finally {
         setIsLoading(false);
       }
-    },
-    [currentId, isLoading, rcmds, supabase]
-  );
+    }
 
-  // Reset and fetch when ID changes
-  useEffect(() => {
-    setRCMDs([]); // Reset rcmds when currentId changes
-    setHasMore(true); // Reset hasMore
-    setCurrentFocusIndex(0); // Reset focus index
-    fetchRCMDs(true);
-  }, [currentId, fetchRCMDs]);
+    loadRcmds();
+  }, [currentId]);
 
-  // Setup intersection observer for loading more RCMDs
+  // Track when RCMDs enter/leave viewport
   useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    // Create observer to track which RCMDs are fully visible
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && hasMore && !isLoading) {
-          fetchRCMDs(false);
-        }
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.95) {
+            const id = entry.target.getAttribute("data-rcmd-id");
+            const index = rcmds.findIndex((r) => r.id === id);
+
+            console.log(
+              "[DEBUG] RCMD in view:",
+              id,
+              "ratio:",
+              entry.intersectionRatio,
+              "index:",
+              index
+            );
+
+            if (index !== -1 && index !== focusedIndex) {
+              const currentRcmd = rcmds[index];
+              console.log("[DEBUG] Updating to RCMD:", currentRcmd.id);
+
+              setFocusedIndex(index);
+
+              // Update URL and fetch next RCMD if needed
+              if (index > 0) {
+                window.history.replaceState(
+                  null,
+                  "",
+                  `/explore/rcmds/feed/${currentRcmd.id}`
+                );
+
+                // Fetch another RCMD if we're near the end
+                if (index >= rcmds.length - 2) {
+                  fetchNextRcmd().then((nextRcmd) => {
+                    if (nextRcmd?.id) {
+                      viewedRcmds.add(nextRcmd.id);
+                      setRcmds((prevRcmds) => [...prevRcmds, nextRcmd]);
+                      console.log(
+                        "[DEBUG] Added new RCMD to stack:",
+                        nextRcmd.id
+                      );
+                    }
+                  });
+                }
+              }
+            }
+          }
+        });
       },
       {
-        root: null,
-        rootMargin: "200px",
-        threshold: 0.1,
+        root: container,
+        threshold: [0.95], // Trigger when RCMD is almost fully visible
+        rootMargin: "0px",
       }
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
+    // Observe all RCMD elements
+    Array.from(container.children).forEach((child) => {
+      if (child instanceof HTMLElement && child.hasAttribute("data-rcmd-id")) {
+        observer.observe(child);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [rcmds, fetchNextRcmd, viewedRcmds, focusedIndex]);
+
+  // Keep a basic scroll handler for debugging
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+
+    function handleScroll() {
+      console.log("[DEBUG] Scroll position:", container.scrollTop);
     }
 
-    return () => observer.disconnect();
-  }, [hasMore, isLoading, fetchRCMDs]);
+    container.addEventListener("scroll", handleScroll, { passive: true });
 
-  // Setup scroll tracking to update the URL
-  useEffect(() => {
-    const handleScroll = () => {
-      if (rcmds.length === 0) return;
-
-      const viewportHeight = window.innerHeight;
-      const scrollPosition = window.scrollY;
-      const viewportCenter = scrollPosition + viewportHeight / 2;
-
-      // Find the RCMD currently in the middle of the viewport
-      let closestIndex = 0;
-      let closestDistance = Infinity;
-
-      rcmdRefs.current.forEach((ref, index) => {
-        if (!ref) return;
-
-        const { top, height } = ref.getBoundingClientRect();
-        const elementCenter = top + height / 2 + scrollPosition;
-        const distance = Math.abs(elementCenter - viewportCenter);
-
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = index;
-        }
-      });
-
-      // Only update if the focus changed
-      if (closestIndex !== currentFocusIndex) {
-        setCurrentFocusIndex(closestIndex);
-
-        // Update the URL without causing a page reload
-        const newId = rcmds[closestIndex]?.id;
-        if (newId) {
-          window.history.replaceState(null, "", `/explore/rcmds/feed/${newId}`);
-        }
-      }
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
     };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [rcmds, currentFocusIndex]);
+  }, []);
 
   if (error) {
     return (
@@ -216,116 +220,113 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 py-3">
-          <button
-            onClick={() => router.push("/explore/rcmds")}
-            className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-lg font-semibold">Explore RCMDs</h1>
-          <div className="w-10" />
-        </div>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
       </div>
+    );
+  }
 
-      {/* Feed Content */}
-      <div className="pt-14 pb-20 px-4 max-w-2xl mx-auto">
-        {rcmds.map((rcmd, index) => (
-          <div
-            key={rcmd.id}
-            ref={(el) => {
-              rcmdRefs.current[index] = el;
-            }}
-            className={`min-h-[90vh] flex flex-col justify-center py-12 transition-opacity duration-300 ${
-              rcmds.length > 1 && index === currentFocusIndex
-                ? "opacity-100"
-                : "opacity-60"
-            }`}
-          >
-            <Link
-              href={`/rcmd/${rcmd.id}`}
-              className="block"
-              onClick={(e) => e.preventDefault()} // Prevent navigation, as we're already in the feed
-            >
-              <div className="relative aspect-square w-full mb-6 rounded-xl overflow-hidden shadow-lg">
-                <Image
-                  src={rcmd.featured_image || "/default-rcmd.png"}
-                  alt={rcmd.title || ""}
-                  fill
-                  className="object-cover"
-                  priority={index < 3}
-                  sizes="(max-width: 768px) 100vw, 600px"
-                />
-              </div>
+  if (rcmds.length === 0) {
+    return null;
+  }
 
-              <div className="space-y-3">
-                <h2 className="text-2xl font-bold">{rcmd.title}</h2>
-                {rcmd.description && (
-                  <p className="text-gray-300 mt-2">{rcmd.description}</p>
-                )}
+  return (
+    <div
+      ref={containerRef}
+      className="h-screen overflow-y-auto bg-black text-white [scroll-behavior:smooth] [transition-timing-function:cubic-bezier(0.4,0,0.2,1)] [transition-duration:150ms]"
+      style={{
+        scrollSnapType: "y mandatory",
+        scrollPaddingTop: "16px",
+        overscrollBehavior: "contain",
+      }}
+    >
+      {/* Floating Back Button */}
+      <button
+        onClick={() => router.push("/explore/rcmds")}
+        className="fixed top-4 left-4 z-50 p-2 rounded-full bg-black/50 backdrop-blur-sm hover:bg-white/10 transition-colors"
+      >
+        <ArrowLeft className="w-6 h-6" />
+      </button>
 
-                {rcmd.profiles && (
-                  <div className="flex items-center gap-2 text-gray-400 mt-2">
-                    <span className="text-sm">By </span>
-                    <Link
-                      href={`/${rcmd.profiles.handle}`}
-                      className="text-blue-400 hover:underline"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Allow this link to navigate
-                      }}
-                    >
-                      {rcmd.profiles.first_name && rcmd.profiles.last_name
-                        ? `${rcmd.profiles.first_name} ${rcmd.profiles.last_name}`
-                        : rcmd.profiles.handle}
-                    </Link>
+      {/* RCMD Stack */}
+      {rcmds.map((rcmd, index) => (
+        <div
+          key={rcmd.id}
+          data-rcmd-id={rcmd.id}
+          className="min-h-[50vh] max-h-[90vh] py-12"
+          style={{
+            scrollSnapAlign: "start",
+            scrollSnapStop: "always",
+          }}
+        >
+          <div className="px-4 max-w-2xl mx-auto h-full">
+            <div className="flex flex-col min-h-0">
+              <div
+                className="transition-opacity duration-300"
+                style={{ opacity: focusedIndex === index ? 1 : 0.3 }}
+              >
+                {rcmd.featured_image && (
+                  <div className="relative aspect-video w-full mb-6 rounded-xl overflow-hidden shadow-lg">
+                    <Image
+                      src={rcmd.featured_image}
+                      alt={rcmd.title}
+                      fill
+                      className="object-cover"
+                      priority={index === 0}
+                      sizes="(max-width: 768px) 100vw, 600px"
+                    />
                   </div>
                 )}
 
-                <div className="pt-4">
-                  <Link
-                    href={`/rcmd/${rcmd.id}`}
-                    className="inline-block bg-white/10 hover:bg-white/20 text-white px-5 py-2 rounded-full transition-colors"
-                  >
-                    View Details
-                  </Link>
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-bold">{rcmd.title}</h2>
+                  {rcmd.description && (
+                    <p className="text-gray-300">{rcmd.description}</p>
+                  )}
+
+                  <div className="flex items-center space-x-3 text-sm text-gray-400">
+                    <div className="flex items-center space-x-2">
+                      <div className="relative w-6 h-6 rounded-full overflow-hidden">
+                        <Image
+                          src={
+                            rcmd.profiles?.profile_picture_url ||
+                            "/default-avatar.png"
+                          }
+                          alt={rcmd.profiles?.handle || ""}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <span>@{rcmd.profiles?.handle}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex space-x-3">
+                    <button
+                      className="inline-block bg-white/10 hover:bg-white/20 text-white px-5 py-2 rounded-full transition-colors"
+                      onClick={() => router.push(`/rcmd/${rcmd.id}`)}
+                    >
+                      View RCMD
+                    </button>
+                    {rcmd.url && (
+                      <a
+                        href={rcmd.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block bg-white text-black px-5 py-2 rounded-full hover:bg-white/90 transition-colors"
+                      >
+                        Visit Link
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
-            </Link>
-          </div>
-        ))}
-
-        {/* Observer target element */}
-        <div ref={observerTarget} className="h-20" aria-hidden="true" />
-
-        {/* Loading indicator */}
-        {isLoading && (
-          <div className="flex justify-center py-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          </div>
-        )}
-
-        {/* Scroll hint - only show when there's more than one rcmd and more to load */}
-        {hasMore &&
-          rcmds.length > 0 &&
-          currentFocusIndex < rcmds.length - 1 && (
-            <div className="fixed bottom-10 left-0 right-0 flex justify-center animate-bounce">
-              <div className="bg-white/10 rounded-full p-3">
-                <ArrowDown className="w-6 h-6 text-white" />
-              </div>
             </div>
-          )}
-
-        {/* End of feed message */}
-        {!hasMore && rcmds.length > 0 && (
-          <div className="text-center text-gray-500 py-8">
-            You've reached the end of the feed
           </div>
-        )}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }

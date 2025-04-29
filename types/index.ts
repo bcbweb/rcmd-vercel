@@ -25,13 +25,12 @@ export type CollectionBlockWithCollection = CollectionBlockType & {
   collection: Collection;
 };
 
-// You can also create custom composite types
 export type BusinessWithOwner = Business & {
   owner: Profile;
 };
 
-export type RCMDWithCreator = RCMD & {
-  creator: Creator;
+export type RCMDWithAuthor = RCMD & {
+  profiles: Profile;
 };
 
 // Custom utility types

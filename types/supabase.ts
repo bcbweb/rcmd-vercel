@@ -1396,6 +1396,21 @@ export type Database = {
           view_count: number | null
         }[]
       }
+      get_random_rcmd: {
+        Args: { excluded_ids?: string[] }
+        Returns: {
+          id: string
+          created_at: string
+          updated_at: string
+          title: string
+          description: string
+          url: string
+          featured_image: string
+          profile_id: string
+          visibility: Database["public"]["Enums"]["rcmd_visibility"]
+          profiles: Json
+        }[]
+      }
       increment_profile_view: {
         Args: { profile_id: string }
         Returns: undefined
