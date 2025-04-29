@@ -117,77 +117,70 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
     loadProfiles();
   }, [currentHandle, fetchProfileByHandle, fetchNextProfile, viewedProfiles]);
 
-  // Track when scroll snap completes
+  // Track when profiles come into view
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
 
-    function handleScrollSnapChange(event: Event) {
-      console.log("[DEBUG] Scroll snap change detected");
-      // @ts-expect-error - SnapEvent is experimental
-      const snapTarget = event.snapTargetBlock;
-      console.log("[DEBUG] Snap target:", snapTarget);
+    const observers = new Map();
 
-      // Find all profile containers
-      const profileContainers = Array.from(container.children).filter(
-        (child) =>
-          child instanceof HTMLElement &&
-          child.style.scrollSnapAlign === "start"
-      );
+    // Create observers for each profile
+    profiles.forEach((profile, index) => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && entry.intersectionRatio > 0.7) {
+              console.log("[DEBUG] Profile in view:", profile.handle);
+              setFocusedIndex(index);
 
-      // Determine which profile is in view based on the snap target
-      if (snapTarget && profileContainers.length > 0) {
-        // Get the index of the snapped profile
-        const snapIndex = profileContainers.indexOf(snapTarget);
-        console.log("[DEBUG] Snap index:", snapIndex);
+              // If we've scrolled to a new profile
+              if (index > 0 && index < profiles.length) {
+                console.log("[DEBUG] Viewing next profile:", profile.handle);
 
-        setFocusedIndex(snapIndex);
+                // Update URL to reflect current profile
+                window.history.replaceState(
+                  null,
+                  "",
+                  `/explore/people/feed/${profile.handle}`
+                );
 
-        // If we've scrolled to a new profile
-        if (snapIndex > 0 && snapIndex < profiles.length) {
-          const currentProfile = profiles[snapIndex];
-          console.log("[DEBUG] Viewing next profile:", currentProfile.handle);
-
-          // Update URL to reflect current profile
-          window.history.replaceState(
-            null,
-            "",
-            `/explore/people/feed/${currentProfile.handle}`
-          );
-
-          // Fetch another profile to maintain the stack
-          fetchNextProfile().then((profile) => {
-            if (profile?.handle) {
-              viewedProfiles.add(profile.handle);
-              setProfiles((prevProfiles) => [...prevProfiles, profile]);
-              console.log(
-                "[DEBUG] Added new profile to stack:",
-                profile.handle
-              );
+                // Fetch another profile to maintain the stack
+                fetchNextProfile().then((nextProfile) => {
+                  if (nextProfile?.handle) {
+                    viewedProfiles.add(nextProfile.handle);
+                    setProfiles((prevProfiles) => [
+                      ...prevProfiles,
+                      nextProfile,
+                    ]);
+                    console.log(
+                      "[DEBUG] Added new profile to stack:",
+                      nextProfile.handle
+                    );
+                  }
+                });
+              }
             }
           });
+        },
+        {
+          root: container,
+          threshold: 0.7, // Trigger when 70% of the profile is visible
+          rootMargin: "0px",
         }
+      );
+
+      // Find the profile container element
+      const profileElement = container.children[index];
+      if (profileElement) {
+        observer.observe(profileElement);
+        observers.set(profile.handle, observer);
       }
-    }
+    });
 
-    // Use scrollsnapchange event with fallback to scrollend
-    if ("onscrollsnapchange" in window) {
-      console.log("[DEBUG] Browser supports scrollsnapchange event");
-      container.addEventListener("scrollsnapchange", handleScrollSnapChange);
-    } else {
-      console.log("[DEBUG] Using scrollend fallback");
-      container.addEventListener("scrollend", handleScrollSnapChange);
-    }
-
+    // Cleanup function
     return () => {
-      if ("onscrollsnapchange" in window) {
-        container.removeEventListener(
-          "scrollsnapchange",
-          handleScrollSnapChange
-        );
-      } else {
-        container.removeEventListener("scrollend", handleScrollSnapChange);
-      }
+      observers.forEach((observer) => observer.disconnect());
+      observers.clear();
     };
   }, [profiles, fetchNextProfile, viewedProfiles]);
 

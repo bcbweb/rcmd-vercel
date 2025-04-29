@@ -1373,6 +1373,29 @@ export type Database = {
           visibility: Database["public"]["Enums"]["rcmd_visibility"] | null
         }[]
       }
+      get_random_profile: {
+        Args: { excluded_handles?: string[] }
+        Returns: {
+          auth_user_id: string
+          bio: string | null
+          cover_image: string | null
+          created_at: string | null
+          default_page_id: string | null
+          default_page_type: string | null
+          email: string
+          first_name: string | null
+          handle: string | null
+          id: string
+          interests: string[] | null
+          is_onboarded: boolean | null
+          last_name: string | null
+          location: string | null
+          profile_picture_url: string | null
+          tags: string[] | null
+          updated_at: string | null
+          view_count: number | null
+        }[]
+      }
       increment_profile_view: {
         Args: { profile_id: string }
         Returns: undefined
