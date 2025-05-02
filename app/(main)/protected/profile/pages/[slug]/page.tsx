@@ -483,7 +483,7 @@ export default function CustomProfilePage() {
                 onClick={() => setIsPageConfigOpen(true)}
               >
                 <Settings className="w-3.5 h-3.5" />
-                Configure
+                <span className="hidden sm:inline">Configure</span>
               </Button>
               {handle && (
                 <Button
@@ -498,7 +498,7 @@ export default function CustomProfilePage() {
                     target="_blank"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    Preview Page
+                    <span className="hidden sm:inline">Preview Page</span>
                   </Link>
                 </Button>
               )}

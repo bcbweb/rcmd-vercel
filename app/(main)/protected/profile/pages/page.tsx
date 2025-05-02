@@ -293,7 +293,7 @@ export default function ProfilePage() {
               onClick={() => setIsConfigModalOpen(true)}
             >
               <Settings className="w-3.5 h-3.5" />
-              Configure
+              <span className="hidden sm:inline">Configure</span>
             </Button>
             {userHandle && (
               <Button
@@ -308,7 +308,7 @@ export default function ProfilePage() {
                   target="_blank"
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  Preview Page
+                  <span className="hidden sm:inline">Preview Page</span>
                 </Link>
               </Button>
             )}

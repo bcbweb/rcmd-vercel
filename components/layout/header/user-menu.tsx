@@ -4,10 +4,11 @@ import Link from "next/link";
 import {
   Settings,
   LogOut,
-  User as UserIcon,
   ArrowLeftRight,
   Rows3,
   SquarePlus,
+  LayoutDashboard,
+  Eye,
 } from "lucide-react";
 import { signOutClient } from "@/app/(main)/client-actions";
 import { useAuthStore } from "@/stores/auth-store";
@@ -109,13 +110,24 @@ export default function UserMenu() {
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
+            {profile?.handle && (
+              <DropdownMenuItem asChild>
+                <Link
+                  href={`/${profile.handle}`}
+                  className="flex items-center cursor-pointer"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Preview my profile
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem asChild>
               <Link
                 href="/protected/profile"
                 className="flex items-center cursor-pointer"
               >
-                <UserIcon className="mr-2 h-4 w-4" />
-                Manage profile
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Manage profile pages
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

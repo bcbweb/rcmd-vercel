@@ -146,7 +146,7 @@ export default function LinksPage() {
             onClick={() => setIsConfigModalOpen(true)}
           >
             <Settings className="w-3.5 h-3.5" />
-            Configure
+            <span className="hidden sm:inline">Configure</span>
           </Button>
           {userHandle && (
             <>
@@ -162,7 +162,7 @@ export default function LinksPage() {
                   target="_blank"
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  Preview Page
+                  <span className="hidden sm:inline">Preview Page</span>
                 </NextLink>
               </Button>
               <Button
@@ -172,7 +172,7 @@ export default function LinksPage() {
                 onClick={() => setIsShareModalOpen(true)}
               >
                 <Share2 className="w-3.5 h-3.5" />
-                Share
+                <span className="hidden sm:inline">Share</span>
               </Button>
             </>
           )}

@@ -12,6 +12,30 @@ interface LinkMetadata {
   favicon?: string;
   type?: string;
   _timestamp?: number;
+  // Additional Microlink fields
+  author?: string;
+  publisher?: string;
+  date?: string;
+  lang?: string;
+  logo?: string;
+  palette?: {
+    background?: string;
+    color?: string[];
+  };
+  audio?: {
+    url: string;
+    type: string;
+    duration?: number;
+  }[];
+  video?: {
+    url: string;
+    type: string;
+    duration?: number;
+  }[];
+  iframe?: {
+    url: string;
+    html: string;
+  };
 }
 
 // Export the interface for use by other components
@@ -211,13 +235,18 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
             title: data?.title || domain,
             description: data?.description || `Content from ${domain}`,
             url: data?.url || value,
-            // Skip images for URLs that are very complex, but preserve if it exists
-            image:
-              value.includes("?") && value.length > 100
-                ? null
-                : data?.image || null,
-            favicon: data?.favicon,
+            image: data?.image || null,
+            favicon: data?.favicon || data?.logo,
             type: data?.type || "website",
+            author: data?.author,
+            publisher: data?.publisher,
+            date: data?.date,
+            lang: data?.lang,
+            logo: data?.logo,
+            palette: data?.palette,
+            audio: data?.audio,
+            video: data?.video,
+            iframe: data?.iframe,
             _timestamp: Date.now(),
           };
 
@@ -550,6 +579,14 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
                 } transition-opacity duration-200`}
                 key={`preview-${metadata._timestamp || Date.now()}`}
                 data-testid="metadata-preview"
+                style={
+                  metadata.palette?.background
+                    ? {
+                        backgroundColor: metadata.palette.background,
+                        color: metadata.palette.color?.[0] || "inherit",
+                      }
+                    : undefined
+                }
               >
                 <div className="flex items-start space-x-4">
                   <div className="flex-1 min-w-0">
@@ -567,46 +604,77 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
                       </p>
                     )}
 
+                    {/* Additional metadata */}
+                    {metadata.author && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        By {metadata.author}
+                      </p>
+                    )}
+
+                    {metadata.publisher && (
+                      <p className="text-xs text-gray-400">
+                        Published by {metadata.publisher}
+                      </p>
+                    )}
+
                     {/* Domain */}
                     <p className="text-xs text-gray-400 mt-1">
                       {getDomainFromUrl(value)}
                     </p>
+
+                    {/* Media indicators */}
+                    <div className="flex gap-2 mt-2">
+                      {metadata.audio && metadata.audio.length > 0 && (
+                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          Audio available
+                        </span>
+                      )}
+                      {metadata.video && metadata.video.length > 0 && (
+                        <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                          Video available
+                        </span>
+                      )}
+                      {metadata.iframe && (
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                          Interactive content
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Only render image if it exists and we're not dealing with a problem URL */}
+                  {/* Image with palette background */}
                   {metadata.image && !isProblemURL && (
                     <div className="flex-shrink-0 relative">
                       <div
-                        className="w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-700 flex items-center justify-center"
+                        className="w-20 h-20 rounded overflow-hidden flex items-center justify-center"
+                        style={
+                          metadata.palette?.background
+                            ? {
+                                backgroundColor: metadata.palette.background,
+                              }
+                            : { backgroundColor: "rgb(243 244 246)" }
+                        }
                         key={`img-container-${metadata._timestamp || Date.now()}`}
                       >
-                        {/* Use Next.js Image component for better performance */}
-                        {metadata.image ? (
-                          <div className="relative w-full h-full">
-                            <Image
-                              src={metadata.image}
-                              alt={metadata.title || "Preview"}
-                              fill
-                              sizes="80px"
-                              className="object-cover"
-                              onError={() => {
-                                // When image fails to load, show a fallback
-                                const container = document.getElementById(
-                                  `img-container-${metadata._timestamp || Date.now()}`
-                                );
-                                if (container) {
-                                  container.innerHTML = `<div class="text-2xl font-bold text-gray-300">
-                                    ${metadata.title?.[0]?.toUpperCase() || "?"}
-                                  </div>`;
-                                }
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <div className="text-2xl font-bold text-gray-300">
-                            {metadata.title?.[0]?.toUpperCase() || "?"}
-                          </div>
-                        )}
+                        <div className="relative w-full h-full">
+                          <Image
+                            src={metadata.image}
+                            alt={metadata.title || "Preview"}
+                            fill
+                            sizes="80px"
+                            className="object-cover"
+                            onError={() => {
+                              const container = document.getElementById(
+                                `img-container-${metadata._timestamp || Date.now()}`
+                              );
+                              if (container) {
+                                container.innerHTML = `<div class="text-2xl font-bold text-gray-300">
+                                  ${metadata.title?.[0]?.toUpperCase() || "?"}
+                                </div>`;
+                              }
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}

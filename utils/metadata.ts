@@ -10,7 +10,7 @@ export const getMetadataBase = () => {
     (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) ||
     (process.env.NEXT_PUBLIC_VERCEL_URL &&
       `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`) ||
-    "https://rcmd.app";
+    "https://rcmd.world";
 
   return new URL(metadataBaseUrl);
 };
