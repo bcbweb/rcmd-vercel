@@ -858,6 +858,56 @@ export type Database = {
           },
         ]
       }
+      profile_social_integrations: {
+        Row: {
+          access_token: string | null
+          created_at: string | null
+          metadata: Json | null
+          platform: string
+          profile_id: string
+          profile_url: string | null
+          refresh_token: string | null
+          scopes: string[] | null
+          token_expiry: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string | null
+          metadata?: Json | null
+          platform: string
+          profile_id: string
+          profile_url?: string | null
+          refresh_token?: string | null
+          scopes?: string[] | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string | null
+          metadata?: Json | null
+          platform?: string
+          profile_id?: string
+          profile_url?: string | null
+          refresh_token?: string | null
+          scopes?: string[] | null
+          token_expiry?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_social_integrations_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_social_links: {
         Row: {
           created_at: string | null

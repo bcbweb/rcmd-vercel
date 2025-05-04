@@ -59,7 +59,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error");
-  const state = url.searchParams.get("state");
 
   // Handle errors from OAuth provider
   if (error) {
