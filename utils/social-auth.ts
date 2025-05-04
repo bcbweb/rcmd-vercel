@@ -47,7 +47,7 @@ const OAUTH_CONFIG = {
     clientId: process.env.NEXT_PUBLIC_TIKTOK_CLIENT_ID,
     authUrl: "https://www.tiktok.com/auth/authorize/",
     tokenUrl: "https://open-api.tiktok.com/oauth/access_token/",
-    scopes: ["user.info.basic"],
+    scopes: ["user.info.profile"],
     redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/tiktok`,
   },
   linkedin: {
@@ -80,7 +80,13 @@ export function initiateOAuthFlow(platform: SocialPlatform): void {
   authUrl.searchParams.append("redirect_uri", config.redirectUri);
   authUrl.searchParams.append("response_type", "code");
   authUrl.searchParams.append("state", state);
-  authUrl.searchParams.append("scope", config.scopes.join(" "));
+
+  // Platform-specific handling for scopes
+  if (platform === "tiktok") {
+    authUrl.searchParams.append("scope", config.scopes.join(","));
+  } else {
+    authUrl.searchParams.append("scope", config.scopes.join(" "));
+  }
 
   // Additional platform-specific parameters
   if (platform === "instagram") {

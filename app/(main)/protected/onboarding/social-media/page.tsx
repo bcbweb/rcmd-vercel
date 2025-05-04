@@ -232,8 +232,8 @@ export default function SocialMediaPage() {
   };
 
   return (
-    <>
-      <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+    <div className="flex flex-col h-[calc(100vh-64px)]">
+      <div className="shrink-0 border-b border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Connect Social Media Accounts
         </h2>
@@ -245,154 +245,166 @@ export default function SocialMediaPage() {
         <StepProgress currentStep={1} totalSteps={4} />
       </div>
 
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => setIsInfoOpen(!isInfoOpen)}
-          className="w-full p-4 flex items-center justify-between text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Info className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            <span className="font-medium text-blue-800 dark:text-blue-300">
-              Why connect social media accounts?
-            </span>
-          </div>
-          <svg
-            className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${isInfoOpen ? "rotate-180" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setIsInfoOpen(!isInfoOpen)}
+            className="w-full p-4 flex items-center justify-between text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
+            <div className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <span className="font-medium text-blue-800 dark:text-blue-300">
+                Why connect social media accounts?
+              </span>
+            </div>
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${isInfoOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
 
-        {isInfoOpen && (
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20">
-            <p className="text-sm text-blue-700 dark:text-blue-200">
-              By connecting your social media accounts, you'll gain access to
-              premium features like:
-            </p>
-            <ul className="list-disc pl-5 mt-2 text-sm text-blue-700 dark:text-blue-200">
-              <li>Automatic content discovery from your accounts</li>
-              <li>Enhanced visibility in relevant searches</li>
-              <li>Integration with our content recommendation engine</li>
-              <li>Cross-platform analytics and insights</li>
-            </ul>
-            <p className="mt-2 text-sm text-blue-700 dark:text-blue-200">
-              We prioritize your privacy and only access the data you explicitly
-              authorize. You can disconnect these integrations at any time.
-            </p>
-          </div>
-        )}
-      </div>
+          {isInfoOpen && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20">
+              <p className="text-sm text-blue-700 dark:text-blue-200">
+                By connecting your social media accounts, you'll gain access to
+                premium features like:
+              </p>
+              <ul className="list-disc pl-5 mt-2 text-sm text-blue-700 dark:text-blue-200">
+                <li>Automatic content discovery from your accounts</li>
+                <li>Enhanced visibility in relevant searches</li>
+                <li>Integration with our content recommendation engine</li>
+                <li>Cross-platform analytics and insights</li>
+              </ul>
+              <p className="mt-2 text-sm text-blue-700 dark:text-blue-200">
+                We prioritize your privacy and only access the data you
+                explicitly authorize. You can disconnect these integrations at
+                any time.
+              </p>
+            </div>
+          )}
+        </div>
 
-      <div className="p-4 space-y-4">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-            <span className="ml-2 text-gray-500">
-              Loading your connected accounts...
-            </span>
-          </div>
-        ) : (
-          <>
-            {/* Social Media Platforms */}
-            <div className="space-y-3">
-              {SOCIAL_PLATFORMS.map((platform) => {
-                const isConnected = isPlatformConnected(platform.value);
-                const connectedAccount = getConnectedAccount(platform.value);
+        <div className="p-4 space-y-4">
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+              <span className="ml-2 text-gray-500">
+                Loading your connected accounts...
+              </span>
+            </div>
+          ) : (
+            <>
+              {/* Social Media Platforms */}
+              <div className="space-y-3">
+                {SOCIAL_PLATFORMS.map((platform) => {
+                  const isConnected = isPlatformConnected(platform.value);
+                  const connectedAccount = getConnectedAccount(platform.value);
 
-                return (
-                  <div
-                    key={platform.value}
-                    className="bg-white dark:bg-gray-800 border rounded-md overflow-hidden"
-                  >
-                    <div className="flex items-center p-4">
-                      <div className="flex-shrink-0 mr-4">
-                        <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">
-                          <Image
-                            src={platform.icon}
-                            alt={platform.label}
-                            width={24}
-                            height={24}
-                            className="w-6 h-6"
-                          />
+                  return (
+                    <div
+                      key={platform.value}
+                      className="bg-white dark:bg-gray-800 border rounded-md overflow-hidden"
+                    >
+                      <div className="flex items-center p-4">
+                        <div className="flex-shrink-0 mr-4">
+                          <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">
+                            <Image
+                              src={platform.icon}
+                              alt={platform.label}
+                              width={24}
+                              height={24}
+                              className="w-6 h-6"
+                            />
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center">
-                          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                            {platform.label}
-                          </h3>
-                          {isConnected && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                              <Check className="w-3 h-3 mr-1" />
-                              Connected
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          {platform.description}
-                        </p>
-
-                        {isConnected && connectedAccount?.username && (
-                          <div className="mt-1 flex items-center">
-                            <Link2 className="w-3 h-3 text-gray-400 mr-1" />
-                            <span className="text-xs text-gray-600 dark:text-gray-300">
-                              {connectedAccount.username}
-                            </span>
-                            {connectedAccount.profileUrl && (
-                              <a
-                                href={connectedAccount.profileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="ml-2 text-xs text-blue-600 hover:text-blue-800 inline-flex items-center"
-                              >
-                                View <ExternalLink className="w-3 h-3 ml-1" />
-                              </a>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center">
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                              {platform.label}
+                            </h3>
+                            {isConnected && (
+                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                <Check className="w-3 h-3 mr-1" />
+                                Connected
+                              </span>
                             )}
                           </div>
-                        )}
-                      </div>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {platform.description}
+                          </p>
 
-                      <div className="ml-4">
-                        {isConnected ? (
-                          <button
-                            type="button"
-                            onClick={() => handleDisconnect(platform.value)}
-                            className="inline-flex items-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                          >
-                            <Trash2 className="w-3 h-3 mr-1" />
-                            Disconnect
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleConnect(platform.value)}
-                            className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                          >
-                            {platform.value === "twitter"
-                              ? "Add username"
-                              : "Connect"}
-                          </button>
-                        )}
+                          {isConnected && connectedAccount?.username && (
+                            <div className="mt-1 flex items-center">
+                              <Link2 className="w-3 h-3 text-gray-400 mr-1" />
+                              <span className="text-xs text-gray-600 dark:text-gray-300">
+                                {connectedAccount.username}
+                              </span>
+                              {connectedAccount.profileUrl && (
+                                <a
+                                  href={connectedAccount.profileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-2 text-xs text-blue-600 hover:text-blue-800 inline-flex items-center"
+                                >
+                                  View <ExternalLink className="w-3 h-3 ml-1" />
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="ml-4">
+                          {isConnected ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDisconnect(platform.value)}
+                              className="inline-flex items-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                              <Trash2 className="w-3 h-3 mr-1" />
+                              Disconnect
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleConnect(platform.value)}
+                              className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              {platform.value === "twitter"
+                                ? "Add username"
+                                : "Connect"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
-        {/* Continue Button */}
-        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+      {/* Footer with Continue and Skip buttons */}
+      <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+        <div className="flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+          >
+            Skip for now
+          </button>
           <button
             type="button"
             onClick={handleContinue}
@@ -483,6 +495,6 @@ export default function SocialMediaPage() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

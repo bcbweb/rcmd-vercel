@@ -105,11 +105,29 @@ export default function UserMenu() {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end">
-          <div className="px-2 py-1.5 text-sm font-medium">
-            {profile?.handle ? `@${profile.handle}` : "Profile"}
+          <div className="flex items-center justify-between px-2 py-1.5">
+            <span className="text-sm font-medium">
+              {profile?.handle ? `@${profile.handle}` : "Profile"}
+            </span>
+            <Link
+              href="/protected/profile/switch"
+              className="flex items-center text-xs text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeftRight className="mr-1 h-3 w-3" />
+              Switch
+            </Link>
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
+            <DropdownMenuItem asChild>
+              <Link
+                href="/protected/profile"
+                className="flex items-center cursor-pointer"
+              >
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Profile builder
+              </Link>
+            </DropdownMenuItem>
             {profile?.handle && (
               <DropdownMenuItem asChild>
                 <Link
@@ -121,15 +139,6 @@ export default function UserMenu() {
                 </Link>
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem asChild>
-              <Link
-                href="/protected/profile"
-                className="flex items-center cursor-pointer"
-              >
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                Manage profile pages
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link
                 href="/protected/profile/rcmds"
@@ -145,16 +154,7 @@ export default function UserMenu() {
                 className="flex items-center cursor-pointer"
               >
                 <SquarePlus className="mr-2 h-4 w-4" />
-                Add profile type
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link
-                href="/protected/profile/switch"
-                className="flex items-center cursor-pointer"
-              >
-                <ArrowLeftRight className="mr-2 h-4 w-4" />
-                Switch profile
+                Add profile
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
