@@ -48,7 +48,10 @@ const OAUTH_CONFIG = {
     authUrl: "https://www.tiktok.com/auth/authorize/",
     tokenUrl: "https://open-api.tiktok.com/oauth/access_token/",
     scopes: ["user.info.profile"],
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/tiktok`,
+    redirectUri:
+      typeof window !== "undefined"
+        ? `${process.env.NEXT_PUBLIC_BASE_URL || window.location.origin}/api/auth/callback/tiktok`
+        : `/api/auth/callback/tiktok`,
   },
   linkedin: {
     clientId: process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID,
@@ -77,7 +80,20 @@ export function initiateOAuthFlow(platform: SocialPlatform): void {
   // Build OAuth URL with appropriate parameters
   const authUrl = new URL(config.authUrl);
   authUrl.searchParams.append("client_id", config.clientId);
-  authUrl.searchParams.append("redirect_uri", config.redirectUri);
+
+  // Fix for TikTok redirect URI - ensure we have a base URL
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
+  const redirectUri =
+    platform === "tiktok"
+      ? `${baseUrl}/api/auth/callback/tiktok`
+      : config.redirectUri;
+
+  // Debug info
+  console.log(`[DEBUG] Initiating ${platform} OAuth flow`);
+  console.log(`[DEBUG] Base URL: ${baseUrl}`);
+  console.log(`[DEBUG] Redirect URI: ${redirectUri}`);
+
+  authUrl.searchParams.append("redirect_uri", redirectUri);
   authUrl.searchParams.append("response_type", "code");
   authUrl.searchParams.append("state", state);
 
@@ -93,6 +109,9 @@ export function initiateOAuthFlow(platform: SocialPlatform): void {
     // Instagram/Facebook needs these parameters
     authUrl.searchParams.append("auth_type", "rerequest");
   }
+
+  // Debug the final URL
+  console.log(`[DEBUG] Auth URL: ${authUrl.toString()}`);
 
   // Redirect to the auth URL
   window.location.href = authUrl.toString();

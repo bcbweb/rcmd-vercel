@@ -94,7 +94,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           client_secret: clientSecret,
           code: code,
           grant_type: "authorization_code",
-          redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/tiktok`,
+          redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000"}/api/auth/callback/tiktok`,
         }).toString(),
       }
     );
