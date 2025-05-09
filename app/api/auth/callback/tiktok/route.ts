@@ -35,9 +35,17 @@ interface TikTokUserInfoResponse {
   message: string;
 }
 
-function generateRedirectUrl(status: string, message?: string) {
-  const baseUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/protected/onboarding/social-media`;
-  const url = new URL(baseUrl);
+function generateRedirectUrl(
+  status: string,
+  message?: string,
+  request?: NextRequest
+) {
+  // Get base URL with fallback to request origin or default
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (request?.headers.get("origin") ?? "http://localhost:3000");
+
+  const url = new URL(`${baseUrl}/protected/onboarding/social-media`);
 
   // Handle potential IDNs in the URL
   try {
@@ -61,21 +69,24 @@ function generateRedirectUrl(status: string, message?: string) {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  // Parse URL and search params
-  const url = new URL(request.url);
-  const code = url.searchParams.get("code");
-  const error = url.searchParams.get("error");
+  const searchParams = request.nextUrl.searchParams;
+  const code = searchParams.get("code");
+  const error = searchParams.get("error");
 
-  // Handle errors from OAuth provider
+  // Handle errors
   if (error) {
     console.error(`Error during TikTok OAuth: ${error}`);
-    return NextResponse.redirect(generateRedirectUrl("failed"));
+    return NextResponse.redirect(
+      generateRedirectUrl("failed", undefined, request)
+    );
   }
 
   // Check if we have a code
   if (!code) {
     console.error("No code provided in TikTok OAuth callback");
-    return NextResponse.redirect(generateRedirectUrl("no_code"));
+    return NextResponse.redirect(
+      generateRedirectUrl("no_code", undefined, request)
+    );
   }
 
   try {
@@ -110,7 +121,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!tokenData.data || !tokenData.data.access_token) {
       console.error("Failed to get access token from TikTok:", tokenData);
       return NextResponse.redirect(
-        generateRedirectUrl("token_error", "Failed to get access token")
+        generateRedirectUrl(
+          "token_error",
+          "Failed to get access token",
+          request
+        )
       );
     }
 
@@ -132,7 +147,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!userInfo.data || !userInfo.data.user) {
       console.error("Failed to get user info from TikTok:", userInfo);
       return NextResponse.redirect(
-        generateRedirectUrl("profile_error", "Failed to get user profile")
+        generateRedirectUrl(
+          "profile_error",
+          "Failed to get user profile",
+          request
+        )
       );
     }
 
@@ -151,7 +170,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!user || userError) {
       console.error("No authenticated user found:", userError);
       return NextResponse.redirect(
-        generateRedirectUrl("auth_error", "User not authenticated")
+        generateRedirectUrl("auth_error", "User not authenticated", request)
       );
     }
 
@@ -165,7 +184,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!profile?.id) {
       console.error("Profile not found for user:", user.id);
       return NextResponse.redirect(
-        generateRedirectUrl("profile_error", "User profile not found")
+        generateRedirectUrl("profile_error", "User profile not found", request)
       );
     }
 
@@ -195,7 +214,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (integrationError) {
       console.error("Error storing TikTok integration:", integrationError);
       return NextResponse.redirect(
-        generateRedirectUrl("db_error", "Failed to store integration")
+        generateRedirectUrl("db_error", "Failed to store integration", request)
       );
     }
 
@@ -207,12 +226,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       updated_at: new Date().toISOString(),
     });
 
-    // Redirect back to the onboarding page with success message
-    return NextResponse.redirect(generateRedirectUrl("success"));
-  } catch (error) {
-    console.error("Error handling TikTok OAuth callback:", error);
+    // Redirect back to the app with success
     return NextResponse.redirect(
-      generateRedirectUrl("server_error", "Server error processing callback")
+      generateRedirectUrl("success", undefined, request)
+    );
+  } catch (error) {
+    console.error("Error in TikTok OAuth callback:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.redirect(
+      generateRedirectUrl("error", errorMessage, request)
     );
   }
 }

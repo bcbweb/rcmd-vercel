@@ -8,26 +8,36 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
   const redirectUrl = "/protected/onboarding/social-media";
 
+  // Get base URL with fallback to request origin
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    request.headers.get("origin") ||
+    "http://localhost:3000";
+
   // Handle errors
   if (error) {
     console.error(`Error during Instagram OAuth: ${error}`);
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_BASE_URL}${redirectUrl}?error=oauth_instagram_failed`
+      `${baseUrl}${redirectUrl}?error=oauth_instagram_failed`
     );
   }
 
   if (!code) {
     console.error("No code provided in Instagram OAuth callback");
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_BASE_URL}${redirectUrl}?error=oauth_instagram_no_code`
+      `${baseUrl}${redirectUrl}?error=oauth_instagram_no_code`
     );
   }
 
   try {
     // Step 1: Exchange code for access token using Facebook API
     const tokenUrl = "https://graph.facebook.com/v18.0/oauth/access_token";
+    const callbackUrl = `${baseUrl}/api/auth/callback/instagram`;
+
+    console.log(`[DEBUG] Using callback URL: ${callbackUrl}`);
+
     const tokenResponse = await fetch(
-      `${tokenUrl}?client_id=${process.env.FACEBOOK_CLIENT_ID}&client_secret=${process.env.FACEBOOK_CLIENT_SECRET}&code=${code}&redirect_uri=${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/instagram`,
+      `${tokenUrl}?client_id=${process.env.FACEBOOK_CLIENT_ID}&client_secret=${process.env.FACEBOOK_CLIENT_SECRET}&code=${code}&redirect_uri=${callbackUrl}`,
       { method: "GET" }
     );
 
@@ -140,13 +150,13 @@ export async function GET(request: NextRequest) {
 
     // Redirect to the onboarding page with success
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_BASE_URL}${redirectUrl}?success=connected_instagram`
+      `${baseUrl}${redirectUrl}?success=connected_instagram`
     );
   } catch (error) {
     console.error("Error in Instagram OAuth callback:", error);
 
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_BASE_URL}${redirectUrl}?error=oauth_instagram_failed&message=${encodeURIComponent(
+      `${baseUrl}${redirectUrl}?error=oauth_instagram_failed&message=${encodeURIComponent(
         error instanceof Error ? error.message : String(error)
       )}`
     );

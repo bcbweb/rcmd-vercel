@@ -34,14 +34,14 @@ const OAUTH_CONFIG = {
       "instagram_content_publish",
       "pages_read_engagement",
     ],
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/instagram`,
+    redirectUri: `/api/auth/callback/instagram`,
   },
   facebook: {
     clientId: process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID,
     authUrl: "https://www.facebook.com/v18.0/dialog/oauth",
     tokenUrl: "https://graph.facebook.com/v18.0/oauth/access_token",
     scopes: ["public_profile", "pages_show_list", "pages_read_engagement"],
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/facebook`,
+    redirectUri: `/api/auth/callback/facebook`,
   },
   // Twitter integration - basic placeholder for type safety
   twitter: {
@@ -57,7 +57,7 @@ const OAUTH_CONFIG = {
     authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     scopes: ["https://www.googleapis.com/auth/youtube.readonly"],
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/youtube`,
+    redirectUri: `/api/auth/callback/youtube`,
   },
   tiktok: {
     clientId: process.env.NEXT_PUBLIC_TIKTOK_CLIENT_ID,
@@ -75,7 +75,7 @@ const OAUTH_CONFIG = {
     authUrl: "https://www.linkedin.com/oauth/v2/authorization",
     tokenUrl: "https://www.linkedin.com/oauth/v2/accessToken",
     scopes: ["r_liteprofile", "r_emailaddress"],
-    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/linkedin`,
+    redirectUri: `/api/auth/callback/linkedin`,
   },
 } as const;
 
@@ -98,16 +98,20 @@ export function initiateOAuthFlow(platform: SocialPlatform): void {
   const authUrl = new URL(config.authUrl);
   authUrl.searchParams.append("client_id", config.clientId);
 
-  // Fix for TikTok redirect URI - ensure we have a base URL
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
-  const redirectUri =
-    platform === "tiktok"
-      ? `${baseUrl}/api/auth/callback/tiktok`
-      : config.redirectUri;
+  // Determine base URL - try environment variable first, then window.location.origin
+  const baseUrl =
+    typeof window !== "undefined"
+      ? process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+      : "https://rcmd.bcbrown.com"; // Fallback for SSR
 
-  // Debug info
-  console.log(`[DEBUG] Initiating ${platform} OAuth flow`);
   console.log(`[DEBUG] Base URL: ${baseUrl}`);
+
+  // Ensure redirectUri is absolute
+  const redirectUri = config.redirectUri.startsWith("http")
+    ? config.redirectUri
+    : `${baseUrl}${config.redirectUri}`;
+
+  console.log(`[DEBUG] Platform: ${platform}`);
   console.log(`[DEBUG] Redirect URI: ${redirectUri}`);
 
   authUrl.searchParams.append("redirect_uri", redirectUri);
@@ -217,7 +221,7 @@ export async function getUserSocialIntegrations(): Promise<
 
     if (!integrations) return [];
 
-    return integrations.map((i) => ({
+    return integrations.map((i: any) => ({
       platform: i.platform as SocialPlatform,
       connected: true,
       username: i.username,

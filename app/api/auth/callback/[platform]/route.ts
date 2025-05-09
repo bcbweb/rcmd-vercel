@@ -75,10 +75,15 @@ const OAUTH_CREDENTIALS: OAuthCredentials = {
 function generateRedirectUrl(
   platform: string,
   status: string,
-  message?: string
+  message?: string,
+  request?: NextRequest
 ) {
-  const baseUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/protected/onboarding/social-media`;
-  const url = new URL(baseUrl);
+  // Get base URL with fallback to request origin or default
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (request?.headers.get("origin") ?? "http://localhost:3000");
+
+  const url = new URL(`${baseUrl}/protected/onboarding/social-media`);
 
   // Handle potential IDNs in the URL
   try {
@@ -102,9 +107,22 @@ function generateRedirectUrl(
 }
 
 // Exchange authorization code for access token
-async function fetchAccessToken(platform: SocialPlatform, code: string) {
+async function fetchAccessToken(
+  platform: SocialPlatform,
+  code: string,
+  request: NextRequest
+) {
   const credentials = OAUTH_CREDENTIALS[platform];
-  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/${platform}`;
+
+  // Get base URL with fallback to request origin or default
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    request.headers.get("origin") ||
+    "http://localhost:3000";
+
+  const redirectUri = `${baseUrl}/api/auth/callback/${platform}`;
+
+  console.log(`[DEBUG] Using redirect URI for token exchange: ${redirectUri}`);
 
   // Handle different platforms with appropriate request formats
   if (platform === "twitter") {
@@ -281,25 +299,31 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // Handle errors from OAuth provider
   if (error) {
     console.error(`Error during ${platform} OAuth: ${error}`);
-    return NextResponse.redirect(generateRedirectUrl(platform, "failed"));
+    return NextResponse.redirect(
+      generateRedirectUrl(platform, "failed", undefined, request)
+    );
   }
 
   // Check if we have a code
   if (!code) {
     console.error(`No code provided in ${platform} OAuth callback`);
-    return NextResponse.redirect(generateRedirectUrl(platform, "no_code"));
+    return NextResponse.redirect(
+      generateRedirectUrl(platform, "no_code", undefined, request)
+    );
   }
 
   // Get credentials for the requested platform
   const credentials = OAUTH_CREDENTIALS[platform];
   if (!credentials) {
     console.error(`No credentials found for platform: ${platform}`);
-    return NextResponse.redirect(generateRedirectUrl(platform, "config_error"));
+    return NextResponse.redirect(
+      generateRedirectUrl(platform, "config_error", undefined, request)
+    );
   }
 
   try {
     // Exchange code for access token
-    const tokenResponse = await fetchAccessToken(platform, code);
+    const tokenResponse = await fetchAccessToken(platform, code, request);
     console.log(
       `[DEBUG] ${platform} Token Response:`,
       JSON.stringify(tokenResponse)
@@ -350,7 +374,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!user || userError) {
       console.error("User not authenticated", userError);
       return NextResponse.redirect(
-        generateRedirectUrl(platform, "auth_error", "User not authenticated")
+        generateRedirectUrl(
+          platform,
+          "auth_error",
+          "User not authenticated",
+          request
+        )
       );
     }
 
@@ -362,7 +391,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         generateRedirectUrl(
           platform,
           "profile_error",
-          "Failed to create profile"
+          "Failed to create profile",
+          request
         )
       );
     }
@@ -377,7 +407,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (!profileData?.id || profileError) {
       console.error("Profile not found after creation attempt:", profileError);
       return NextResponse.redirect(
-        generateRedirectUrl(platform, "profile_error", "Profile not found")
+        generateRedirectUrl(
+          platform,
+          "profile_error",
+          "Profile not found",
+          request
+        )
       );
     }
 
@@ -406,7 +441,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (integrationError) {
       console.error("Error storing integration", integrationError);
       return NextResponse.redirect(
-        generateRedirectUrl(platform, "db_error", "Failed to store integration")
+        generateRedirectUrl(
+          platform,
+          "db_error",
+          "Failed to store integration",
+          request
+        )
       );
     }
 
@@ -419,14 +459,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     // Redirect back to the app with success
-    return NextResponse.redirect(generateRedirectUrl(platform, "success"));
+    return NextResponse.redirect(
+      generateRedirectUrl(platform, "success", undefined, request)
+    );
   } catch (error: unknown) {
     console.error(`Error processing ${platform} OAuth callback:`, error);
     return NextResponse.redirect(
       generateRedirectUrl(
         platform,
         "error",
-        error instanceof Error ? error.message : "Unknown error occurred"
+        error instanceof Error ? error.message : "Unknown error occurred",
+        request
       )
     );
   }
