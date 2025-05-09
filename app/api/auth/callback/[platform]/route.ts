@@ -79,10 +79,15 @@ function generateRedirectUrl(
   message?: string,
   request?: NextRequest
 ) {
-  // Get base URL with fallback to request origin or default
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (request?.headers.get("origin") ?? "http://localhost:3000");
+  // Get the host from the request
+  const host = request?.headers.get("host") || "localhost:3000";
+  const protocol = host.includes("localhost") ? "http" : "https";
+
+  // Determine base URL, prioritizing the actual request host
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`;
+
+  console.log(`[DEBUG] Request host: ${host}`);
+  console.log(`[DEBUG] Using base URL for redirect: ${baseUrl}`);
 
   const url = new URL(`${baseUrl}/protected/onboarding/social-media`);
 
@@ -115,11 +120,15 @@ async function fetchAccessToken(
 ) {
   const credentials = OAUTH_CREDENTIALS[platform];
 
-  // Get base URL with fallback to request origin or default
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    request.headers.get("origin") ||
-    "http://localhost:3000";
+  // Get the host from the request
+  const host = request.headers.get("host") || "localhost:3000";
+  const protocol = host.includes("localhost") ? "http" : "https";
+
+  // Determine base URL, prioritizing the actual request host
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`;
+
+  console.log(`[DEBUG] Request host: ${host}`);
+  console.log(`[DEBUG] Using base URL for token exchange: ${baseUrl}`);
 
   const redirectUri = `${baseUrl}/api/auth/callback/${platform}`;
 

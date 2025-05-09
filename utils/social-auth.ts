@@ -92,13 +92,25 @@ export function initiateOAuthFlow(platform: SocialPlatform): void {
   const authUrl = new URL(config.authUrl);
   authUrl.searchParams.append("client_id", config.clientId);
 
-  // Determine base URL - try environment variable first, then window.location.origin
-  const baseUrl =
-    typeof window !== "undefined"
-      ? process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-      : "https://rcmd.bcbrown.com"; // Fallback for SSR
+  // Get the current location (only available client-side)
+  let baseUrl: string;
 
-  console.log(`[DEBUG] Base URL: ${baseUrl}`);
+  if (typeof window !== "undefined") {
+    // Client-side: Use window.location
+    const location = window.location;
+    const host = location.host;
+    const protocol = location.protocol.replace(/:$/, ""); // Remove trailing colon
+
+    // Use env var if available, otherwise construct from window.location
+    baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`;
+
+    console.log(`[DEBUG] Current host: ${host}`);
+  } else {
+    // Server-side: Use fallback (should not normally happen in this function)
+    baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://rcmd.bcbrown.com";
+  }
+
+  console.log(`[DEBUG] Using base URL: ${baseUrl}`);
 
   // Ensure redirectUri is absolute
   const redirectUri = config.redirectUri.startsWith("http")

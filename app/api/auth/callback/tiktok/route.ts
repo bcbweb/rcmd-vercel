@@ -40,10 +40,15 @@ function generateRedirectUrl(
   message?: string,
   request?: NextRequest
 ) {
-  // Get base URL with fallback to request origin or default
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (request?.headers.get("origin") ?? "http://localhost:3000");
+  // Get the host from the request
+  const host = request?.headers.get("host") || "localhost:3000";
+  const protocol = host.includes("localhost") ? "http" : "https";
+
+  // Determine base URL, prioritizing the actual request host
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`;
+
+  console.log(`[DEBUG] Request host: ${host}`);
+  console.log(`[DEBUG] Using base URL for redirect: ${baseUrl}`);
 
   const url = new URL(`${baseUrl}/protected/onboarding/social-media`);
 
@@ -98,6 +103,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       throw new Error("Missing TikTok API credentials");
     }
 
+    // Get the host from the request
+    const host = request.headers.get("host") || "localhost:3000";
+    const protocol = host.includes("localhost") ? "http" : "https";
+
+    // Determine base URL, prioritizing the actual request host
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`;
+
+    console.log(`[DEBUG] Request host: ${host}`);
+    console.log(`[DEBUG] Using base URL for token exchange: ${baseUrl}`);
+
+    const callbackUrl = `${baseUrl}/api/auth/callback/tiktok`;
+
     // Exchange code for access token
     const tokenResponse = await fetch(
       "https://open-api.tiktok.com/oauth/access_token/",
@@ -111,7 +128,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           client_secret: clientSecret,
           code: code,
           grant_type: "authorization_code",
-          redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000"}/api/auth/callback/tiktok`,
+          redirect_uri: callbackUrl,
         }).toString(),
       }
     );

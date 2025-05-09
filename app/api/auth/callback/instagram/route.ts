@@ -8,11 +8,15 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
   const redirectUrl = "/protected/onboarding/social-media";
 
-  // Get base URL with fallback to request origin
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    request.headers.get("origin") ||
-    "http://localhost:3000";
+  // Get the host from the request
+  const host = request.headers.get("host") || "localhost:3000";
+  const protocol = host.includes("localhost") ? "http" : "https";
+
+  // Determine base URL, prioritizing the actual request host
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`;
+
+  console.log(`[DEBUG] Request host: ${host}`);
+  console.log(`[DEBUG] Using base URL: ${baseUrl}`);
 
   // Handle errors
   if (error) {
