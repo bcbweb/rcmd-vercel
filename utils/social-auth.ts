@@ -27,20 +27,14 @@ const OAUTH_CONFIG = {
     clientId: process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID,
     authUrl: "https://www.facebook.com/v18.0/dialog/oauth",
     tokenUrl: "https://graph.facebook.com/v18.0/oauth/access_token",
-    scopes: [
-      "public_profile",
-      "instagram_basic",
-      "pages_show_list",
-      "instagram_content_publish",
-      "pages_read_engagement",
-    ],
+    scopes: ["public_profile", "email"],
     redirectUri: `/api/auth/callback/instagram`,
   },
   facebook: {
     clientId: process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID,
     authUrl: "https://www.facebook.com/v18.0/dialog/oauth",
     tokenUrl: "https://graph.facebook.com/v18.0/oauth/access_token",
-    scopes: ["public_profile", "pages_show_list", "pages_read_engagement"],
+    scopes: ["public_profile", "email"],
     redirectUri: `/api/auth/callback/facebook`,
   },
   // Twitter integration - basic placeholder for type safety

@@ -11,6 +11,7 @@ interface SocialUserProfile {
   id?: string;
   name?: string;
   imageUrl?: string;
+  email?: string;
 }
 
 // Update the interface for OAuth credentials to include the Instagram-specific fields
@@ -173,77 +174,26 @@ async function fetchUserProfile(
   accessToken: string
 ): Promise<SocialUserProfile | null> {
   try {
-    if (platform === "instagram") {
-      // First, get the Facebook pages connected to the user account
-      const pagesResponse = await fetch(
-        `https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account{username,profile_picture_url,name,id}&access_token=${accessToken}`
-      );
-
-      const pagesData = await pagesResponse.json();
-      console.log(
-        "[DEBUG] Instagram Pages Response:",
-        JSON.stringify(pagesData)
-      );
-
-      // Check if there's any Instagram business account connected
-      if (
-        pagesData.data &&
-        pagesData.data.length > 0 &&
-        pagesData.data[0].instagram_business_account
-      ) {
-        const instagramAccount = pagesData.data[0].instagram_business_account;
-
-        return {
-          id: instagramAccount.id,
-          username: instagramAccount.username,
-          name: instagramAccount.name,
-          profileUrl: `https://instagram.com/${instagramAccount.username}`,
-          imageUrl: instagramAccount.profile_picture_url,
-        };
-      } else {
-        // If no Instagram business account is found, try to fetch long-lived access token anyway
-        // Get app-scoped user ID
-        const meResponse = await fetch(
-          `https://graph.facebook.com/v18.0/me?access_token=${accessToken}`
-        );
-        const meData = await meResponse.json();
-
-        return {
-          id: meData.id,
-          username: `unknown_instagram_${meData.id}`,
-          name: meData.name,
-          profileUrl: `https://instagram.com/`,
-        };
-      }
-    } else if (platform === "facebook") {
-      // Get Facebook user profile
+    if (platform === "instagram" || platform === "facebook") {
+      // Get basic profile for Facebook or Instagram (same API)
       const profileResponse = await fetch(
-        `https://graph.facebook.com/v18.0/me?fields=id,name,picture&access_token=${accessToken}`
+        `https://graph.facebook.com/v18.0/me?fields=id,name,email,picture&access_token=${accessToken}`
       );
+
+      if (!profileResponse.ok) {
+        throw new Error(`Error fetching profile: ${profileResponse.status}`);
+      }
 
       const profileData = await profileResponse.json();
       console.log(
-        "[DEBUG] Facebook Profile Response:",
+        `[DEBUG] ${platform} Profile Response:`,
         JSON.stringify(profileData)
       );
 
-      // Get Facebook pages
-      const pagesResponse = await fetch(
-        `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
-      );
-
-      const pagesData = await pagesResponse.json();
-      console.log(
-        "[DEBUG] Facebook Pages Response:",
-        JSON.stringify(pagesData)
-      );
-
-      let username = `user_${profileData.id}`;
-      // Check if we have a custom username on any page
-      if (pagesData.data && pagesData.data.length > 0) {
-        // Use the first page's name as username if available
-        username = pagesData.data[0].name.replace(/\s+/g, "").toLowerCase();
-      }
+      // Generate a username from their name or ID
+      const username = profileData.name
+        ? profileData.name.replace(/\s+/g, ".").toLowerCase()
+        : `${platform}_user_${profileData.id}`;
 
       return {
         id: profileData.id,
@@ -251,6 +201,7 @@ async function fetchUserProfile(
         name: profileData.name,
         profileUrl: `https://facebook.com/${profileData.id}`,
         imageUrl: profileData.picture?.data?.url,
+        email: profileData.email,
       };
     } else if (platform === "twitter") {
       // Existing Twitter code

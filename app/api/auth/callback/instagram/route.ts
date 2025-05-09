@@ -51,9 +51,9 @@ export async function GET(request: NextRequest) {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    // Step 2: Fetch user's Facebook profile first
+    // Step 2: Fetch user's Facebook profile
     const userResponse = await fetch(
-      `https://graph.facebook.com/v18.0/me?fields=id,name&access_token=${accessToken}`
+      `https://graph.facebook.com/v18.0/me?fields=id,name,email&access_token=${accessToken}`
     );
 
     if (!userResponse.ok) {
@@ -61,42 +61,15 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = await userResponse.json();
+    console.log("[DEBUG] User data:", JSON.stringify(userData));
 
-    // Step 3: Try to fetch Instagram account via the Pages API
-    let instagramUsername = userData.name; // Default to Facebook name
-    let instagramProfileUrl = `https://facebook.com/${userData.id}`; // Default to Facebook profile
-    let instagramAccount = null;
+    // Use Facebook data for the integration
+    const username = userData.name
+      ? userData.name.replace(/\s+/g, ".").toLowerCase()
+      : `fb_user_${userData.id}`;
+    const profileUrl = `https://facebook.com/${userData.id}`;
 
-    try {
-      // Get Facebook Pages connected to the user
-      const pagesResponse = await fetch(
-        `https://graph.facebook.com/v18.0/me/accounts?fields=instagram_business_account{username,profile_picture_url,name,id}&access_token=${accessToken}`
-      );
-
-      if (pagesResponse.ok) {
-        const pagesData = await pagesResponse.json();
-
-        // Look for Instagram business account in the pages data
-        if (pagesData.data && pagesData.data.length > 0) {
-          for (const page of pagesData.data) {
-            if (page.instagram_business_account) {
-              instagramAccount = page.instagram_business_account;
-              instagramUsername = instagramAccount.username;
-              instagramProfileUrl = `https://instagram.com/${instagramAccount.username}`;
-              break;
-            }
-          }
-        }
-      }
-    } catch (instagramError) {
-      console.warn(
-        "Could not fetch Instagram business account:",
-        instagramError
-      );
-      // Continue with Facebook data
-    }
-
-    // Step 4: Store the connection in the database
+    // Get Supabase client
     const supabase = await createClient();
     const {
       data: { user },
@@ -124,13 +97,13 @@ export async function GET(request: NextRequest) {
       .upsert({
         profile_id: profile.id,
         platform: "instagram",
-        username: instagramUsername,
-        profile_url: instagramProfileUrl,
+        username: username,
+        profile_url: profileUrl,
         access_token: accessToken,
         token_expiry: tokenData.expires_in
           ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
           : null,
-        scopes: "public_profile,instagram_basic,pages_show_list",
+        scopes: "public_profile,email",
         updated_at: new Date().toISOString(),
       });
 
@@ -144,7 +117,7 @@ export async function GET(request: NextRequest) {
     await supabase.from("profile_social_links").upsert({
       profile_id: profile.id,
       platform: "instagram",
-      handle: instagramUsername,
+      handle: username,
       updated_at: new Date().toISOString(),
     });
 
