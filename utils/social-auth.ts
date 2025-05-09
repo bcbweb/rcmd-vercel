@@ -361,6 +361,14 @@ export async function storeManualSocialAccount(
       };
     }
 
+    // Define platform-specific scopes
+    let scopes: string[] | undefined;
+    if (platform === "tiktok") {
+      scopes = ["user.info.basic"];
+    } else if (platform === "instagram" || platform === "facebook") {
+      scopes = ["public_profile", "email"];
+    }
+
     // Store the social media integration
     const { error } = await supabase
       .from("profile_social_integrations")
@@ -370,6 +378,7 @@ export async function storeManualSocialAccount(
         username: username,
         profile_url: profileUrl,
         metadata,
+        scopes,
         updated_at: new Date().toISOString(),
       });
 

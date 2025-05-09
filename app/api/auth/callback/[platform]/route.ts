@@ -395,6 +395,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         user_id: userProfile.id, // Store the platform-specific user ID
         name: userProfile.name, // Store the user's name if available
         image_url: userProfile.imageUrl, // Store profile image if available
+        scopes:
+          platform === "instagram" || platform === "facebook"
+            ? ["public_profile", "email"]
+            : undefined,
         updated_at: new Date().toISOString(),
       });
 

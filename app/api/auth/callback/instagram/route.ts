@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
         token_expiry: tokenData.expires_in
           ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
           : null,
-        scopes: "public_profile,email",
+        scopes: ["public_profile", "email"],
         updated_at: new Date().toISOString(),
       });
 
