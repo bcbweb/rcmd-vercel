@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { ProfilePage } from "@/types";
 import { devtools, persist } from "zustand/middleware";
+import { ensureUserProfile } from "@/utils/profile-utils";
 
 interface Profile {
   id: string;
@@ -92,6 +93,12 @@ export const useProfileStore = create<ProfileState>()(
             await new Promise((resolve) => setTimeout(resolve, 500));
 
             const supabase = createClient();
+
+            // Ensure a profile exists for this user
+            const profileId = await ensureUserProfile(userId);
+            if (!profileId) {
+              throw new Error("Failed to ensure profile exists");
+            }
 
             // First check if we have a profile
             console.log("Querying profiles table for auth_user_id:", userId);
@@ -206,19 +213,11 @@ export const useProfileStore = create<ProfileState>()(
           try {
             const supabase = createClient();
 
-            // First get the profile ID from the auth user ID
-            const { data: profileData, error: profileError } = await supabase
-              .from("profiles")
-              .select("id")
-              .eq("auth_user_id", userId)
-              .single();
-
-            if (profileError) throw profileError;
-            if (!profileData || !profileData.id) {
-              throw new Error("Profile not found");
+            // Ensure a profile exists for this user
+            const profileId = await ensureUserProfile(userId);
+            if (!profileId) {
+              throw new Error("Failed to ensure profile exists");
             }
-
-            const profileId = profileData.id;
 
             // Now fetch pages using the profile ID
             const { data: pages, error } = await supabase

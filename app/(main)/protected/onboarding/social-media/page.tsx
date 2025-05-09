@@ -12,7 +12,6 @@ import {
   ExternalLink,
   Link2,
   Loader2,
-  X,
 } from "lucide-react";
 import {
   SocialPlatform,
@@ -29,7 +28,6 @@ type SocialPlatformWithConfig = {
   value: SocialPlatform;
   label: string;
   icon: string;
-  description: string;
   manualConnect?: boolean;
 };
 
@@ -37,36 +35,40 @@ type SocialPlatformWithConfig = {
 const SOCIAL_PLATFORMS: SocialPlatformWithConfig[] = [
   {
     value: "instagram",
-    label: "Instagram (+ Facebook)",
+    label: "Instagram",
     icon: "/icons/instagram.svg",
-    description:
-      "Connect to share your photos and visual content from Instagram and Facebook",
   },
+  {
+    value: "facebook",
+    label: "Facebook",
+    icon: "/icons/facebook.svg",
+  },
+  /*
   {
     value: "youtube",
     label: "YouTube",
     icon: "/icons/youtube.svg",
-    description: "Share your videos and grow your channel",
   },
+  */
   {
     value: "tiktok",
     label: "TikTok",
     icon: "/icons/tiktok.svg",
-    description: "Showcase your short-form video content",
+    manualConnect: true, // Add manual connect flag for TikTok
   },
+  /*
   {
     value: "linkedin",
     label: "LinkedIn",
     icon: "/icons/linkedin.svg",
-    description: "Connect your professional profile and network",
   },
   {
     value: "twitter",
     label: "X (Twitter)",
     icon: "/icons/x-twitter.svg",
-    description: "Add your X username (full integration coming soon)",
     manualConnect: true, // Flag to indicate manual connection instead of OAuth
   },
+  */
 ] as const;
 
 export default function SocialMediaPage() {
@@ -80,6 +82,8 @@ export default function SocialMediaPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTwitterModal, setShowTwitterModal] = useState(false);
   const [twitterUsername, setTwitterUsername] = useState("");
+  const [showTikTokModal, setShowTikTokModal] = useState(false);
+  const [tikTokUsername, setTikTokUsername] = useState("");
   const [isManualConnecting, setIsManualConnecting] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -128,6 +132,7 @@ export default function SocialMediaPage() {
         !modalRef.current.contains(event.target as Node)
       ) {
         setShowTwitterModal(false);
+        setShowTikTokModal(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -138,12 +143,14 @@ export default function SocialMediaPage() {
 
   // Connect a social media account
   const handleConnect = (platform: SocialPlatform, isManual?: boolean) => {
-    // For Twitter, show the username input modal instead of OAuth
+    // For Twitter or TikTok, show the username input modal instead of OAuth
     const platformConfig = SOCIAL_PLATFORMS.find((p) => p.value === platform);
 
     if (platformConfig?.manualConnect || isManual) {
       if (platform === "twitter") {
         setShowTwitterModal(true);
+      } else if (platform === "tiktok") {
+        setShowTikTokModal(true);
       }
       return;
     }
@@ -156,34 +163,53 @@ export default function SocialMediaPage() {
     }
   };
 
-  // Store manual Twitter account
-  const handleTwitterSubmit = async () => {
-    if (!twitterUsername.trim()) {
-      toast.error("Please enter your X username");
+  // Store manual social account
+  const handleManualSubmit = async (
+    platform: SocialPlatform,
+    username: string
+  ) => {
+    if (!username.trim()) {
+      toast.error(
+        `Please enter your ${platform === "twitter" ? "X" : "TikTok"} username`
+      );
       return;
     }
 
     setIsManualConnecting(true);
 
     try {
-      const success = await storeManualSocialAccount(
-        "twitter",
-        twitterUsername
-      );
+      // Remove @ if present
+      const cleanUsername = username.startsWith("@")
+        ? username.substring(1)
+        : username;
+      const success = await storeManualSocialAccount(platform, cleanUsername);
+
       if (success) {
         // Reload connected accounts to show the new connection
         const integrations = await getUserSocialIntegrations();
         setConnectedAccounts(integrations);
 
-        setShowTwitterModal(false);
-        setTwitterUsername("");
-        toast.success("Successfully connected X account");
+        if (platform === "twitter") {
+          setShowTwitterModal(false);
+          setTwitterUsername("");
+        } else if (platform === "tiktok") {
+          setShowTikTokModal(false);
+          setTikTokUsername("");
+        }
+
+        toast.success(
+          `Successfully connected ${platform === "twitter" ? "X" : "TikTok"} account`
+        );
       } else {
-        throw new Error("Failed to connect X account");
+        throw new Error(
+          `Failed to connect ${platform === "twitter" ? "X" : "TikTok"} account`
+        );
       }
     } catch (error) {
-      console.error("Error connecting X account:", error);
-      toast.error("Failed to connect X account");
+      console.error(`Error connecting ${platform} account:`, error);
+      toast.error(
+        `Failed to connect ${platform === "twitter" ? "X" : "TikTok"} account`
+      );
     } finally {
       setIsManualConnecting(false);
     }
@@ -232,7 +258,7 @@ export default function SocialMediaPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col h-[calc(100vh-64px)] min-h-[500px] relative">
       <div className="shrink-0 border-b border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Connect Social Media Accounts
@@ -245,7 +271,8 @@ export default function SocialMediaPage() {
         <StepProgress currentStep={1} totalSteps={4} />
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0">
+      {/* Main scrollable content area with padding to prevent content from being hidden behind the fixed footer */}
+      <div className="flex-1 overflow-y-auto min-h-[200px] pb-20">
         <div className="border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setIsInfoOpen(!isInfoOpen)}
@@ -292,7 +319,6 @@ export default function SocialMediaPage() {
             </div>
           )}
         </div>
-
         <div className="p-4 space-y-4">
           {isLoading ? (
             <div className="flex justify-center items-center py-8">
@@ -339,9 +365,6 @@ export default function SocialMediaPage() {
                               </span>
                             )}
                           </div>
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            {platform.description}
-                          </p>
 
                           {isConnected && connectedAccount?.username && (
                             <div className="mt-1 flex items-center">
@@ -395,8 +418,8 @@ export default function SocialMediaPage() {
         </div>
       </div>
 
-      {/* Footer with Continue and Skip buttons */}
-      <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+      {/* Footer with Continue and Skip buttons - fixed at the bottom */}
+      <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 sticky bottom-0 left-0 right-0 z-10">
         <div className="flex justify-end gap-3">
           <button
             type="button"
@@ -423,70 +446,103 @@ export default function SocialMediaPage() {
         </div>
       </div>
 
-      {/* Twitter Username Modal */}
+      {/* Twitter Username Modal - z-index above the footer */}
       {showTwitterModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div
             ref={modalRef}
-            className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full"
+            className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md"
           >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Connect X (Twitter)</h3>
-              <button
-                onClick={() => setShowTwitterModal(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
+            <h3 className="text-lg font-semibold mb-4">
+              Connect X (Twitter) Account
+            </h3>
             <div className="mb-4">
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                Enter your X username to connect your account.{" "}
-                <span className="text-blue-600 font-medium">
-                  Full integration with X API coming soon!
-                </span>
-              </p>
               <label
                 htmlFor="twitterUsername"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-sm font-medium mb-1"
               >
-                X Username
+                Your X Username
               </label>
-              <div className="flex">
-                <span className="inline-flex items-center px-3 border border-r-0 border-gray-300 bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm rounded-l-md">
-                  @
-                </span>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-gray-500">@</span>
                 <input
-                  id="twitterUsername"
                   type="text"
+                  id="twitterUsername"
+                  className="w-full rounded-md border border-gray-300 pl-6 py-2 px-3"
+                  placeholder="username"
                   value={twitterUsername}
                   onChange={(e) => setTwitterUsername(e.target.value)}
-                  placeholder="username"
-                  className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full min-w-0 rounded-none rounded-r-md sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 />
               </div>
             </div>
-
-            <div className="flex justify-end">
+            <div className="flex space-x-3">
               <button
-                type="button"
                 onClick={() => setShowTwitterModal(false)}
-                className="mr-3 inline-flex justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600"
+                className="flex-1 py-2 border border-gray-300 rounded-md"
+                disabled={isManualConnecting}
               >
                 Cancel
               </button>
               <button
-                type="button"
-                onClick={handleTwitterSubmit}
-                disabled={isManualConnecting || !twitterUsername.trim()}
-                className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed"
+                onClick={() => handleManualSubmit("twitter", twitterUsername)}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-md flex items-center justify-center"
+                disabled={isManualConnecting}
               >
                 {isManualConnecting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Connecting...
-                  </>
+                  <Loader2 className="animate-spin h-5 w-5" />
+                ) : (
+                  "Connect"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TikTok Username Modal - z-index above the footer */}
+      {showTikTokModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div
+            ref={modalRef}
+            className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md"
+          >
+            <h3 className="text-lg font-semibold mb-4">
+              Connect TikTok Account
+            </h3>
+            <div className="mb-4">
+              <label
+                htmlFor="tikTokUsername"
+                className="block text-sm font-medium mb-1"
+              >
+                Your TikTok Username
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-gray-500">@</span>
+                <input
+                  type="text"
+                  id="tikTokUsername"
+                  className="w-full rounded-md border border-gray-300 pl-6 py-2 px-3"
+                  placeholder="username"
+                  value={tikTokUsername}
+                  onChange={(e) => setTikTokUsername(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowTikTokModal(false)}
+                className="flex-1 py-2 border border-gray-300 rounded-md"
+                disabled={isManualConnecting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleManualSubmit("tiktok", tikTokUsername)}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-md flex items-center justify-center"
+                disabled={isManualConnecting}
+              >
+                {isManualConnecting ? (
+                  <Loader2 className="animate-spin h-5 w-5" />
                 ) : (
                   "Connect"
                 )}

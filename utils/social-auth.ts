@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
+import { ensureUserProfile } from "@/utils/profile-utils";
 
 // Define types for our social media integrations
 export type SocialPlatform =
@@ -6,7 +7,8 @@ export type SocialPlatform =
   | "twitter" // X/Twitter added back for basic integration
   | "youtube"
   | "tiktok"
-  | "linkedin";
+  | "linkedin"
+  | "facebook"; // Add Facebook as a separate platform
 
 export interface SocialIntegration {
   platform: SocialPlatform;
@@ -16,6 +18,7 @@ export interface SocialIntegration {
   accessToken?: string;
   tokenExpiry?: Date;
   scopes?: string[];
+  userId?: string; // Add user ID field for platforms that provide it
 }
 
 // Configuration for OAuth providers
@@ -24,8 +27,21 @@ const OAUTH_CONFIG = {
     clientId: process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID,
     authUrl: "https://www.facebook.com/v18.0/dialog/oauth",
     tokenUrl: "https://graph.facebook.com/v18.0/oauth/access_token",
-    scopes: ["public_profile", "instagram_basic", "pages_show_list"],
+    scopes: [
+      "public_profile",
+      "instagram_basic",
+      "pages_show_list",
+      "instagram_content_publish",
+      "pages_read_engagement",
+    ],
     redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/instagram`,
+  },
+  facebook: {
+    clientId: process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID,
+    authUrl: "https://www.facebook.com/v18.0/dialog/oauth",
+    tokenUrl: "https://graph.facebook.com/v18.0/oauth/access_token",
+    scopes: ["public_profile", "pages_show_list", "pages_read_engagement"],
+    redirectUri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/facebook`,
   },
   // Twitter integration - basic placeholder for type safety
   twitter: {
@@ -52,6 +68,7 @@ const OAUTH_CONFIG = {
       typeof window !== "undefined"
         ? `${process.env.NEXT_PUBLIC_BASE_URL || window.location.origin}/api/auth/callback/tiktok`
         : `/api/auth/callback/tiktok`,
+    manualConnect: true, // Add option for manual connection
   },
   linkedin: {
     clientId: process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID,
@@ -133,22 +150,17 @@ export async function storeSocialIntegration(
       throw new Error("No authenticated user found");
     }
 
-    // Get the profile ID
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("auth_user_id", user.id)
-      .single();
-
-    if (!profile?.id) {
-      throw new Error("Profile not found");
+    // Ensure a profile exists before proceeding
+    const profileId = await ensureUserProfile(user.id);
+    if (!profileId) {
+      throw new Error("Failed to create or find profile");
     }
 
     // Store the social media integration
     const { error } = await supabase
       .from("profile_social_integrations")
       .upsert({
-        profile_id: profile.id,
+        profile_id: profileId,
         platform: integration.platform,
         username: integration.username,
         profile_url: integration.profileUrl,
@@ -162,7 +174,7 @@ export async function storeSocialIntegration(
 
     // Update the existing social_links record if it exists
     await supabase.from("profile_social_links").upsert({
-      profile_id: profile.id,
+      profile_id: profileId,
       platform: integration.platform,
       handle: integration.username,
       updated_at: new Date().toISOString(),
@@ -191,22 +203,17 @@ export async function getUserSocialIntegrations(): Promise<
       throw new Error("No authenticated user found");
     }
 
-    // Get the profile ID
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("auth_user_id", user.id)
-      .single();
-
-    if (!profile?.id) {
-      throw new Error("Profile not found");
+    // Ensure a profile exists before proceeding
+    const profileId = await ensureUserProfile(user.id);
+    if (!profileId) {
+      return []; // Return empty array if no profile found
     }
 
     // Get social integrations
     const { data: integrations } = await supabase
       .from("profile_social_integrations")
       .select("*")
-      .eq("profile_id", profile.id);
+      .eq("profile_id", profileId);
 
     if (!integrations) return [];
 
@@ -218,6 +225,7 @@ export async function getUserSocialIntegrations(): Promise<
       accessToken: i.access_token,
       tokenExpiry: i.token_expiry ? new Date(i.token_expiry) : undefined,
       scopes: i.scopes,
+      userId: i.user_id,
     }));
   } catch (error) {
     console.error("Error fetching social integrations:", error);
@@ -241,22 +249,17 @@ export async function disconnectSocialIntegration(
       throw new Error("No authenticated user found");
     }
 
-    // Get the profile ID
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("auth_user_id", user.id)
-      .single();
-
-    if (!profile?.id) {
-      throw new Error("Profile not found");
+    // Ensure a profile exists before proceeding
+    const profileId = await ensureUserProfile(user.id);
+    if (!profileId) {
+      throw new Error("Failed to create or find profile");
     }
 
     // Remove the integration
     const { error } = await supabase
       .from("profile_social_integrations")
       .delete()
-      .eq("profile_id", profile.id)
+      .eq("profile_id", profileId)
       .eq("platform", platform);
 
     if (error) throw error;
@@ -269,8 +272,41 @@ export async function disconnectSocialIntegration(
 }
 
 /**
- * Manually store a social media username without OAuth
- * Used for platforms where we don't have full OAuth integration yet
+ * Fetches TikTok user info directly using username
+ * For Display API usage without OAuth login
+ */
+export async function fetchTikTokUserInfo(username: string): Promise<{
+  success: boolean;
+  data?: {
+    username: string;
+    profileUrl: string;
+  };
+  error?: string;
+}> {
+  try {
+    // For TikTok, we can just store the username without verification
+    // The Display API can be used later to fetch content using this username
+    const profileUrl = `https://www.tiktok.com/@${username}`;
+
+    return {
+      success: true,
+      data: {
+        username,
+        profileUrl,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching TikTok user info:", error);
+    return {
+      success: false,
+      error: "Failed to verify TikTok username",
+    };
+  }
+}
+
+/**
+ * Stores a manual social account connection
+ * Works for platforms that don't require OAuth or can work with just a username
  */
 export async function storeManualSocialAccount(
   platform: SocialPlatform,
@@ -286,50 +322,60 @@ export async function storeManualSocialAccount(
       throw new Error("No authenticated user found");
     }
 
-    // Get the profile ID
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("auth_user_id", user.id)
-      .single();
-
-    if (!profile?.id) {
-      throw new Error("Profile not found");
+    // Ensure a profile exists before proceeding
+    const profileId = await ensureUserProfile(user.id);
+    if (!profileId) {
+      throw new Error("Failed to create or find profile");
     }
 
     let profileUrl = "";
+    let metadata = {};
+
+    // Platform-specific handling
     if (platform === "twitter") {
-      // Remove @ from username if present
-      const cleanUsername = username.startsWith("@")
-        ? username.substring(1)
-        : username;
-      profileUrl = `https://x.com/${cleanUsername}`;
+      profileUrl = `https://x.com/${username}`;
+    } else if (platform === "tiktok") {
+      // Fetch additional info for TikTok if needed
+      const tikTokResult = await fetchTikTokUserInfo(username);
+      if (!tikTokResult.success) {
+        throw new Error(
+          tikTokResult.error || "Failed to verify TikTok account"
+        );
+      }
 
-      // Store in profile_social_integrations table
-      const { error: integrationError } = await supabase
-        .from("profile_social_integrations")
-        .upsert({
-          profile_id: profile.id,
-          platform: platform,
-          username: cleanUsername,
-          profile_url: profileUrl,
-          updated_at: new Date().toISOString(),
-        });
+      profileUrl =
+        tikTokResult.data?.profileUrl || `https://www.tiktok.com/@${username}`;
+      metadata = {
+        display_name: username,
+        profile_deep_link: profileUrl,
+      };
+    }
 
-      if (integrationError) throw integrationError;
-
-      // Update the social links table
-      await supabase.from("profile_social_links").upsert({
-        profile_id: profile.id,
+    // Store the social media integration
+    const { error } = await supabase
+      .from("profile_social_integrations")
+      .upsert({
+        profile_id: profileId,
         platform: platform,
-        handle: cleanUsername,
+        username: username,
+        profile_url: profileUrl,
+        metadata,
         updated_at: new Date().toISOString(),
       });
-    }
+
+    if (error) throw error;
+
+    // Update the existing social_links record if it exists
+    await supabase.from("profile_social_links").upsert({
+      profile_id: profileId,
+      platform: platform,
+      handle: username,
+      updated_at: new Date().toISOString(),
+    });
 
     return true;
   } catch (error) {
-    console.error(`Error storing ${platform} account:`, error);
+    console.error("Error storing manual social account:", error);
     return false;
   }
 }

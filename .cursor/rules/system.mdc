@@ -23,5 +23,4 @@ Other notes:
 Should actually be:
 `const resolvedParams = await params; const { handle } = resolvedParams;`
 - Always prefix debug or trace statments with "[DEBUG]" so we can easily find and remove them later.
-
-
+- Don't run bun run build or bun run dev unless specifically required for the given prompt - most of the time I will be running these manually and it will interfere if the agent tries to run them again.

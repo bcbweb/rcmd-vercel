@@ -7,6 +7,7 @@ import { StepProgress } from "@/components/common";
 import { ProfilePhotoUpload } from "@/components/common/media";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
+import { ensureUserProfile } from "@/utils/profile-utils";
 
 export default function ProfilePhotoPage() {
   const router = useRouter();
@@ -22,6 +23,11 @@ export default function ProfilePhotoPage() {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) return;
+
+        const profileId = await ensureUserProfile(user.id);
+        if (!profileId) {
+          throw new Error("Failed to ensure profile exists");
+        }
 
         const { data: profile, error } = await supabase
           .from("profiles")

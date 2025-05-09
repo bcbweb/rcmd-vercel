@@ -1,3 +1,9 @@
+/**
+ * TikTok OAuth callback handler
+ * NOTE: We've switched to using manual username input instead of OAuth for TikTok integration
+ * This file is kept for reference or future use if we need to switch back to OAuth
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import punycode from "punycode";

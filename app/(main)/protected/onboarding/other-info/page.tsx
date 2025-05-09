@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { StepProgress } from "@/components/common";
-import { createClient } from '@/utils/supabase/client';
+import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { TagInput } from "@/components/common/forms";
-import { URLHandleInput } from '@/components/common/forms';
-import countries from '@/data/countries.json';
+import { URLHandleInput } from "@/components/common/forms";
+import countries from "@/data/countries.json";
+import { ensureUserProfile } from "@/utils/profile-utils";
 
 interface OtherInfoFormData {
   handle: string;
@@ -17,7 +18,7 @@ interface OtherInfoFormData {
   tags: string[];
 }
 
-const STORAGE_KEY = 'onboarding_other_info';
+const STORAGE_KEY = "onboarding_other_info";
 
 export default function OtherInfoPage() {
   const router = useRouter();
@@ -28,13 +29,13 @@ export default function OtherInfoPage() {
   const supabase = createClient();
 
   const [formData, setFormData] = useState<OtherInfoFormData>({
-    handle: '',
-    location: '',
+    handle: "",
+    location: "",
     interests: [],
-    tags: []
+    tags: [],
   });
 
-  const [initialHandle, setInitialHandle] = useState<string>('');
+  const [initialHandle, setInitialHandle] = useState<string>("");
 
   // Save form data to localStorage whenever it changes
   useEffect(() => {
@@ -43,81 +44,93 @@ export default function OtherInfoPage() {
     }
   }, [formData, isLoading]);
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          router.push('/sign-in');
+  const loadProfile = async () => {
+    try {
+      setIsLoading(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/sign-in");
+        return;
+      }
+
+      // Ensure profile exists
+      const profileId = await ensureUserProfile(user.id);
+      if (!profileId) {
+        throw new Error("Failed to ensure profile exists");
+      }
+
+      // Try to load from localStorage first
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      let localData: OtherInfoFormData | null = null;
+
+      if (savedData) {
+        localData = JSON.parse(savedData);
+      }
+
+      // Now fetch profile data
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("handle, location, interests, tags, bio, is_onboarded")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (profile) {
+        // If the profile is already onboarded, redirect to profile page
+        if (profile.is_onboarded) {
+          router.push("/protected/profile");
           return;
         }
 
-        // Try to load from localStorage first
-        const savedData = localStorage.getItem(STORAGE_KEY);
-        let localData: OtherInfoFormData | null = null;
+        // Merge localStorage data with profile data, preferring localStorage
+        setFormData({
+          handle: localData?.handle || profile.handle || "",
+          location: localData?.location || profile.location || "",
+          interests: localData?.interests || profile.interests || [],
+          tags: localData?.tags || profile.tags || [],
+        });
 
-        if (savedData) {
-          localData = JSON.parse(savedData);
+        setInitialHandle(profile.handle || "");
+
+        // Check if handle is available
+        if (profile.handle) {
+          setIsHandleAvailable(true);
         }
-
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('handle, location, interests, tags, is_onboarded')
-          .eq('auth_user_id', user.id)
-          .single();
-
-        if (error) throw error;
-
-        if (profile) {
-          // If the profile is already onboarded, redirect to profile page
-          if (profile.is_onboarded) {
-            router.push('/protected/profile');
-            return;
-          }
-
-          // Merge localStorage data with profile data, preferring localStorage
-          setFormData({
-            handle: localData?.handle || profile.handle || '',
-            location: localData?.location || profile.location || '',
-            interests: localData?.interests || profile.interests || [],
-            tags: localData?.tags || profile.tags || []
-          });
-
-          // Store initial handle from database to compare later
-          setInitialHandle(profile.handle || '');
-
-          // If handle exists in database, set it as available
-          if (profile.handle) {
-            setIsHandleAvailable(true);
-          }
-        } else if (localData) {
-          // If no profile but localStorage data exists, use it
-          setFormData(localData);
-        }
-      } catch (error) {
-        console.error('Error loading profile:', error);
-        toast.error('Failed to load profile data');
-      } finally {
-        setIsLoading(false);
+      } else if (localData) {
+        // If no profile but localStorage data exists, use it
+        setFormData(localData);
       }
-    };
+    } catch (error) {
+      console.error("Error loading profile:", error);
+      toast.error("Failed to load profile data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadProfile();
   }, [supabase, router]);
 
   const isFormValid = Boolean(
     formData.handle &&
-    (isHandleAvailable || formData.handle === initialHandle) &&
-    !isCheckingHandle &&
-    formData.location
+      (isHandleAvailable || formData.handle === initialHandle) &&
+      !isCheckingHandle &&
+      formData.location
   );
 
   const sanitizeHandle = (handle: string) => {
-    if (!handle) return '';
+    if (!handle) return "";
     let sanitized = handle.toLowerCase();
-    sanitized = sanitized.replace(/[^a-z0-9-_]/g, '');
-    sanitized = sanitized.replace(/[-_]{2,}/g, '-');
-    sanitized = sanitized.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
+    sanitized = sanitized.replace(/[^a-z0-9-_]/g, "");
+    sanitized = sanitized.replace(/[-_]{2,}/g, "-");
+    sanitized = sanitized.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
     return sanitized;
   };
 
@@ -132,22 +145,24 @@ export default function OtherInfoPage() {
     try {
       setIsSubmitting(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("No authenticated user");
 
       const sanitizedHandle = sanitizeHandle(formData.handle);
 
       const { error } = await supabase
-        .from('profiles')
+        .from("profiles")
         .update({
           handle: sanitizedHandle,
           location: formData.location,
           interests: formData.interests,
           tags: formData.tags,
           is_onboarded: true,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('auth_user_id', user.id);
+        .eq("auth_user_id", user.id);
 
       if (error) throw error;
 
@@ -189,7 +204,12 @@ export default function OtherInfoPage() {
           <div className="mt-1">
             <URLHandleInput
               value={formData.handle}
-              onChange={(handle) => setFormData(prev => ({ ...prev, handle: sanitizeHandle(handle) }))}
+              onChange={(handle) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  handle: sanitizeHandle(handle),
+                }))
+              }
               currentHandle={initialHandle}
               onAvailabilityChange={(status) => {
                 setIsCheckingHandle(status.isChecking);
@@ -206,7 +226,9 @@ export default function OtherInfoPage() {
           <div className="relative mt-1">
             <select
               value={formData.location}
-              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, location: e.target.value }))
+              }
               className="mt-1 block w-full px-4 py-2 
       bg-white dark:bg-gray-700
       text-gray-900 dark:text-white 
@@ -217,9 +239,15 @@ export default function OtherInfoPage() {
       focus:outline-none appearance-none 
       cursor-pointer text-base pr-10"
             >
-              <option value="" className="bg-white dark:bg-gray-800">Select a country</option>
-              {countries.map(country => (
-                <option key={country.code} value={country.code} className="bg-white dark:bg-gray-800">
+              <option value="" className="bg-white dark:bg-gray-800">
+                Select a country
+              </option>
+              {countries.map((country) => (
+                <option
+                  key={country.code}
+                  value={country.code}
+                  className="bg-white dark:bg-gray-800"
+                >
                   {country.name}
                 </option>
               ))}
@@ -248,7 +276,9 @@ export default function OtherInfoPage() {
           </label>
           <TagInput
             tags={formData.interests}
-            onChange={(interests) => setFormData(prev => ({ ...prev, interests }))}
+            onChange={(interests) =>
+              setFormData((prev) => ({ ...prev, interests }))
+            }
             placeholder="Add interests..."
           />
         </div>
@@ -259,7 +289,7 @@ export default function OtherInfoPage() {
           </label>
           <TagInput
             tags={formData.tags}
-            onChange={(tags) => setFormData(prev => ({ ...prev, tags }))}
+            onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
             placeholder="Add tags..."
           />
         </div>

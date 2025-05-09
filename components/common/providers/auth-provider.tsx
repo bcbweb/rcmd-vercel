@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { ensureUserProfile } from "@/utils/profile-utils";
 
 export function AuthProvider({
   children,
@@ -198,8 +199,11 @@ export function AuthProvider({
         // Set up auth state change listener
         const {
           data: { subscription },
-        } = supabase.auth.onAuthStateChange((event, session) => {
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
           if (event === "SIGNED_IN" && session) {
+            // Create or ensure a profile exists
+            await ensureUserProfile(session.user.id);
+
             setAuthenticated(session.user.id);
             lastAuthTime.current = Date.now();
             redirectAttempts.current = 0; // Reset redirect attempts on sign in

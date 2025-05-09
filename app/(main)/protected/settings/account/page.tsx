@@ -7,6 +7,15 @@ import { useProfileStore } from "@/stores/profile-store";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { AlertTriangle } from "lucide-react";
 
 export default function AccountManagementPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -15,6 +24,8 @@ export default function AccountManagementPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [email, setEmail] = useState("");
   const [localLoading, setLocalLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState("");
 
   const supabase = createClient();
   const router = useRouter();
@@ -65,14 +76,6 @@ export default function AccountManagementPage() {
   }
 
   async function handleDeleteAccount() {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete your account? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-
     try {
       setIsDeletingAccount(true);
       if (!userId) {
@@ -114,8 +117,17 @@ export default function AccountManagementPage() {
       toast.error("Failed to delete account");
     } finally {
       setIsDeletingAccount(false);
+      setShowDeleteModal(false);
     }
   }
+
+  // Reset confirmation text when dialog closes
+  const handleDialogChange = (open: boolean) => {
+    setShowDeleteModal(open);
+    if (!open) {
+      setConfirmDelete("");
+    }
+  };
 
   // Show loading spinner during initial data fetch
   if (localLoading) {
@@ -222,13 +234,100 @@ export default function AccountManagementPage() {
           certain.
         </p>
         <button
-          onClick={handleDeleteAccount}
-          disabled={isDeletingAccount}
-          className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md"
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
         >
-          {isDeletingAccount ? "Deleting..." : "Delete Account"}
+          Delete Account
         </button>
       </div>
+
+      {/* Delete Account Confirmation Dialog */}
+      <Dialog open={showDeleteModal} onOpenChange={handleDialogChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="bg-red-100 p-3 rounded-full">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-red-600">
+              Delete Your Account
+            </DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              This will permanently delete your account and all associated data.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-start">
+                <span className="bg-red-100 rounded-full p-1 mr-2 mt-0.5">
+                  <span className="block h-1.5 w-1.5 rounded-full bg-red-600"></span>
+                </span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  All your personal information will be deleted
+                </span>
+              </li>
+              <li className="flex items-start">
+                <span className="bg-red-100 rounded-full p-1 mr-2 mt-0.5">
+                  <span className="block h-1.5 w-1.5 rounded-full bg-red-600"></span>
+                </span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  All your recommendations, collections, and links will be
+                  permanently removed
+                </span>
+              </li>
+              <li className="flex items-start">
+                <span className="bg-red-100 rounded-full p-1 mr-2 mt-0.5">
+                  <span className="block h-1.5 w-1.5 rounded-full bg-red-600"></span>
+                </span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  Your social media connections will be removed
+                </span>
+              </li>
+            </ul>
+
+            <div className="pt-2">
+              <label
+                htmlFor="confirm-delete"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Type "<span className="font-bold">delete my account</span>" to
+                confirm:
+              </label>
+              <input
+                id="confirm-delete"
+                type="text"
+                value={confirmDelete}
+                onChange={(e) => setConfirmDelete(e.target.value)}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm"
+                placeholder="delete my account"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(false)}
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md border border-gray-300 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteAccount}
+              disabled={
+                isDeletingAccount || confirmDelete !== "delete my account"
+              }
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDeletingAccount ? "Deleting..." : "Permanently Delete Account"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

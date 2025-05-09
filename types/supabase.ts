@@ -758,6 +758,42 @@ export type Database = {
           },
         ]
       }
+      meta_deletion_logs: {
+        Row: {
+          completed_at: string | null
+          confirmation_code: string
+          created_at: string | null
+          error_details: Json | null
+          id: string
+          provider: string
+          provider_user_id: string
+          requested_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          confirmation_code: string
+          created_at?: string | null
+          error_details?: Json | null
+          id?: string
+          provider: string
+          provider_user_id: string
+          requested_at: string
+          status: string
+        }
+        Update: {
+          completed_at?: string | null
+          confirmation_code?: string
+          created_at?: string | null
+          error_details?: Json | null
+          id?: string
+          provider?: string
+          provider_user_id?: string
+          requested_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       profile_blocks: {
         Row: {
           auth_user_id: string
@@ -862,7 +898,9 @@ export type Database = {
         Row: {
           access_token: string | null
           created_at: string | null
+          image_url: string | null
           metadata: Json | null
+          name: string | null
           platform: string
           profile_id: string
           profile_url: string | null
@@ -870,12 +908,15 @@ export type Database = {
           scopes: string[] | null
           token_expiry: string | null
           updated_at: string | null
+          user_id: string | null
           username: string | null
         }
         Insert: {
           access_token?: string | null
           created_at?: string | null
+          image_url?: string | null
           metadata?: Json | null
+          name?: string | null
           platform: string
           profile_id: string
           profile_url?: string | null
@@ -883,12 +924,15 @@ export type Database = {
           scopes?: string[] | null
           token_expiry?: string | null
           updated_at?: string | null
+          user_id?: string | null
           username?: string | null
         }
         Update: {
           access_token?: string | null
           created_at?: string | null
+          image_url?: string | null
           metadata?: Json | null
+          name?: string | null
           platform?: string
           profile_id?: string
           profile_url?: string | null
@@ -896,6 +940,7 @@ export type Database = {
           scopes?: string[] | null
           token_expiry?: string | null
           updated_at?: string | null
+          user_id?: string | null
           username?: string | null
         }
         Relationships: [
@@ -1341,6 +1386,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_user_profile: {
+        Args: {
+          auth_id: string
+          handle_param: string
+          profile_id_param?: string
+        }
+        Returns: string
+      }
       debug_profile_info: {
         Args: { profile_id_param: string }
         Returns: Json

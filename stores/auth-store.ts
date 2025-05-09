@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { ensureUserProfile } from "@/utils/profile-utils";
 
 type AuthStatus =
   | "idle"
@@ -43,6 +44,11 @@ export const useAuthStore = create<AuthState>()(
         },
 
         setAuthenticated: (userId: string) => {
+          // Create or ensure a profile exists after authentication
+          ensureUserProfile(userId).catch((error) => {
+            console.error("Failed to ensure profile exists:", error);
+          });
+
           const timestamp = Date.now();
           set({
             userId,
