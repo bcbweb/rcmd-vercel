@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from 'react';
-import { uploadProfileImage } from '@/utils/storage';
-import Image from 'next/image';
+import { useState, useCallback, useEffect } from "react";
+import { uploadProfileImage } from "@/utils/storage";
+import Image from "next/image";
 
 interface ProfilePhotoUploadProps {
   onUploadComplete: (url: string) => void;
@@ -11,49 +11,59 @@ interface ProfilePhotoUploadProps {
 
 export default function ProfilePhotoUpload({
   onUploadComplete,
-  currentPhotoUrl
+  currentPhotoUrl,
 }: ProfilePhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState<string>(currentPhotoUrl || '');
-  const [error, setError] = useState<string>('');
+  const [preview, setPreview] = useState<string>(currentPhotoUrl || "");
+  const [error, setError] = useState<string>("");
 
-  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setError('');
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-
-      // Validate file size (5MB limit)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image must be less than 5MB');
-        return;
-      }
-
-      // Show preview
-      const objectUrl = URL.createObjectURL(file);
-      setPreview(objectUrl);
-
-      // Start upload
-      setUploading(true);
-
-      // Upload using our utility function
-      const publicUrl = await uploadProfileImage(file);
-
-      // Call the callback with the public URL
-      onUploadComplete(publicUrl);
-    } catch (err) {
-      console.error('Upload error:', err);
-      setError('Failed to upload image');
-    } finally {
-      setUploading(false);
+  // Update preview when currentPhotoUrl changes
+  useEffect(() => {
+    if (currentPhotoUrl) {
+      setPreview(currentPhotoUrl);
     }
-  }, [onUploadComplete]);
+  }, [currentPhotoUrl]);
+
+  const handleFileSelect = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      try {
+        setError("");
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+          setError("Please select an image file");
+          return;
+        }
+
+        // Validate file size (5MB limit)
+        if (file.size > 5 * 1024 * 1024) {
+          setError("Image must be less than 5MB");
+          return;
+        }
+
+        // Show preview
+        const objectUrl = URL.createObjectURL(file);
+        setPreview(objectUrl);
+
+        // Start upload
+        setUploading(true);
+
+        // Upload using our utility function
+        const publicUrl = await uploadProfileImage(file);
+
+        // Call the callback with the public URL
+        onUploadComplete(publicUrl);
+      } catch (err) {
+        console.error("Upload error:", err);
+        setError("Failed to upload image");
+      } finally {
+        setUploading(false);
+      }
+    },
+    [onUploadComplete]
+  );
 
   return (
     <div className="space-y-4">

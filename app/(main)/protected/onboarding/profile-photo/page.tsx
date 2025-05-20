@@ -8,11 +8,13 @@ import { ProfilePhotoUpload } from "@/components/common/media";
 import { createClient } from "@/utils/supabase/client";
 import { toast } from "sonner";
 import { ensureUserProfile } from "@/utils/profile-utils";
+import { uploadImageFromUrl } from "@/utils/storage";
 import {
   getUserSocialIntegrations,
   getProfileDataFromSocial,
   SocialIntegration,
   SocialPlatform,
+  getSafeProfileImageUrl,
 } from "@/utils/social-auth";
 import { Loader2, CloudDownload, ChevronDown } from "lucide-react";
 import Image from "next/image";
@@ -125,6 +127,21 @@ export default function ProfilePhotoPage() {
     return iconMap[platform] || "";
   };
 
+  // Verify image URL is valid and accessible
+  const verifyImageUrl = async (url: string): Promise<boolean> => {
+    // Basic URL validation
+    if (!url || !url.startsWith("http")) {
+      console.log(`[DEBUG] Profile-photo: Invalid URL format: ${url}`);
+      return false;
+    }
+
+    console.log(`[DEBUG] Profile-photo: Verifying image URL: ${url}`);
+
+    // For most social media profile images, we can't actually check if they load
+    // because of CORS restrictions, so we'll just validate the format
+    return true;
+  };
+
   const importSocialProfilePhoto = async (
     specificPlatform?: SocialPlatform
   ) => {
@@ -156,12 +173,59 @@ export default function ProfilePhotoPage() {
         return;
       }
 
+      // Get a sanitized version of the image URL
+      const rawImageUrl = socialData.profile_image;
+      const safeImageUrl = getSafeProfileImageUrl(rawImageUrl, platformToUse);
+
       console.log(
-        `[DEBUG] Profile-photo: Setting photo URL to ${socialData.profile_image}`
+        `[DEBUG] Profile-photo: Raw URL: ${rawImageUrl}, Safe URL: ${safeImageUrl}`
       );
 
-      // Set the photo URL from social media
-      setPhotoUrl(socialData.profile_image);
+      // Note for Facebook profile image URLs
+      if (
+        platformToUse === "facebook" &&
+        safeImageUrl.includes("graph.facebook.com")
+      ) {
+        console.log(
+          `[DEBUG] Profile-photo: Facebook Graph API URLs (like ${safeImageUrl}) are direct API endpoints to profile pictures and should render correctly when used in <img> tags, even though they don't end with file extensions.`
+        );
+      }
+
+      // Verify image URL is valid and accessible
+      const isValid = await verifyImageUrl(safeImageUrl);
+      if (!isValid) {
+        console.log(
+          `[DEBUG] Profile-photo: Invalid image URL: ${safeImageUrl}`
+        );
+        toast.error("Invalid image URL from social media account");
+        return;
+      }
+
+      try {
+        // Download and re-upload the image to our storage
+        console.log(
+          `[DEBUG] Profile-photo: Downloading and re-uploading image...`
+        );
+
+        // This will download the image and store it in our storage
+        const storedImageUrl = await uploadImageFromUrl(safeImageUrl);
+
+        console.log(
+          `[DEBUG] Profile-photo: Successfully stored image at ${storedImageUrl}`
+        );
+
+        // Set the stored image URL as the profile photo
+        setPhotoUrl(storedImageUrl);
+      } catch (downloadError) {
+        console.error("Error downloading image:", downloadError);
+
+        // Fall back to the direct URL if download/upload fails
+        console.log(
+          `[DEBUG] Profile-photo: Falling back to direct URL: ${safeImageUrl}`
+        );
+        setPhotoUrl(safeImageUrl);
+      }
+
       toast.success(
         `Profile photo imported from ${getPlatformName(platformToUse)}`
       );

@@ -74,6 +74,47 @@ const OAUTH_CONFIG = {
 } as const;
 
 /**
+ * Translates a social media profile image URL to one that can be safely displayed in our app
+ * Some platforms like Facebook require additional parameters or proxy handling
+ */
+export function getSafeProfileImageUrl(
+  url: string,
+  platform?: SocialPlatform
+): string {
+  if (!url) return "";
+
+  console.log(
+    `[DEBUG] getSafeProfileImageUrl for ${platform || "unknown"}: ${url}`
+  );
+
+  // Facebook/Instagram profile pictures sometimes need specific parameters
+  if (platform === "facebook" || platform === "instagram") {
+    // If it's a Facebook graph API URL, make sure it has the right parameters
+    if (url.includes("graph.facebook.com") && !url.includes("type=")) {
+      // Facebook Graph API URLs need the type=large parameter to get full-size images
+      return `${url}${url.includes("?") ? "&" : "?"}type=large`;
+    }
+  }
+
+  // TikTok image URLs may need special handling
+  if (platform === "tiktok") {
+    // For TikTok placeholder avatars, we can use them directly
+    if (url.includes("ui-avatars.com")) {
+      return url;
+    }
+
+    // Some TikTok images need to be proxied through a CORS-friendly service
+    if (url.includes("tiktokcdn") || url.includes("tiktok.com")) {
+      // For now, we'll just use the URL directly, but we could implement a proxy if needed
+      return url;
+    }
+  }
+
+  // For fallback images or platforms without special handling, use the URL directly
+  return url;
+}
+
+/**
  * Initiates the OAuth flow for a specific social media platform
  */
 export function initiateOAuthFlow(platform: SocialPlatform): void {
@@ -323,10 +364,10 @@ export async function fetchTikTokUserInfo(username: string): Promise<{
     // The Display API can be used later to fetch content using this username
     const profileUrl = `https://www.tiktok.com/@${username}`;
 
-    // Attempt to get a default avatar for the user
-    // This is a fallback approach. In production, you would use the TikTok API
-    // with proper authentication to get the actual profile picture.
-    const avatar_url = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`;
+    // Generate a better avatar for the user by using a more recognizable placeholder
+    // In a production app, you could try to fetch the actual profile picture using TikTok's API
+    // with proper OAuth credentials, but for now we'll use a placeholder.
+    const avatar_url = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=000000&color=ffffff&bold=true&size=256`;
 
     console.log(
       "[DEBUG] fetchTikTokUserInfo: Generated avatar URL:",

@@ -22,6 +22,7 @@ import {
   storeManualSocialAccount,
 } from "@/utils/social-auth";
 import { useSearchParams } from "next/navigation";
+import TikTokUsernameModal from "@/components/features/profile/tiktok-username-modal";
 
 // Add type for platform with manual connect option
 type SocialPlatformWithConfig = {
@@ -83,7 +84,6 @@ export default function SocialMediaPage() {
   const [showTwitterModal, setShowTwitterModal] = useState(false);
   const [twitterUsername, setTwitterUsername] = useState("");
   const [showTikTokModal, setShowTikTokModal] = useState(false);
-  const [tikTokUsername, setTikTokUsername] = useState("");
   const [isManualConnecting, setIsManualConnecting] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -194,7 +194,6 @@ export default function SocialMediaPage() {
           setTwitterUsername("");
         } else if (platform === "tiktok") {
           setShowTikTokModal(false);
-          setTikTokUsername("");
         }
 
         toast.success(
@@ -412,7 +411,8 @@ export default function SocialMediaPage() {
                               onClick={() => handleConnect(platform.value)}
                               className="inline-flex items-center justify-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white dark:bg-gray-700 dark:text-blue-400 dark:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap w-full sm:w-[120px]"
                             >
-                              {platform.value === "twitter"
+                              {platform.value === "twitter" ||
+                              platform.value === "tiktok"
                                 ? "Add username"
                                 : "Connect"}
                             </button>
@@ -511,55 +511,16 @@ export default function SocialMediaPage() {
 
       {/* TikTok Username Modal - z-index above the footer */}
       {showTikTokModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div
-            ref={modalRef}
-            className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md"
-          >
-            <h3 className="text-lg font-semibold mb-4">
-              Connect TikTok Account
-            </h3>
-            <div className="mb-4">
-              <label
-                htmlFor="tikTokUsername"
-                className="block text-sm font-medium mb-1"
-              >
-                Your TikTok Username
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-gray-500">@</span>
-                <input
-                  type="text"
-                  id="tikTokUsername"
-                  className="w-full rounded-md border border-gray-300 pl-6 py-2 px-3"
-                  placeholder="username"
-                  value={tikTokUsername}
-                  onChange={(e) => setTikTokUsername(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowTikTokModal(false)}
-                className="flex-1 py-2 border border-gray-300 rounded-md"
-                disabled={isManualConnecting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleManualSubmit("tiktok", tikTokUsername)}
-                className="flex-1 py-2 bg-blue-600 text-white rounded-md flex items-center justify-center"
-                disabled={isManualConnecting}
-              >
-                {isManualConnecting ? (
-                  <Loader2 className="animate-spin h-5 w-5" />
-                ) : (
-                  "Connect"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        <TikTokUsernameModal
+          isOpen={showTikTokModal}
+          onClose={() => setShowTikTokModal(false)}
+          onSuccess={async () => {
+            // Reload connected accounts to show the new connection
+            const integrations = await getUserSocialIntegrations();
+            setConnectedAccounts(integrations);
+            toast.success("Successfully connected TikTok account");
+          }}
+        />
       )}
     </div>
   );
