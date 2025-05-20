@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     // Step 2: Fetch user's Facebook profile
     const userResponse = await fetch(
-      `https://graph.facebook.com/v18.0/me?fields=id,name,email&access_token=${accessToken}`
+      `https://graph.facebook.com/v18.0/me?fields=id,name,email,picture.type(large)&access_token=${accessToken}`
     );
 
     if (!userResponse.ok) {
@@ -72,6 +72,9 @@ export async function GET(request: NextRequest) {
       ? userData.name.replace(/\s+/g, ".").toLowerCase()
       : `fb_user_${userData.id}`;
     const profileUrl = `https://facebook.com/${userData.id}`;
+
+    // Extract profile picture URL if available
+    const profilePictureUrl = userData.picture?.data?.url || null;
 
     // Get Supabase client
     const supabase = await createClient();
@@ -108,6 +111,10 @@ export async function GET(request: NextRequest) {
           ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
           : null,
         scopes: ["public_profile", "email"],
+        metadata: {
+          user_id: userData.id,
+          profile_picture_url: profilePictureUrl,
+        },
         updated_at: new Date().toISOString(),
       });
 

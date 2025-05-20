@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Link2,
   Loader2,
+  X,
 } from "lucide-react";
 import {
   SocialPlatform,
@@ -337,70 +338,80 @@ export default function SocialMediaPage() {
 
                   return (
                     <div
+                      className="flex flex-col mb-4 border rounded-lg dark:border-gray-700 overflow-hidden"
                       key={platform.value}
-                      className="bg-white dark:bg-gray-800 border rounded-md overflow-hidden"
                     >
-                      <div className="flex items-center p-4">
-                        <div className="flex-shrink-0 mr-4">
-                          <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">
-                            <Image
-                              src={platform.icon}
-                              alt={platform.label}
-                              width={24}
-                              height={24}
-                              className="w-6 h-6"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center">
-                            <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                              {platform.label}
-                            </h3>
-                            {isConnected && (
-                              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                <Check className="w-3 h-3 mr-1" />
-                                Connected
-                              </span>
-                            )}
+                      <div className="flex flex-col sm:flex-row sm:items-center p-4">
+                        <div className="flex items-center grow mb-3 sm:mb-0">
+                          <div className="flex-shrink-0 mr-4">
+                            <div className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md">
+                              <Image
+                                src={platform.icon}
+                                alt={platform.label}
+                                width={24}
+                                height={24}
+                                className="w-6 h-6"
+                              />
+                            </div>
                           </div>
 
-                          {isConnected && connectedAccount?.username && (
-                            <div className="mt-1 flex items-center">
-                              <Link2 className="w-3 h-3 text-gray-400 mr-1" />
-                              <span className="text-xs text-gray-600 dark:text-gray-300">
-                                {connectedAccount.username}
-                              </span>
-                              {connectedAccount.profileUrl && (
-                                <a
-                                  href={connectedAccount.profileUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="ml-2 text-xs text-blue-600 hover:text-blue-800 inline-flex items-center"
-                                >
-                                  View <ExternalLink className="w-3 h-3 ml-1" />
-                                </a>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center">
+                              <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                                {platform.label}
+                              </h3>
+                              {isConnected && (
+                                <div className="ml-2 inline-flex items-center">
+                                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 flex items-center">
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Connected
+                                  </span>
+                                  <div className="ml-1">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDisconnect(platform.value);
+                                      }}
+                                      className="p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                                      aria-label={`Disconnect ${platform.label}`}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
                               )}
                             </div>
-                          )}
+
+                            {isConnected && connectedAccount?.username && (
+                              <div className="mt-1 flex items-center">
+                                <Link2 className="w-3 h-3 text-gray-400 mr-1" />
+                                <span className="text-xs text-gray-600 dark:text-gray-300 truncate max-w-[10ch] sm:max-w-[25ch]">
+                                  {connectedAccount.username}
+                                </span>
+                                {connectedAccount.profileUrl && (
+                                  <a
+                                    href={connectedAccount.profileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="ml-2 text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center whitespace-nowrap"
+                                  >
+                                    View{" "}
+                                    <ExternalLink className="w-3 h-3 ml-1" />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="ml-4">
+                        <div className="flex-shrink-0 sm:ml-4 mt-2 sm:mt-0 w-full sm:w-auto">
                           {isConnected ? (
-                            <button
-                              type="button"
-                              onClick={() => handleDisconnect(platform.value)}
-                              className="inline-flex items-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                            >
-                              <Trash2 className="w-3 h-3 mr-1" />
-                              Disconnect
-                            </button>
+                            <></>
                           ) : (
                             <button
                               type="button"
                               onClick={() => handleConnect(platform.value)}
-                              className="inline-flex items-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              className="inline-flex items-center justify-center px-3 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-white dark:bg-gray-700 dark:text-blue-400 dark:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap w-full sm:w-[120px]"
                             >
                               {platform.value === "twitter"
                                 ? "Add username"
