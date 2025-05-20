@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { StepProgress } from "@/components/common";
@@ -75,7 +75,7 @@ export default function OtherInfoPage() {
     checkSocialAccounts();
   }, []);
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       setIsLoading(true);
       const {
@@ -143,11 +143,11 @@ export default function OtherInfoPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [supabase, router]);
 
   useEffect(() => {
     loadProfile();
-  }, [supabase, router]);
+  }, [loadProfile]);
 
   const isFormValid = Boolean(
     formData.handle &&

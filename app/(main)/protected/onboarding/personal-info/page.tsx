@@ -18,7 +18,7 @@ import {
   SocialIntegration,
   SocialPlatform,
 } from "@/utils/social-auth";
-import { Loader2, RefreshCcw, UserRound, ChevronDown } from "lucide-react";
+import { Loader2, RefreshCcw, ChevronDown } from "lucide-react";
 import Image from "next/image";
 
 const STORAGE_KEY = "onboarding_personal_info";
@@ -186,15 +186,6 @@ export default function PersonalInfoPage() {
       linkedin: "/icons/linkedin.svg",
     };
     return iconMap[platform] || "";
-  };
-
-  // Get username for selected platform
-  const getSelectedAccountUsername = (): string => {
-    if (!selectedAccount) return "";
-    const account = socialAccounts.find(
-      (acc) => acc.platform === selectedAccount
-    );
-    return account?.username || "";
   };
 
   const onSubmit = async (data: PersonalInfoFormData) => {
