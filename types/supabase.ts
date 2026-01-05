@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       business_claims: {
@@ -75,7 +80,7 @@ export type Database = {
           address: string
           business_id: string | null
           city: string
-          coordinates: unknown | null
+          coordinates: unknown
           country: string
           created_at: string | null
           email: string | null
@@ -93,7 +98,7 @@ export type Database = {
           address: string
           business_id?: string | null
           city: string
-          coordinates?: unknown | null
+          coordinates?: unknown
           country: string
           created_at?: string | null
           email?: string | null
@@ -111,7 +116,7 @@ export type Database = {
           address?: string
           business_id?: string | null
           city?: string
-          coordinates?: unknown | null
+          coordinates?: unknown
           country?: string
           created_at?: string | null
           email?: string | null
@@ -1394,26 +1399,11 @@ export type Database = {
         }
         Returns: string
       }
-      debug_profile_info: {
-        Args: { profile_id_param: string }
-        Returns: Json
-      }
-      debug_profile_pages: {
-        Args: { p_profile_id: string }
-        Returns: Json
-      }
-      delete_collection: {
-        Args: { p_id: string }
-        Returns: Json
-      }
-      delete_profile_page: {
-        Args: { page_id: string }
-        Returns: undefined
-      }
-      does_function_exist: {
-        Args: { function_name: string }
-        Returns: boolean
-      }
+      debug_profile_info: { Args: { profile_id_param: string }; Returns: Json }
+      debug_profile_pages: { Args: { p_profile_id: string }; Returns: Json }
+      delete_collection: { Args: { p_id: string }; Returns: Json }
+      delete_profile_page: { Args: { page_id: string }; Returns: undefined }
+      does_function_exist: { Args: { function_name: string }; Returns: boolean }
       function_exists_by_name: {
         Args: { function_name: string }
         Returns: boolean
@@ -1445,6 +1435,12 @@ export type Database = {
           view_count: number
           visibility: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "links"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_public_rcmds_for_profile: {
         Args: { profile_id_param: string }
@@ -1475,6 +1471,12 @@ export type Database = {
           view_count: number
           visibility: Database["public"]["Enums"]["rcmd_visibility"] | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "rcmds"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_random_profile: {
         Args: { excluded_handles?: string[] }
@@ -1498,20 +1500,26 @@ export type Database = {
           updated_at: string | null
           view_count: number | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_random_rcmd: {
         Args: { excluded_ids?: string[] }
         Returns: {
-          id: string
           created_at: string
-          updated_at: string
-          title: string
           description: string
-          url: string
           featured_image: string
+          id: string
           profile_id: string
-          visibility: Database["public"]["Enums"]["rcmd_visibility"]
           profiles: Json
+          title: string
+          updated_at: string
+          url: string
+          visibility: Database["public"]["Enums"]["rcmd_visibility"]
         }[]
       }
       increment_profile_view: {
@@ -1519,7 +1527,7 @@ export type Database = {
         Returns: undefined
       }
       insert_block_with_order: {
-        Args: { p_profile_id: string; p_content: Json; p_type: string }
+        Args: { p_content: Json; p_profile_id: string; p_type: string }
         Returns: {
           auth_user_id: string
           created_at: string | null
@@ -1531,43 +1539,46 @@ export type Database = {
           type: string
           updated_at: string | null
         }
+        SetofOptions: {
+          from: "*"
+          to: "profile_blocks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      insert_collection: {
-        Args: { payload: Json }
-        Returns: Json
-      }
+      insert_collection: { Args: { payload: Json }; Returns: Json }
       insert_collection_block: {
         Args: {
-          p_profile_id: string
           p_collection_id: string
           p_page_id?: string
+          p_profile_id: string
           p_show_border?: boolean
         }
         Returns: Json
       }
       insert_image_block: {
         Args: {
-          p_profile_id: string
-          p_image_url: string
           p_caption?: string
-          p_original_filename?: string
-          p_size_bytes?: number
-          p_mime_type?: string
-          p_width?: number
           p_height?: number
+          p_image_url: string
+          p_mime_type?: string
+          p_original_filename?: string
           p_page_id?: string
+          p_profile_id: string
           p_show_border?: boolean
+          p_size_bytes?: number
+          p_width?: number
         }
         Returns: Json
       }
       insert_link: {
         Args: {
-          p_title: string
-          p_url: string
           p_description: string
-          p_type: string
-          p_visibility: string
           p_profile_id?: string
+          p_title: string
+          p_type: string
+          p_url: string
+          p_visibility: string
         }
         Returns: {
           click_count: number
@@ -1590,12 +1601,18 @@ export type Database = {
           view_count: number
           visibility: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "links"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       insert_link_block: {
         Args: {
-          p_profile_id: string
           p_link_id: string
           p_page_id?: string
+          p_profile_id: string
           p_show_border?: boolean
         }
         Returns: Json
@@ -1604,87 +1621,161 @@ export type Database = {
         Args: { page_name: string; page_slug: string }
         Returns: string
       }
-      insert_rcmd: {
-        Args:
-          | {
-              p_title: string
+      insert_rcmd:
+        | {
+            Args: {
               p_description: string
-              p_type: string
-              p_visibility: string
               p_featured_image: string
-            }
-          | {
               p_title: string
-              p_description: string
               p_type: string
               p_visibility: string
+            }
+            Returns: {
+              created_at: string
+              description: string
+              featured_image: string
+              id: string
+              owner_id: string
+              title: string
+              type: Database["public"]["Enums"]["rcmd_type"]
+              visibility: Database["public"]["Enums"]["rcmd_visibility"]
+            }[]
+          }
+        | {
+            Args: {
+              p_description: string
               p_featured_image?: string
               p_tags?: string[]
-            }
-          | {
               p_title: string
-              p_description: string
               p_type: string
               p_visibility: string
+            }
+            Returns: {
+              created_at: string
+              description: string
+              featured_image: string
+              id: string
+              owner_id: string
+              tags: string[]
+              title: string
+              type: Database["public"]["Enums"]["rcmd_type"]
+              visibility: Database["public"]["Enums"]["rcmd_visibility"]
+            }[]
+          }
+        | {
+            Args: {
+              p_description: string
               p_featured_image?: string
               p_tags?: string[]
+              p_title: string
+              p_type: string
               p_url?: string
-            }
-          | {
-              p_title: string
-              p_description: string
-              p_type: string
               p_visibility: string
+            }
+            Returns: {
+              created_at: string
+              description: string
+              featured_image: string
+              id: string
+              owner_id: string
+              tags: string[]
+              title: string
+              type: Database["public"]["Enums"]["rcmd_type"]
+              url: string
+              visibility: Database["public"]["Enums"]["rcmd_visibility"]
+            }[]
+          }
+        | {
+            Args: {
+              p_description: string
               p_featured_image?: string
-              p_tags?: string[]
-              p_url?: string
               p_location?: Json
-            }
-          | {
-              p_title: string
-              p_description: string
-              p_type: string
-              p_visibility: string
-              p_featured_image?: string
               p_tags?: string[]
+              p_title: string
+              p_type: string
               p_url?: string
+              p_visibility: string
+            }
+            Returns: {
+              created_at: string
+              description: string
+              featured_image: string
+              id: string
+              location: Json
+              owner_id: string
+              tags: string[]
+              title: string
+              type: Database["public"]["Enums"]["rcmd_type"]
+              url: string
+              visibility: Database["public"]["Enums"]["rcmd_visibility"]
+            }[]
+          }
+        | {
+            Args: {
+              p_description: string
+              p_featured_image?: string
               p_location?: Json
               p_profile_id?: string
+              p_tags?: string[]
+              p_title: string
+              p_type: string
+              p_url?: string
+              p_visibility: string
             }
-        Returns: {
-          id: string
-          created_at: string
-          title: string
-          description: string
-          type: Database["public"]["Enums"]["rcmd_type"]
-          visibility: Database["public"]["Enums"]["rcmd_visibility"]
-          owner_id: string
-          featured_image: string
-          tags: string[]
-          url: string
-          location: Json
-        }[]
-      }
+            Returns: {
+              click_count: number
+              commission_rate: number | null
+              created_at: string | null
+              description: string | null
+              featured_image: string | null
+              id: string
+              is_sponsored: boolean | null
+              like_count: number
+              location: Json | null
+              metadata: Json | null
+              monetization_enabled: boolean | null
+              owner_id: string | null
+              price_range: Json | null
+              profile_id: string | null
+              save_count: number | null
+              share_count: number
+              sponsor_details: Json | null
+              status: Database["public"]["Enums"]["rcmd_status"] | null
+              tags: string[] | null
+              title: string
+              type: Database["public"]["Enums"]["rcmd_type"]
+              updated_at: string | null
+              url: string | null
+              view_count: number
+              visibility: Database["public"]["Enums"]["rcmd_visibility"] | null
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "rcmds"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
       insert_rcmd_block: {
         Args: {
+          p_page_id?: string
           p_profile_id: string
           p_rcmd_id: string
-          p_page_id?: string
           p_show_border?: boolean
         }
         Returns: Json
       }
       insert_rcmd_v2: {
         Args: {
-          p_title: string
           p_description: string
-          p_type: string
-          p_visibility: string
           p_featured_image?: string
-          p_tags?: string[]
-          p_url?: string
           p_location?: Json
           p_profile_id?: string
+          p_tags?: string[]
+          p_title: string
+          p_type: string
+          p_url?: string
+          p_visibility: string
         }
         Returns: {
           click_count: number
@@ -1713,13 +1804,19 @@ export type Database = {
           view_count: number
           visibility: Database["public"]["Enums"]["rcmd_visibility"] | null
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "rcmds"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       insert_text_block: {
         Args: {
-          p_profile_id: string
-          p_text: string
           p_page_id?: string
+          p_profile_id: string
           p_show_border?: boolean
+          p_text: string
         }
         Returns: {
           auth_user_id: string
@@ -1733,20 +1830,17 @@ export type Database = {
           updated_at: string
         }[]
       }
-      next_block_order: {
-        Args: { p_profile_id: string }
-        Returns: number
-      }
+      next_block_order: { Args: { p_profile_id: string }; Returns: number }
       reorder_profile_blocks: {
-        Args: { p_profile_id: string; p_block_id: string; p_new_order: number }
+        Args: { p_block_id: string; p_new_order: number; p_profile_id: string }
         Returns: boolean
       }
-      safe_function_call: {
-        Args:
-          | { function_name: string; param_value?: string }
-          | { function_name: string; params?: Json }
-        Returns: Json
-      }
+      safe_function_call:
+        | {
+            Args: { function_name: string; param_value?: string }
+            Returns: Json
+          }
+        | { Args: { function_name: string; params?: Json }; Returns: Json }
       toggle_link_visibility: {
         Args: { p_link_id: string; p_visibility?: string }
         Returns: {
@@ -1770,11 +1864,14 @@ export type Database = {
           view_count: number
           visibility: string
         }
+        SetofOptions: {
+          from: "*"
+          to: "links"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      toggle_rcmd_like: {
-        Args: { rcmd_id: string }
-        Returns: boolean
-      }
+      toggle_rcmd_like: { Args: { rcmd_id: string }; Returns: boolean }
       update_collection: {
         Args: { p_collection_id: string; p_updates: Json }
         Returns: Json
@@ -1782,8 +1879,8 @@ export type Database = {
       update_collection_items: {
         Args: {
           p_collection_id: string
-          p_rcmd_ids?: string[]
           p_link_ids?: string[]
+          p_rcmd_ids?: string[]
         }
         Returns: Json
       }
@@ -1816,21 +1913,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -1848,14 +1949,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -1871,14 +1974,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -1894,14 +1999,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -1909,14 +2016,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never

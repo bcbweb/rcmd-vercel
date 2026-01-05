@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
@@ -22,33 +22,36 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
   const [viewedRcmds] = useState(new Set<string>());
   const supabase = createClient();
 
-  const fetchRcmdById = async (id: string) => {
-    console.log("[DEBUG] Fetching RCMD for id:", id);
-    // Convert shortId to UUID if needed and ensure it's decoded
-    const decodedId = decodeURIComponent(id);
-    const uuid =
-      decodedId.length < 36 ? getUUIDFromShortId(decodedId) : decodedId;
+  const fetchRcmdById = useCallback(
+    async (id: string) => {
+      console.log("[DEBUG] Fetching RCMD for id:", id);
+      // Convert shortId to UUID if needed and ensure it's decoded
+      const decodedId = decodeURIComponent(id);
+      const uuid =
+        decodedId.length < 36 ? getUUIDFromShortId(decodedId) : decodedId;
 
-    const { data: rcmd, error } = await supabase
-      .from("rcmds")
-      .select(
-        `
+      const { data: rcmd, error } = await supabase
+        .from("rcmds")
+        .select(
+          `
         *,
         profiles!rcmds_profile_id_fkey (*)
       `
-      )
-      .eq("id", uuid)
-      .single();
+        )
+        .eq("id", uuid)
+        .single();
 
-    if (error) {
-      console.error("[DEBUG] Error fetching RCMD:", error);
-      return null;
-    }
+      if (error) {
+        console.error("[DEBUG] Error fetching RCMD:", error);
+        return null;
+      }
 
-    return rcmd as RCMDWithAuthor;
-  };
+      return rcmd as RCMDWithAuthor;
+    },
+    [supabase]
+  );
 
-  const fetchNextRcmd = async () => {
+  const fetchNextRcmd = useCallback(async () => {
     console.log("[DEBUG] Fetching next RCMD. Already viewed:", viewedRcmds);
     const { data: rcmds, error } = await supabase.rpc("get_random_rcmd", {
       excluded_ids: Array.from(viewedRcmds).map(
@@ -67,7 +70,7 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
     }
 
     return rcmds[0] as RCMDWithAuthor;
-  };
+  }, [viewedRcmds, supabase]);
 
   // Initial load of current and next RCMDs
   useEffect(() => {
@@ -119,7 +122,7 @@ export function RCMDFeed({ currentId }: RCMDFeedProps) {
     }
 
     loadRcmds();
-  }, [currentId]);
+  }, [currentId, fetchRcmdById, fetchNextRcmd, viewedRcmds]);
 
   // Track when RCMDs enter/leave viewport
   useEffect(() => {

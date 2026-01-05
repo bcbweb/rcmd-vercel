@@ -21,21 +21,24 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
   const [viewedProfiles] = useState(new Set<string>());
   const supabase = createClient();
 
-  const fetchProfileByHandle = useCallback(async (handle: string) => {
-    console.log("[DEBUG] Fetching profile for handle:", handle);
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("handle", handle)
-      .single();
+  const fetchProfileByHandle = useCallback(
+    async (handle: string) => {
+      console.log("[DEBUG] Fetching profile for handle:", handle);
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("handle", handle)
+        .single();
 
-    if (error) {
-      console.error("[DEBUG] Error fetching profile:", error);
-      return null;
-    }
+      if (error) {
+        console.error("[DEBUG] Error fetching profile:", error);
+        return null;
+      }
 
-    return profile;
-  }, []);
+      return profile;
+    },
+    [supabase]
+  );
 
   const fetchNextProfile = useCallback(async () => {
     console.log(
@@ -57,7 +60,7 @@ export function ProfileFeed({ currentHandle }: ProfileFeedProps) {
     }
 
     return profiles[0];
-  }, [viewedProfiles]);
+  }, [viewedProfiles, supabase]);
 
   // Initial load of current and next profiles
   useEffect(() => {

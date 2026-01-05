@@ -150,11 +150,11 @@ export default function UserMenu() {
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link
-                href="/protected/profile/add"
+                href="/protected/add-profile"
                 className="flex items-center cursor-pointer"
               >
                 <SquarePlus className="mr-2 h-4 w-4" />
-                Add profile
+                Add profile type
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

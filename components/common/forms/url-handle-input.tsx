@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import debounce from "lodash/debounce";
 import { createClient } from "@/utils/supabase/client";
 
@@ -42,48 +42,71 @@ export function URLHandleInput({
   const [isHandleAvailable, setIsHandleAvailable] = useState(false);
   const supabase = createClient();
 
-  const checkHandleAvailability = async (handle: string): Promise<void> => {
-    // If handle matches currentHandle, consider it available and skip check
-    if (handle === currentHandle) {
-      setIsHandleAvailable(true);
-      return;
-    }
+  // Memoize this function to prevent recreating it on every render
+  const checkHandleAvailability = useCallback(
+    async (handle: string): Promise<void> => {
+      // If handle matches currentHandle, consider it available and skip check
+      if (handle === currentHandle) {
+        setIsHandleAvailable(true);
+        return;
+      }
 
-    if (!handle) {
-      setIsHandleAvailable(false);
-      return;
-    }
+      if (!handle) {
+        setIsHandleAvailable(false);
+        return;
+      }
 
-    setIsCheckingHandle(true);
-    try {
-      const { data } = await supabase
-        .from("profiles")
-        .select("handle")
-        .ilike("handle", handle)
-        .maybeSingle();
+      // Skip check if handle is too short
+      if (handle.length < minLength) {
+        setIsHandleAvailable(false);
+        return;
+      }
 
-      setIsHandleAvailable(!data);
-    } catch (error) {
-      console.error("Error checking handle:", error);
-      setIsHandleAvailable(false);
-    } finally {
-      setIsCheckingHandle(false);
-    }
-  };
+      setIsCheckingHandle(true);
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("handle")
+          .ilike("handle", handle)
+          .maybeSingle();
 
-  const debouncedCheckHandle = debounce((handle: string) => {
-    checkHandleAvailability(handle);
-  }, 300);
+        setIsHandleAvailable(!data);
+      } catch (error) {
+        console.error("Error checking handle:", error);
+        setIsHandleAvailable(false);
+      } finally {
+        setIsCheckingHandle(false);
+      }
+    },
+    [currentHandle, minLength, supabase]
+  );
 
+  // Effect to trigger handle check when value changes
   useEffect(() => {
     if (value === "") {
       setIsHandleAvailable(false);
       return;
     }
 
-    debouncedCheckHandle(value);
-  }, [value, debouncedCheckHandle]);
+    // Skip for handles that match the current handle
+    if (value === currentHandle) {
+      setIsHandleAvailable(true);
+      return;
+    }
 
+    // Create a debounced function inside the effect
+    const debouncedCheck = debounce(checkHandleAvailability, 300);
+
+    // Call the debounced function
+    debouncedCheck(value);
+
+    // Clean up the debounced call when component unmounts or value changes
+    return () => {
+      debouncedCheck.cancel();
+    };
+  }, [value, checkHandleAvailability, currentHandle]);
+
+  // Effect to notify parent component of status changes
   useEffect(() => {
     if (onAvailabilityChange) {
       onAvailabilityChange({

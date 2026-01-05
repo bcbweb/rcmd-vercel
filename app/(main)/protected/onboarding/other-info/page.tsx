@@ -119,18 +119,24 @@ export default function OtherInfoPage() {
           return;
         }
 
+        // Set initial handle first for proper availability comparison
+        setInitialHandle(profile.handle || "");
+
         // Merge localStorage data with profile data, preferring localStorage
-        setFormData({
+        const updatedFormData = {
           handle: localData?.handle || profile.handle || "",
           location: localData?.location || profile.location || "",
           interests: localData?.interests || profile.interests || [],
           tags: localData?.tags || profile.tags || [],
-        });
+        };
 
-        setInitialHandle(profile.handle || "");
+        setFormData(updatedFormData);
 
-        // Check if handle is available
-        if (profile.handle) {
+        // If using existing handle from profile, it's available by definition
+        if (
+          updatedFormData.handle &&
+          updatedFormData.handle === profile.handle
+        ) {
           setIsHandleAvailable(true);
         }
       } else if (localData) {
@@ -158,16 +164,34 @@ export default function OtherInfoPage() {
 
   const sanitizeHandle = (handle: string) => {
     if (!handle) return "";
-    let sanitized = handle.toLowerCase();
+
+    // Save original value for comparison
+    const originalHandle = handle.toLowerCase();
+
+    // Apply sanitization steps
+    let sanitized = originalHandle;
     sanitized = sanitized.replace(/[^a-z0-9-_]/g, "");
     sanitized = sanitized.replace(/[-_]{2,}/g, "-");
     sanitized = sanitized.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, "");
+
+    // If sanitized value is the same as the original, just return it to avoid re-renders
+    if (sanitized === originalHandle) {
+      return originalHandle;
+    }
+
     return sanitized;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Additional validation to prevent infinite loops
+    if (isCheckingHandle) {
+      toast.error("Please wait for handle validation to complete");
+      return;
+    }
+
+    // Only validate handle if it has changed from the initial value
     if (!isHandleAvailable && formData.handle !== initialHandle) {
       toast.error("Please choose an available handle");
       return;
@@ -182,6 +206,23 @@ export default function OtherInfoPage() {
       if (!user) throw new Error("No authenticated user");
 
       const sanitizedHandle = sanitizeHandle(formData.handle);
+
+      // One more availability check before submitting
+      if (sanitizedHandle !== initialHandle) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("handle")
+          .ilike("handle", sanitizedHandle)
+          .maybeSingle();
+
+        if (data) {
+          toast.error(
+            "This handle is already taken. Please choose another one."
+          );
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
       const { error } = await supabase
         .from("profiles")
@@ -321,12 +362,15 @@ export default function OtherInfoPage() {
             <div className="mt-1">
               <URLHandleInput
                 value={formData.handle}
-                onChange={(handle) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    handle: sanitizeHandle(handle),
-                  }))
-                }
+                onChange={(handle) => {
+                  // Only update if handle has changed to prevent unnecessary revalidation
+                  if (formData.handle !== handle) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      handle: sanitizeHandle(handle),
+                    }));
+                  }
+                }}
                 currentHandle={initialHandle}
                 onAvailabilityChange={(status) => {
                   setIsCheckingHandle(status.isChecking);
