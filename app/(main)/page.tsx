@@ -10,6 +10,7 @@ import { Business, Profile, RCMD } from "@/types";
 import { getHomepage } from "@/lib/sanity";
 import Link from "next/link";
 import SanityImage from "@/components/common/SanityImage";
+import { redirect } from "next/navigation";
 
 // Define types for Sanity data
 interface SanityImage {
@@ -71,6 +72,15 @@ interface SanityHomepage {
 
 export default async function Index() {
   const supabase = await createClient();
+
+  // Check if user is authenticated and redirect to profile if so
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/protected/profile");
+  }
 
   // Fetch Sanity homepage data
   const homepageData: SanityHomepage = await getHomepage();
