@@ -6,12 +6,23 @@ import { SubmitButton } from "@/components/common/forms";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function Signup() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { status } = useAuthStore();
   const error = searchParams.get("error");
   const success = searchParams.get("success");
+
+  // Redirect to profile page if already logged in
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/protected/profile");
+    }
+  }, [status, router]);
 
   // Create a message object from search params
   let message: Message | null = null;
