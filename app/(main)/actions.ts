@@ -66,19 +66,44 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-in", "Invalid login credentials");
   }
 
-  // Check onboarding status
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_onboarded")
+  // Check onboarding status - get active profile
+  let activeProfileId: string | null = null;
+  const { data: activeProfile } = await supabase
+    .from("user_active_profiles")
+    .select("profile_id")
     .eq("auth_user_id", data.user.id)
     .single();
+
+  if (activeProfile) {
+    activeProfileId = activeProfile.profile_id;
+  } else {
+    // Fallback: get the first profile for the user
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("auth_user_id", data.user.id)
+      .order("created_at", { ascending: true })
+      .limit(1);
+
+    if (profiles && profiles.length > 0) {
+      activeProfileId = profiles[0].id;
+    }
+  }
 
   // Add a query parameter to indicate this is a redirect from sign-in
   // This helps middleware avoid premature redirects
 
-  // Redirect based on onboarding status
-  if (!profile?.is_onboarded) {
-    return redirect("/protected/onboarding?from=signin");
+  // Redirect based on onboarding status of active profile
+  if (activeProfileId) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_onboarded")
+      .eq("id", activeProfileId)
+      .single();
+
+    if (!profile?.is_onboarded) {
+      return redirect("/protected/onboarding?from=signin");
+    }
   }
 
   return redirect("/protected/profile?from=signin");

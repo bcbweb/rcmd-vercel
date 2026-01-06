@@ -14,14 +14,40 @@ export async function generateMetadata(): Promise<Metadata> {
     redirect("/sign-in");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_onboarded")
+  // Get active profile ID from user_active_profiles
+  let profileId: string | null = null;
+  const { data: activeProfile } = await supabase
+    .from("user_active_profiles")
+    .select("profile_id")
     .eq("auth_user_id", user.id)
     .single();
 
-  if (profile?.is_onboarded) {
-    redirect("/protected/profile/rcmds");
+  if (activeProfile) {
+    profileId = activeProfile.profile_id;
+  } else {
+    // Fallback: get the first profile for the user
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("auth_user_id", user.id)
+      .order("created_at", { ascending: true })
+      .limit(1);
+
+    if (profiles && profiles.length > 0) {
+      profileId = profiles[0].id;
+    }
+  }
+
+  if (profileId) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_onboarded")
+      .eq("id", profileId)
+      .single();
+
+    if (profile?.is_onboarded) {
+      redirect("/protected/profile/rcmds");
+    }
   }
 
   return {
