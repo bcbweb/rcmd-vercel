@@ -61,7 +61,8 @@ export default function ProfileSwitchPage() {
       console.log("[DEBUG] Loading profiles for auth user:", authUser.id);
 
       // Fetch all profiles for this authenticated user
-      // Include auth_user_id in the select so we can filter client-side if needed
+      // RLS should restrict this to only profiles where auth.uid() = auth_user_id
+      // But we'll also filter client-side as a safety measure
       const { data, error } = await supabase
         .from("profiles")
         .select(
@@ -75,29 +76,29 @@ export default function ProfileSwitchPage() {
         throw error;
       }
 
-      console.log(
-        `[DEBUG] Found ${data?.length || 0} profiles for user ${authUser.id}`
-      );
-
-      // Filter profiles client-side to ensure we only show profiles belonging to this user
-      // This is a safety measure in case RLS policies are too permissive
+      // Strictly filter profiles client-side to ensure we only show profiles belonging to this user
+      // Convert both to strings for comparison to avoid type mismatches
       const filteredProfiles = (data || []).filter((profile: Profile) => {
-        // Only include profiles that belong to the authenticated user
-        return profile.auth_user_id === authUser.id;
+        if (!profile.auth_user_id) return false;
+        // Ensure both are strings for comparison
+        const profileUserId = String(profile.auth_user_id);
+        const authUserId = String(authUser.id);
+        return profileUserId === authUserId;
       });
 
-      if (data && data.length > 0) {
-        console.log(
-          "[DEBUG] All profiles returned:",
-          data.map((p: Profile) => ({
-            id: p.id,
-            handle: p.handle,
-            auth_user_id: p.auth_user_id,
-          }))
-        );
-        console.log(
-          "[DEBUG] Filtered profiles (should match auth user):",
-          filteredProfiles.map((p: Profile) => ({
+      console.log(
+        `[DEBUG] Found ${data?.length || 0} profiles, filtered to ${filteredProfiles.length} for user ${authUser.id}`
+      );
+
+      // Log any mismatches for debugging
+      if (data && data.length > filteredProfiles.length) {
+        const mismatches = data.filter((p: Profile) => {
+          if (!p.auth_user_id) return true;
+          return String(p.auth_user_id) !== String(authUser.id);
+        });
+        console.warn(
+          "[DEBUG] Found profiles that don't match auth user:",
+          mismatches.map((p: Profile) => ({
             id: p.id,
             handle: p.handle,
             auth_user_id: p.auth_user_id,
