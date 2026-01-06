@@ -278,18 +278,46 @@ export default function ProfileHeaderMain({
 
   const handleMakeDefault = async (pageId: string) => {
     try {
-      // Get profile ID first
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("auth_user_id", userId)
-        .single();
+      // Get active profile ID from profile store or fetch it
+      let profileId: string | null = null;
 
-      if (!profile) {
-        throw new Error("Profile not found");
+      // First try to get from profile store
+      const profileState = useProfileStore.getState();
+      if (profileState.profile?.id) {
+        profileId = profileState.profile.id;
+      } else {
+        // Fallback: get the active profile from database
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const { data: activeProfile } = await supabase
+            .from("user_active_profiles")
+            .select("profile_id")
+            .eq("auth_user_id", user.id)
+            .single();
+
+          if (activeProfile) {
+            profileId = activeProfile.profile_id;
+          } else {
+            // Last resort: get the first profile for the user
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("id")
+              .eq("auth_user_id", user.id)
+              .order("created_at", { ascending: true })
+              .limit(1);
+
+            if (profiles && profiles.length > 0) {
+              profileId = profiles[0].id;
+            }
+          }
+        }
       }
 
-      const profileId = profile.id;
+      if (!profileId) {
+        throw new Error("Profile not found");
+      }
 
       // Find if it's a custom page
       const matchingPage = customPages.find((page) => page.id === pageId);
@@ -306,44 +334,49 @@ export default function ProfileHeaderMain({
         }
       }
 
-      try {
-        if (isString(defaultPageType)) {
-          try {
-            if (defaultPageType === "custom" && pageId) {
-              await supabase
-                .from("profiles")
-                .update({
-                  default_page_type: "custom",
-                  default_page_id: pageId,
-                })
-                .eq("id", profileId);
-            } else {
-              // For non-custom pages (rcmd, link, collection)
-              await supabase
-                .from("profiles")
-                .update({
-                  default_page_type: defaultPageType,
-                  default_page_id: null,
-                })
-                .eq("id", profileId);
-            }
-          } catch {
-            throw new Error("Failed to update default page");
-          }
-        }
-      } catch {
-        toast.error("Failed to update default page");
-        return;
+      if (!isString(defaultPageType)) {
+        throw new Error("Invalid page type");
       }
+
+      // Update the profile with error handling
+      const updateData: {
+        default_page_type: string;
+        default_page_id?: string | null;
+      } = {
+        default_page_type: defaultPageType,
+      };
+
+      if (defaultPageType === "custom" && pageId) {
+        updateData.default_page_id = pageId;
+      } else {
+        updateData.default_page_id = null;
+      }
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update(updateData)
+        .eq("id", profileId);
+
+      if (updateError) {
+        console.error("[MakeDefault] Update error:", updateError);
+        throw new Error(
+          `Failed to update default page: ${updateError.message}`
+        );
+      }
+
+      toast.success("Default page updated successfully");
 
       // Call the onUpdate prop to refresh the parent component
       if (onUpdate) {
         onUpdate();
       }
-
-      toast.success("Default page updated");
-    } catch {
-      toast.error("Failed to update default page");
+    } catch (error) {
+      console.error("[MakeDefault] Error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to update default page";
+      toast.error(errorMessage);
     }
   };
 
