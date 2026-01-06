@@ -454,6 +454,7 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          display_order: number | null
           id: string
           name: string
           owner_id: string | null
@@ -464,6 +465,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           description?: string | null
+          display_order?: number | null
           id?: string
           name: string
           owner_id?: string | null
@@ -474,6 +476,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           description?: string | null
+          display_order?: number | null
           id?: string
           name?: string
           owner_id?: string | null
@@ -688,6 +691,7 @@ export type Database = {
           created_at: string
           creator_id: string | null
           description: string | null
+          display_order: number | null
           id: string
           is_sponsored: boolean
           like_count: number
@@ -709,6 +713,7 @@ export type Database = {
           created_at?: string
           creator_id?: string | null
           description?: string | null
+          display_order?: number | null
           id?: string
           is_sponsored?: boolean
           like_count?: number
@@ -730,6 +735,7 @@ export type Database = {
           created_at?: string
           creator_id?: string | null
           description?: string | null
+          display_order?: number | null
           id?: string
           is_sponsored?: boolean
           like_count?: number
@@ -1016,6 +1022,7 @@ export type Database = {
           last_name: string | null
           location: string | null
           profile_picture_url: string | null
+          profile_type: string | null
           tags: string[] | null
           updated_at: string | null
           view_count: number | null
@@ -1036,6 +1043,7 @@ export type Database = {
           last_name?: string | null
           location?: string | null
           profile_picture_url?: string | null
+          profile_type?: string | null
           tags?: string[] | null
           updated_at?: string | null
           view_count?: number | null
@@ -1056,6 +1064,7 @@ export type Database = {
           last_name?: string | null
           location?: string | null
           profile_picture_url?: string | null
+          profile_type?: string | null
           tags?: string[] | null
           updated_at?: string | null
           view_count?: number | null
@@ -1268,6 +1277,7 @@ export type Database = {
           commission_rate: number | null
           created_at: string | null
           description: string | null
+          display_order: number | null
           featured_image: string | null
           id: string
           is_sponsored: boolean | null
@@ -1295,6 +1305,7 @@ export type Database = {
           commission_rate?: number | null
           created_at?: string | null
           description?: string | null
+          display_order?: number | null
           featured_image?: string | null
           id?: string
           is_sponsored?: boolean | null
@@ -1322,6 +1333,7 @@ export type Database = {
           commission_rate?: number | null
           created_at?: string | null
           description?: string | null
+          display_order?: number | null
           featured_image?: string | null
           id?: string
           is_sponsored?: boolean | null
@@ -1386,6 +1398,39 @@ export type Database = {
           },
         ]
       }
+      user_active_profiles: {
+        Row: {
+          auth_user_id: string
+          profile_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          auth_user_id: string
+          profile_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          auth_user_id?: string
+          profile_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user_active_profile_profile"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_active_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1419,6 +1464,7 @@ export type Database = {
           created_at: string
           creator_id: string | null
           description: string | null
+          display_order: number | null
           id: string
           is_sponsored: boolean
           like_count: number
@@ -1449,6 +1495,7 @@ export type Database = {
           commission_rate: number | null
           created_at: string | null
           description: string | null
+          display_order: number | null
           featured_image: string | null
           id: string
           is_sponsored: boolean | null
@@ -1496,6 +1543,7 @@ export type Database = {
           last_name: string | null
           location: string | null
           profile_picture_url: string | null
+          profile_type: string | null
           tags: string[] | null
           updated_at: string | null
           view_count: number | null
@@ -1585,6 +1633,7 @@ export type Database = {
           created_at: string
           creator_id: string | null
           description: string | null
+          display_order: number | null
           id: string
           is_sponsored: boolean
           like_count: number
@@ -1727,6 +1776,7 @@ export type Database = {
               commission_rate: number | null
               created_at: string | null
               description: string | null
+              display_order: number | null
               featured_image: string | null
               id: string
               is_sponsored: boolean | null
@@ -1782,6 +1832,7 @@ export type Database = {
           commission_rate: number | null
           created_at: string | null
           description: string | null
+          display_order: number | null
           featured_image: string | null
           id: string
           is_sponsored: boolean | null
@@ -1831,8 +1882,35 @@ export type Database = {
         }[]
       }
       next_block_order: { Args: { p_profile_id: string }; Returns: number }
+      reorder_collections: {
+        Args: {
+          p_collection_id: string
+          p_new_order: number
+          p_owner_id?: string
+          p_profile_id?: string
+        }
+        Returns: boolean
+      }
+      reorder_links: {
+        Args: {
+          p_link_id: string
+          p_new_order: number
+          p_owner_id?: string
+          p_profile_id?: string
+        }
+        Returns: boolean
+      }
       reorder_profile_blocks: {
         Args: { p_block_id: string; p_new_order: number; p_profile_id: string }
+        Returns: boolean
+      }
+      reorder_rcmds: {
+        Args: {
+          p_new_order: number
+          p_owner_id?: string
+          p_profile_id?: string
+          p_rcmd_id: string
+        }
         Returns: boolean
       }
       safe_function_call:
@@ -1841,6 +1919,7 @@ export type Database = {
             Returns: Json
           }
         | { Args: { function_name: string; params?: Json }; Returns: Json }
+      set_active_profile: { Args: { p_profile_id: string }; Returns: boolean }
       toggle_link_visibility: {
         Args: { p_link_id: string; p_visibility?: string }
         Returns: {
@@ -1848,6 +1927,7 @@ export type Database = {
           created_at: string
           creator_id: string | null
           description: string | null
+          display_order: number | null
           id: string
           is_sponsored: boolean
           like_count: number
