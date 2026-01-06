@@ -10,6 +10,7 @@ import {
   List,
   Star,
   ArrowLeft,
+  Play,
 } from "lucide-react";
 import { useModalStore } from "@/stores/modal-store";
 
@@ -22,6 +23,7 @@ export default function AddBlockButton() {
     setIsImageBlockModalOpen,
     setIsLinkBlockModalOpen,
     setIsCollectionBlockModalOpen,
+    setIsVideoBlockModalOpen,
   } = useModalStore();
 
   const openBlockTypeSelector = () => {
@@ -75,6 +77,11 @@ export default function AddBlockButton() {
   const handleCollectionSelection = () => {
     setIsModalOpen(false);
     setIsCollectionBlockModalOpen(true);
+  };
+
+  const handleVideoSelection = () => {
+    setIsModalOpen(false);
+    setIsVideoBlockModalOpen(true);
   };
 
   return (
@@ -188,6 +195,19 @@ export default function AddBlockButton() {
                   aria-hidden="true"
                 />
                 <span className="font-medium">Link</span>
+              </button>
+              <button
+                onClick={handleVideoSelection}
+                className="flex flex-col items-center justify-center p-4 border border-gray-200 
+									dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg 
+									hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-900/20 
+									dark:hover:border-blue-700 transition-all"
+              >
+                <Play
+                  className="w-8 h-8 mb-2 text-blue-500"
+                  aria-hidden="true"
+                />
+                <span className="font-medium">Video</span>
               </button>
             </div>
           </div>

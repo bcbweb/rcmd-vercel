@@ -13,6 +13,8 @@ interface ModalStore {
   setIsLinkBlockModalOpen: (isOpen: boolean) => void;
   isCollectionBlockModalOpen: boolean;
   setIsCollectionBlockModalOpen: (isOpen: boolean) => void;
+  isVideoBlockModalOpen: boolean;
+  setIsVideoBlockModalOpen: (isOpen: boolean) => void;
 
   // RCMD Modal state
   isRCMDModalOpen: boolean;
@@ -73,6 +75,14 @@ export const useModalStore = create<ModalStore>()(
           { isCollectionBlockModalOpen: isOpen },
           false,
           "setIsCollectionBlockModalOpen"
+        ),
+
+      isVideoBlockModalOpen: false,
+      setIsVideoBlockModalOpen: (isOpen) =>
+        set(
+          { isVideoBlockModalOpen: isOpen },
+          false,
+          "setIsVideoBlockModalOpen"
         ),
 
       // RCMD Modal

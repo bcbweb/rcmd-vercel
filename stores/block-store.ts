@@ -43,6 +43,15 @@ interface BlockStore {
     pageId?: string,
     showBorder?: boolean
   ) => Promise<boolean>;
+  saveVideoBlock: (
+    profileId: string,
+    videoUrl: string,
+    videoType: "youtube" | "vimeo",
+    videoId: string,
+    caption?: string,
+    pageId?: string,
+    showBorder?: boolean
+  ) => Promise<boolean>;
 }
 
 export const useBlockStore = create<BlockStore>()(
@@ -265,6 +274,59 @@ export const useBlockStore = create<BlockStore>()(
           set({ error: errorMessage, isLoading: false });
           console.error("Error saving collection block:", error);
           return false;
+        }
+      },
+
+      saveVideoBlock: async (
+        profileId: string,
+        videoUrl: string,
+        videoType: "youtube" | "vimeo",
+        videoId: string,
+        caption?: string,
+        pageId?: string,
+        showBorder: boolean = false
+      ) => {
+        const supabase = createClient();
+        set({ isLoading: true, error: null });
+
+        try {
+          if (!profileId) {
+            throw new Error("Profile ID is required");
+          }
+
+          const { data, error } = await supabase.rpc("insert_video_block", {
+            p_profile_id: profileId,
+            p_video_url: videoUrl,
+            p_video_type: videoType,
+            p_video_id: videoId,
+            p_caption: caption || null,
+            p_page_id: pageId || null,
+            p_show_border: showBorder,
+          });
+
+          if (error) {
+            console.error("[DEBUG] insert_video_block RPC error:", error);
+            throw error;
+          }
+
+          if (!data || data.length === 0) {
+            console.warn("[DEBUG] insert_video_block returned no data");
+          }
+
+          set({ isLoading: false });
+          return true;
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : typeof error === "object" &&
+                  error !== null &&
+                  "message" in error
+                ? String(error.message)
+                : "Failed to save video block";
+          set({ error: errorMessage, isLoading: false });
+          console.error("[DEBUG] Error saving video block:", error);
+          throw error; // Re-throw so the modal can show the error
         }
       },
     }),

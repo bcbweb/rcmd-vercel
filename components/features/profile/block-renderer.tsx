@@ -8,6 +8,7 @@ import {
   type LinkBlockType,
   type RCMDBlockType,
   type CollectionBlockWithCollection,
+  type VideoBlockType,
 } from "@/types";
 import { useEffect, useState } from "react";
 import TextBlock from "./blocks/text-block";
@@ -15,6 +16,7 @@ import ImageBlock from "./blocks/image-block";
 import LinkBlock from "./blocks/link-block";
 import RCMDBlock from "./blocks/rcmd-block";
 import CollectionBlock from "./blocks/collection-block";
+import VideoBlock from "./blocks/video-block";
 
 interface Props {
   block: ProfileBlockType;
@@ -38,6 +40,7 @@ export default function BlockRenderer({
   const [rcmdBlock, setRCMDBlock] = useState<RCMDBlockType | null>(null);
   const [collectionBlock, setCollectionBlock] =
     useState<CollectionBlockWithCollection | null>(null);
+  const [videoBlock, setVideoBlock] = useState<VideoBlockType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,6 +95,13 @@ export default function BlockRenderer({
               .eq("profile_block_id", block.id)
               .single();
             break;
+          case "video":
+            query = supabase
+              .from("video_blocks")
+              .select("*")
+              .eq("profile_block_id", block.id)
+              .single();
+            break;
           default:
             setIsLoading(false);
             return;
@@ -115,6 +125,9 @@ export default function BlockRenderer({
             break;
           case "collection":
             setCollectionBlock(data);
+            break;
+          case "video":
+            setVideoBlock(data);
             break;
         }
       } catch (err) {
@@ -275,6 +288,34 @@ export default function BlockRenderer({
     }
   };
 
+  const handleVideoBlockSave = async (
+    updatedBlock: Partial<VideoBlockType>
+  ) => {
+    if (!videoBlock) return;
+
+    try {
+      const { error } = await supabase
+        .from("video_blocks")
+        .update({
+          video_url: updatedBlock.video_url,
+          caption: updatedBlock.caption,
+        })
+        .eq("profile_block_id", block.id);
+
+      if (error) throw error;
+
+      setVideoBlock({
+        ...videoBlock,
+        video_url: updatedBlock.video_url ?? videoBlock.video_url,
+        caption: updatedBlock.caption ?? videoBlock.caption,
+      });
+      onSave?.(block);
+    } catch (err) {
+      console.error("Error saving video block:", err);
+      throw err;
+    }
+  };
+
   if (isLoading) {
     return <div className="animate-pulse h-24 bg-gray-100 rounded-lg"></div>;
   }
@@ -335,6 +376,17 @@ export default function BlockRenderer({
           collection={collectionBlock.collection}
           onDelete={onDelete}
           onSave={() => handleCollectionBlockSave(collectionBlock)}
+          noBorder={noBorder}
+          hideEdit={hideEdit}
+        />
+      );
+    case "video":
+      if (!videoBlock) return null;
+      return (
+        <VideoBlock
+          videoBlock={videoBlock}
+          onDelete={onDelete}
+          onSave={handleVideoBlockSave}
           noBorder={noBorder}
           hideEdit={hideEdit}
         />

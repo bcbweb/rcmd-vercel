@@ -6,6 +6,7 @@ import LinkBlock from "./link-block";
 import RCMDBlock from "./rcmd-block";
 import ImageBlock from "./image-block";
 import CollectionBlock from "./collection-block";
+import VideoBlock from "./video-block";
 import type { ProfileBlockType } from "@/types";
 
 // Create an interface that matches what we're receiving in blocks which
@@ -153,6 +154,7 @@ export default function PublicProfileBlocks({
               {block.type === "collection" && (
                 <CollectionBlock blockId={block.id} />
               )}
+              {block.type === "video" && <VideoBlock blockId={block.id} />}
             </BlockWithSuspense>
           </div>
         );

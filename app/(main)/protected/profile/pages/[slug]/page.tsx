@@ -8,6 +8,7 @@ import {
   ImageBlockModal,
   LinkBlockModal,
   CollectionBlockModal,
+  VideoBlockModal,
   PageConfigModal,
 } from "@/components/features/profile/modals";
 import { createClient } from "@/utils/supabase/client";
@@ -51,6 +52,8 @@ export default function CustomProfilePage() {
     setIsLinkBlockModalOpen,
     isCollectionBlockModalOpen,
     setIsCollectionBlockModalOpen,
+    isVideoBlockModalOpen,
+    setIsVideoBlockModalOpen,
   } = useModalStore();
   const fetchCollections = useCollectionStore(
     (state) => state.fetchCollections
@@ -445,6 +448,12 @@ export default function CustomProfilePage() {
     setIsCollectionBlockModalOpen(false);
   }, [pageId, refreshBlocks, setIsCollectionBlockModalOpen]);
 
+  const handleVideoBlockAdded = useCallback(async () => {
+    if (!pageId) return;
+    await refreshBlocks(pageId);
+    setIsVideoBlockModalOpen(false);
+  }, [pageId, refreshBlocks, setIsVideoBlockModalOpen]);
+
   const handleDeleteBlock = useCallback(
     async (id: string) => {
       toast("Are you sure you want to delete this block?", {
@@ -597,6 +606,14 @@ export default function CustomProfilePage() {
             profileId={profileId}
             pageId={pageId}
             onSuccess={handleCollectionBlockAdded}
+          />
+        )}
+
+        {isVideoBlockModalOpen && (
+          <VideoBlockModal
+            profileId={profileId}
+            pageId={pageId}
+            onSuccess={handleVideoBlockAdded}
           />
         )}
 

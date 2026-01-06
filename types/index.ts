@@ -19,6 +19,7 @@ export type ImageBlockType = TableTypes["image_blocks"]["Row"];
 export type LinkBlockType = TableTypes["link_blocks"]["Row"];
 export type RCMDBlockType = TableTypes["rcmd_blocks"]["Row"];
 export type CollectionBlockType = TableTypes["collection_blocks"]["Row"];
+export type VideoBlockType = TableTypes["video_blocks"]["Row"];
 
 // Custom composite types
 export type CollectionBlockWithCollection = CollectionBlockType & {
