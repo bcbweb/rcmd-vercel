@@ -122,17 +122,43 @@ export default function TextBlockModal({
       setIsSaving(true);
       const content = editor.getHTML();
 
+      // Validate content
+      if (!content || content.trim() === "" || content === "<p></p>") {
+        toast.error("Please enter some text content");
+        return;
+      }
+
+      // Validate profileId
+      if (!profileId) {
+        toast.error("Profile ID is missing. Please refresh the page.");
+        console.error("[DEBUG] profileId is missing:", { profileId, pageId });
+        return;
+      }
+
+      console.log("[DEBUG] Saving text block:", {
+        profileId,
+        pageId,
+        contentLength: content.length,
+      });
+
       const success = await saveTextBlock(profileId, content, pageId);
 
       if (success) {
+        toast.success("Text block added successfully");
         onSuccess();
         setIsTextBlockModalOpen(false);
       } else {
         toast.error("Failed to save text block");
       }
     } catch (error) {
-      console.error("Error saving text block:", error);
-      toast.error("Failed to save text block");
+      console.error("[DEBUG] Error saving text block:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error
+            ? String(error.message)
+            : "Failed to save text block";
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }

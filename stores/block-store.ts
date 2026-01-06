@@ -119,14 +119,29 @@ export const useBlockStore = create<BlockStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          const { error } = await supabase.rpc("insert_text_block", {
+          if (!profileId) {
+            throw new Error("Profile ID is required");
+          }
+
+          if (!content || content.trim() === "" || content === "<p></p>") {
+            throw new Error("Text content cannot be empty");
+          }
+
+          const { data, error } = await supabase.rpc("insert_text_block", {
             p_profile_id: profileId,
             p_text: content,
             p_page_id: pageId || null,
             p_show_border: showBorder,
           });
 
-          if (error) throw error;
+          if (error) {
+            console.error("[DEBUG] insert_text_block RPC error:", error);
+            throw error;
+          }
+
+          if (!data || data.length === 0) {
+            console.warn("[DEBUG] insert_text_block returned no data");
+          }
 
           set({ isLoading: false });
           return true;
@@ -134,10 +149,14 @@ export const useBlockStore = create<BlockStore>()(
           const errorMessage =
             error instanceof Error
               ? error.message
-              : "Failed to save text block";
+              : typeof error === "object" &&
+                  error !== null &&
+                  "message" in error
+                ? String(error.message)
+                : "Failed to save text block";
           set({ error: errorMessage, isLoading: false });
-          console.error("Error saving text block:", error);
-          return false;
+          console.error("[DEBUG] Error saving text block:", error);
+          throw error; // Re-throw so the modal can show the error
         }
       },
 
