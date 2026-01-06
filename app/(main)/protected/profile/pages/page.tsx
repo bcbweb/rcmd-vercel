@@ -151,7 +151,12 @@ export default function ProfilePage() {
             table: "profiles",
             filter: `auth_user_id=eq.${userId}`,
           },
-          (payload) => {
+          (payload: {
+            new?: {
+              default_page_type?: string;
+              default_page_id?: string | null;
+            };
+          }) => {
             console.log("Profile update received in main page:", payload);
             if (payload.new) {
               const { default_page_type, default_page_id } = payload.new;
@@ -323,6 +328,12 @@ export default function ProfilePage() {
           blocks={blocks}
           onMove={moveBlock}
           onDelete={handleDeleteBlock}
+          onSave={async (updatedBlock) => {
+            // Refresh blocks after save to get updated data
+            if (profileId) {
+              await refreshBlocks(profileId);
+            }
+          }}
         />
 
         {isBlockSaving && (

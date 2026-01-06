@@ -114,91 +114,116 @@ export default function CustomProfilePage() {
       setIsLoading(true);
 
       try {
-        // First get user's profile ID
-        try {
-          // First try to fetch with the new columns
-          const { data: profile, error } = await supabase
+        // Get active profile ID from user_active_profiles or current profile
+        let profileId: string | null = null;
+        let profileData: any = null;
+
+        // First try to get active profile from database
+        const { data: activeProfile } = await supabase
+          .from("user_active_profiles")
+          .select("profile_id")
+          .eq("auth_user_id", userId)
+          .single();
+
+        if (activeProfile) {
+          profileId = activeProfile.profile_id;
+        } else {
+          // Fallback: get the first profile for the user
+          const { data: profiles } = await supabase
             .from("profiles")
-            .select("id, handle, default_page_type, default_page_id")
+            .select("id")
             .eq("auth_user_id", userId)
-            .single();
+            .order("created_at", { ascending: true })
+            .limit(1);
 
-          let profileData = null;
-
-          if (error && error.message.includes("does not exist")) {
-            // If the columns don't exist yet, fall back to just getting id and handle
-            const { data: basicData, error: basicError } = await supabase
-              .from("profiles")
-              .select("id, handle")
-              .eq("auth_user_id", userId)
-              .single();
-
-            if (basicError) throw basicError;
-            profileData = {
-              ...basicData,
-              default_page_type: undefined,
-              default_page_id: undefined,
-            };
-          } else if (error) {
-            throw error;
-          } else {
-            // No error, use the data from the first query
-            profileData = profile;
+          if (profiles && profiles.length > 0) {
+            profileId = profiles[0].id;
           }
-
-          if (!profileData) {
-            toast.error("Profile not found");
-            router.push("/protected/profile");
-            return;
-          }
-
-          setProfileId(profileData.id);
-          profileIdRef.current = profileData.id;
-          setHandle(profileData.handle || "");
-
-          // Now get the page details using the slug
-          const { data: page, error: pageError } = await supabase
-            .from("profile_pages")
-            .select("*")
-            .eq("profile_id", profileData.id)
-            .eq("slug", slug)
-            .single();
-
-          if (pageError) {
-            console.error("Error fetching page:", pageError);
-            toast.error("Page not found");
-            router.push("/protected/profile");
-            return;
-          }
-
-          if (!page) {
-            toast.error("Page not found");
-            router.push("/protected/profile");
-            return;
-          }
-
-          setPageId(page.id);
-          pageIdRef.current = page.id;
-          setPageName(page.name);
-
-          // Check if this is the default page only if the columns exist
-          if (profileData.default_page_type !== undefined) {
-            setIsDefaultPage(
-              profileData.default_page_type === "custom" &&
-                profileData.default_page_id === page.id
-            );
-          } else {
-            // Assume it's not a default page if we don't have that data
-            setIsDefaultPage(false);
-          }
-
-          // Fetch blocks for this page
-          await refreshBlocks(page.id);
-        } catch (error) {
-          console.error("Error fetching page data:", error);
-          toast.error("Failed to load page");
-          router.push("/protected/profile");
         }
+
+        if (!profileId) {
+          toast.error("Profile not found");
+          router.push("/protected/profile");
+          return;
+        }
+
+        // Now fetch the full profile data
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, handle, default_page_type, default_page_id")
+          .eq("id", profileId)
+          .single();
+
+        if (profileError) {
+          // If columns don't exist, try without them
+          const { data: basicData, error: basicError } = await supabase
+            .from("profiles")
+            .select("id, handle")
+            .eq("id", profileId)
+            .single();
+
+          if (basicError) throw basicError;
+          profileData = {
+            ...basicData,
+            default_page_type: undefined,
+            default_page_id: undefined,
+          };
+        } else {
+          profileData = profile;
+        }
+
+        if (!profileData) {
+          toast.error("Profile not found");
+          router.push("/protected/profile");
+          return;
+        }
+
+        setProfileId(profileData.id);
+        profileIdRef.current = profileData.id;
+        setHandle(profileData.handle || "");
+
+        // Now get the page details using the slug
+        const { data: page, error: pageError } = await supabase
+          .from("profile_pages")
+          .select("*")
+          .eq("profile_id", profileData.id)
+          .eq("slug", slug)
+          .single();
+
+        if (pageError) {
+          console.error("Error fetching page:", pageError);
+          toast.error("Page not found");
+          router.push("/protected/profile");
+          return;
+        }
+
+        if (!page) {
+          toast.error("Page not found");
+          router.push("/protected/profile");
+          return;
+        }
+
+        setPageId(page.id);
+        pageIdRef.current = page.id;
+        setPageName(page.name);
+
+        // Check if this is the default page only if the columns exist
+        if (profileData.default_page_type !== undefined) {
+          setIsDefaultPage(
+            profileData.default_page_type === "custom" &&
+              profileData.default_page_id === page.id
+          );
+        } else {
+          // Assume it's not a default page if we don't have that data
+          setIsDefaultPage(false);
+        }
+
+        // Fetch blocks for this page
+        await refreshBlocks(page.id);
+      } catch (error) {
+        console.error("Error fetching page data:", error);
+        toast.error("Failed to load page");
+        router.push("/protected/profile");
       } finally {
         setIsLoading(false);
         isFetchingRef.current = false;
@@ -253,7 +278,7 @@ export default function CustomProfilePage() {
             table: "profile_pages",
             filter: `id=eq.${pageIdRef.current}`, // Use the page ID to filter
           },
-          ({ new: newData }) => {
+          ({ new: newData }: any) => {
             if (newData) {
               // Update the page name if it changed
               setPageName(newData.name);
@@ -515,6 +540,12 @@ export default function CustomProfilePage() {
           blocks={blocks}
           onMove={moveBlock}
           onDelete={handleDeleteBlock}
+          onSave={async (updatedBlock) => {
+            // Refresh blocks after save to get updated data
+            if (pageId) {
+              await refreshBlocks(pageId);
+            }
+          }}
         />
 
         {isBlockSaving && (

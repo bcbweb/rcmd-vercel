@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import type { Profile } from "@/types";
 import { toast } from "sonner";
 import { useAuthStore } from "@/stores/auth-store";
+import { useProfileStore } from "@/stores/profile-store";
 import { CoverImage } from "./cover-image";
 import { ProfilePhoto } from "./photo";
 import { ProfileInfo } from "./info";
@@ -92,29 +93,71 @@ export default function ProfileHeaderMain({
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
 
-      // Get profile ID first to pass to the RPC function
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("auth_user_id", userId)
-        .single();
+      // Get active profile ID from profile store or fetch it
+      let profileId: string | null = null;
 
-      if (!profile) throw new Error("Profile not found");
+      // First try to get from profile store
+      const profileState = useProfileStore.getState();
+      if (profileState.profile?.id) {
+        profileId = profileState.profile.id;
+        console.log("[AddPage] Using active profile from store:", profileId);
+      } else {
+        // Fallback: get the active profile from database
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const { data: activeProfile } = await supabase
+            .from("user_active_profiles")
+            .select("profile_id")
+            .eq("auth_user_id", user.id)
+            .single();
 
-      // Call the RPC function
+          if (activeProfile) {
+            profileId = activeProfile.profile_id;
+            console.log("[AddPage] Using active profile from DB:", profileId);
+          } else {
+            // Last resort: get the first profile for the user
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("id")
+              .eq("auth_user_id", user.id)
+              .order("created_at", { ascending: true })
+              .limit(1);
+
+            if (profiles && profiles.length > 0) {
+              profileId = profiles[0].id;
+              console.log("[AddPage] Using first profile:", profileId);
+            }
+          }
+        }
+      }
+
+      // The RPC function will use the active profile internally
+      // But we can verify it exists for better error messages
+      if (!profileId) {
+        throw new Error(
+          "Profile not found. Please ensure you have an active profile."
+        );
+      }
+
+      // Call the RPC function - it uses the active profile from user_active_profiles
       const { error } = await supabase.rpc("insert_profile_page", {
         page_name: pageName.trim(),
         page_slug: slug,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("[AddPage] RPC error:", error);
+        throw error;
+      }
 
       // If this should be the default page, update that as well
       if (isDefault) {
         const { data: newPage } = await supabase
           .from("profile_pages")
           .select("id")
-          .eq("profile_id", profile.id)
+          .eq("profile_id", profileId)
           .eq("slug", slug)
           .single();
 
@@ -125,10 +168,25 @@ export default function ProfileHeaderMain({
 
       toast.success("Page created successfully");
       setIsAddingPage(false);
+
+      // Refresh pages list by calling onUpdate if available
+      // This will trigger fetchPages in the profile store
+      if (onUpdate) {
+        await onUpdate();
+      } else {
+        // Fallback: manually refresh pages from profile store
+        const profileStore = useProfileStore.getState();
+        if (userId) {
+          await profileStore.fetchPages(userId);
+        }
+      }
+
       return true;
     } catch (error) {
       console.error("Error creating page:", error);
-      toast.error("Failed to create page");
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create page";
+      toast.error(errorMessage);
       return false;
     }
   };

@@ -10,6 +10,7 @@ interface Props {
   index: number;
   onMove?: (dragIndex: number, hoverIndex: number) => void;
   onDelete?: (id: string) => void;
+  onSave?: (updatedBlock: ProfileBlockType) => void;
 }
 
 export default function DraggableBlock({
@@ -17,6 +18,7 @@ export default function DraggableBlock({
   index,
   onMove,
   onDelete,
+  onSave,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -53,12 +55,12 @@ export default function DraggableBlock({
         isOver ? "ring-2 ring-blue-500 rounded-lg" : ""
       } ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
     >
-      {/* Not passing onSave to hide the edit button */}
       <BlockRenderer
         block={block}
         onDelete={onDelete ? () => onDelete(block.id) : undefined}
+        onSave={onSave}
         noBorder={!block.show_border}
-        hideEdit={true}
+        hideEdit={false}
       />
     </div>
   );

@@ -132,12 +132,18 @@ export const useProfileStore = create<ProfileState>()(
                 await supabase.rpc("set_active_profile", {
                   p_profile_id: profileId,
                 });
-                console.log("Created and set new profile as active:", profileId);
+                console.log(
+                  "Created and set new profile as active:",
+                  profileId
+                );
               }
             }
 
             // Fetch the active profile
-            console.log("Querying profiles table for profile_id:", activeProfileId);
+            console.log(
+              "Querying profiles table for profile_id:",
+              activeProfileId
+            );
             const { data: profile, error: profileError } = await supabase
               .from("profiles")
               .select(
@@ -249,10 +255,31 @@ export const useProfileStore = create<ProfileState>()(
           try {
             const supabase = createClient();
 
-            // Ensure a profile exists for this user
-            const profileId = await ensureUserProfile(userId);
+            // Get active profile ID from user_active_profiles or current profile
+            let profileId: string | null = null;
+
+            // First try to get from current profile state
+            const currentProfile = get().profile;
+            if (currentProfile?.id) {
+              profileId = currentProfile.id;
+            } else {
+              // Get active profile from database
+              const { data: activeProfile } = await supabase
+                .from("user_active_profiles")
+                .select("profile_id")
+                .eq("auth_user_id", userId)
+                .single();
+
+              if (activeProfile) {
+                profileId = activeProfile.profile_id;
+              } else {
+                // Fallback: ensure a profile exists
+                profileId = await ensureUserProfile(userId);
+              }
+            }
+
             if (!profileId) {
-              throw new Error("Failed to ensure profile exists");
+              throw new Error("Failed to get active profile");
             }
 
             // Now fetch pages using the profile ID

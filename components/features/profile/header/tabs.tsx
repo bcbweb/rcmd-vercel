@@ -116,24 +116,53 @@ export function ProfileTabs({
       // If we don't have profile ID from pages, get it from the auth user
       if (!profileIdRef.current) {
         try {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id, default_page_id, default_page_type")
+          // Get active profile from user_active_profiles
+          const { data: activeProfile } = await supabase
+            .from("user_active_profiles")
+            .select("profile_id")
             .eq("auth_user_id", userId)
             .single();
 
-          if (profile) {
-            profileIdRef.current = profile.id;
-            // While we have fresh data, update local state
-            if (
-              profile.default_page_id !== localDefaultPageId ||
-              profile.default_page_type !== localDefaultPageType
-            ) {
-              setLocalDefaultPageId(profile.default_page_id);
-              setLocalDefaultPageType(profile.default_page_type);
+          if (activeProfile) {
+            profileIdRef.current = activeProfile.profile_id;
+
+            // Also fetch default page info from the profile
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("default_page_id, default_page_type")
+              .eq("id", activeProfile.profile_id)
+              .single();
+
+            if (profile) {
+              if (
+                profile.default_page_id !== localDefaultPageId ||
+                profile.default_page_type !== localDefaultPageType
+              ) {
+                setLocalDefaultPageId(profile.default_page_id);
+                setLocalDefaultPageType(profile.default_page_type);
+              }
             }
           } else {
-            return; // Can't continue without profile ID
+            // Fallback: get the first profile for the user
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("id, default_page_id, default_page_type")
+              .eq("auth_user_id", userId)
+              .order("created_at", { ascending: true })
+              .limit(1);
+
+            if (profiles && profiles.length > 0) {
+              profileIdRef.current = profiles[0].id;
+              if (
+                profiles[0].default_page_id !== localDefaultPageId ||
+                profiles[0].default_page_type !== localDefaultPageType
+              ) {
+                setLocalDefaultPageId(profiles[0].default_page_id);
+                setLocalDefaultPageType(profiles[0].default_page_type);
+              }
+            } else {
+              return; // Can't continue without profile ID
+            }
           }
         } catch (error) {
           console.error("Error fetching profile ID:", error);
@@ -155,7 +184,7 @@ export function ProfileTabs({
             table: "profile_pages",
             filter: `profile_id=eq.${profileId}`,
           },
-          (payload) => {
+          (payload: any) => {
             // Handle different types of events
             if (payload.eventType === "INSERT") {
               // New page added
@@ -208,7 +237,7 @@ export function ProfileTabs({
             table: "profiles",
             filter: `id=eq.${profileId}`,
           },
-          (payload) => {
+          (payload: any) => {
             if (payload.new) {
               setLocalDefaultPageId(payload.new.default_page_id);
               setLocalDefaultPageType(payload.new.default_page_type);
