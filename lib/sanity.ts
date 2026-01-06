@@ -36,17 +36,40 @@ type SanityImageValue =
 // Use fallback values from the sanity.config.js if environment variables are not available
 // This ensures the build process can still access Sanity even if env vars aren't set
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "ce6vefd3";
-// Validate dataset - must be lowercase, alphanumeric, underscores, dashes, max 64 chars
-// Sanity dataset names: lowercase, alphanumeric, underscores, dashes only, max 64 chars
-let dataset = (process.env.NEXT_PUBLIC_SANITY_DATASET || "production").trim();
-// Ensure dataset is valid: lowercase, alphanumeric, underscores, dashes only
-if (dataset) {
-  dataset = dataset
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, "")
-    .substring(0, 64);
+
+// Get dataset from environment variable - be explicit to avoid concatenation issues
+// The error shows dataset was concatenated with other env vars, so we need to be very careful
+const datasetEnv = process.env.NEXT_PUBLIC_SANITY_DATASET;
+let dataset: string;
+
+if (
+  datasetEnv &&
+  typeof datasetEnv === "string" &&
+  datasetEnv.trim().length > 0
+) {
+  // Extract only the valid dataset name part (before any concatenation)
+  // Common valid dataset names: production, development, staging, etc.
+  // Match only the first valid dataset-like string (lowercase, alphanumeric, underscores, dashes)
+  const match = datasetEnv.match(/^([a-z0-9_-]{1,64})/i);
+  if (match && match[1]) {
+    dataset = match[1].toLowerCase();
+    // Ensure it's a reasonable dataset name (not too short, not just numbers)
+    if (dataset.length < 2 || /^\d+$/.test(dataset)) {
+      dataset = "production";
+    }
+  } else {
+    dataset = "production";
+  }
+} else {
+  // Default to production if env var is missing or invalid
+  dataset = "production";
 }
-// Fallback to production if dataset is empty or invalid
+
+// Final validation: ensure dataset is valid Sanity dataset format
+dataset = dataset
+  .toLowerCase()
+  .replace(/[^a-z0-9_-]/g, "")
+  .substring(0, 64);
 if (!dataset || dataset.length === 0) {
   dataset = "production";
 }
