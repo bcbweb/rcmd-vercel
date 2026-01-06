@@ -328,7 +328,7 @@ export default function ProfilePage() {
           blocks={blocks}
           onMove={moveBlock}
           onDelete={handleDeleteBlock}
-          onSave={async (updatedBlock) => {
+          onSave={async () => {
             // Refresh blocks after save to get updated data
             if (profileId) {
               await refreshBlocks(profileId);

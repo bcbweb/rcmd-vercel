@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
@@ -35,13 +35,7 @@ export default function ProfileSwitchPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSwitching, setIsSwitching] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (userId) {
-      loadProfiles();
-    }
-  }, [userId]);
-
-  const loadProfiles = async () => {
+  const loadProfiles = useCallback(async () => {
     if (!userId) return;
 
     try {
@@ -66,7 +60,13 @@ export default function ProfileSwitchPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      loadProfiles();
+    }
+  }, [userId, loadProfiles]);
 
   const handleSwitchProfile = async (profileId: string) => {
     if (!userId) return;

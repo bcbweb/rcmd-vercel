@@ -116,7 +116,12 @@ export default function CustomProfilePage() {
       try {
         // Get active profile ID from user_active_profiles or current profile
         let profileId: string | null = null;
-        let profileData: any = null;
+        let profileData: {
+          id: string;
+          handle?: string | null;
+          default_page_type?: string;
+          default_page_id?: string | null;
+        } | null = null;
 
         // First try to get active profile from database
         const { data: activeProfile } = await supabase
@@ -278,8 +283,8 @@ export default function CustomProfilePage() {
             table: "profile_pages",
             filter: `id=eq.${pageIdRef.current}`, // Use the page ID to filter
           },
-          ({ new: newData }: any) => {
-            if (newData) {
+          ({ new: newData }: { new?: { name?: string } }) => {
+            if (newData && newData.name) {
               // Update the page name if it changed
               setPageName(newData.name);
               // Also refresh blocks in case display order changed
@@ -540,7 +545,7 @@ export default function CustomProfilePage() {
           blocks={blocks}
           onMove={moveBlock}
           onDelete={handleDeleteBlock}
-          onSave={async (updatedBlock) => {
+          onSave={async () => {
             // Refresh blocks after save to get updated data
             if (pageId) {
               await refreshBlocks(pageId);

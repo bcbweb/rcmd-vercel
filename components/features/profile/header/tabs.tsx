@@ -184,7 +184,11 @@ export function ProfileTabs({
             table: "profile_pages",
             filter: `profile_id=eq.${profileId}`,
           },
-          (payload: any) => {
+          (payload: {
+            eventType: "INSERT" | "UPDATE" | "DELETE";
+            new?: CustomPage;
+            old?: { id: string };
+          }) => {
             // Handle different types of events
             if (payload.eventType === "INSERT") {
               // New page added
@@ -199,7 +203,7 @@ export function ProfileTabs({
               if (payload.new && payload.old) {
                 setLocalPages((current) =>
                   current.map((page) =>
-                    page.id === payload.new.id
+                    page.id === payload.new!.id
                       ? { ...page, ...payload.new }
                       : page
                   )
@@ -209,7 +213,7 @@ export function ProfileTabs({
               // Page deleted
               if (payload.old) {
                 setLocalPages((current) =>
-                  current.filter((page) => page.id !== payload.old.id)
+                  current.filter((page) => page.id !== payload.old!.id)
                 );
 
                 // If the deleted page was the default page, update default page state
@@ -237,10 +241,19 @@ export function ProfileTabs({
             table: "profiles",
             filter: `id=eq.${profileId}`,
           },
-          (payload: any) => {
+          (payload: {
+            new?: {
+              default_page_id?: string | null;
+              default_page_type?: string | null;
+            };
+          }) => {
             if (payload.new) {
-              setLocalDefaultPageId(payload.new.default_page_id);
-              setLocalDefaultPageType(payload.new.default_page_type);
+              if (payload.new.default_page_id !== undefined) {
+                setLocalDefaultPageId(payload.new.default_page_id);
+              }
+              if (payload.new.default_page_type !== undefined) {
+                setLocalDefaultPageType(payload.new.default_page_type);
+              }
             }
           }
         )
