@@ -361,6 +361,7 @@ export default function CustomProfilePage() {
           p_profile_id: profileId,
           p_block_id: blockId,
           p_new_order: newOrder,
+          p_page_id: pageId,
         });
 
         if (error) throw error;
