@@ -21,7 +21,7 @@ export default function LinksPage() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const userId = useAuthStore((state) => state.userId);
-  const { links, fetchLinks, deleteLink, updateLink } = useLinkStore();
+  const { links, fetchLinks, deleteLink, updateLink, reorderLinks } = useLinkStore();
   const [userHandle, setUserHandle] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string>("");
 
@@ -72,10 +72,14 @@ export default function LinksPage() {
   }, []);
 
   useEffect(() => {
-    if (userId) {
-      fetchLinks();
+    if (userId && profileId) {
+      console.log("[DEBUG] Fetching links for profileId:", profileId);
+      fetchLinks(userId, profileId);
+    } else if (userId) {
+      console.log("[DEBUG] Fetching links for userId:", userId);
+      fetchLinks(userId);
     }
-  }, [userId, fetchLinks]);
+  }, [userId, profileId, fetchLinks]);
 
   useEffect(() => {
     setLinkBlocks(transformLinksToBlocks(links));
@@ -85,7 +89,11 @@ export default function LinksPage() {
     useModalStore.setState({
       onModalSuccess: () => {
         if (userId) {
-          fetchLinks();
+          if (profileId) {
+            fetchLinks(userId, profileId);
+          } else {
+            fetchLinks(userId);
+          }
           console.log("Links page: onModalSuccess callback executed");
         }
       },
@@ -131,6 +139,47 @@ export default function LinksPage() {
     // Refresh profile data to get updated default page settings
     if (userId) {
       fetchProfile(userId);
+    }
+  };
+
+  // Handler for reordering links
+  const handleMoveLink = async (dragIndex: number, hoverIndex: number) => {
+    if (!linkBlocks.length || dragIndex < 0 || hoverIndex < 0) return;
+
+    try {
+      setIsLinksSaving(true);
+
+      const draggedBlock = linkBlocks[dragIndex];
+      if (!draggedBlock?.link_id) return;
+
+      // Calculate new order (1-indexed)
+      const newOrder = hoverIndex + 1;
+
+      // Call the reorder function
+      await reorderLinks(
+        draggedBlock.link_id,
+        newOrder,
+        profileId || undefined,
+        userId || undefined
+      );
+
+      // Refetch to get updated order
+      if (profileId) {
+        await fetchLinks(userId, profileId);
+      } else {
+        await fetchLinks(userId);
+      }
+    } catch (error) {
+      console.error("Error reordering link:", error);
+      toast.error("Failed to reorder link");
+      // Refetch to restore original order
+      if (profileId) {
+        await fetchLinks(userId, profileId);
+      } else {
+        await fetchLinks(userId);
+      }
+    } finally {
+      setIsLinksSaving(false);
     }
   };
 
@@ -187,6 +236,7 @@ export default function LinksPage() {
         initialLinkBlocks={linkBlocks}
         onDelete={handleDeleteLink}
         onSave={handleSaveLink}
+        onMove={handleMoveLink}
       />
 
       {isLinksSaving && (

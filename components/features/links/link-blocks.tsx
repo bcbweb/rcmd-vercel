@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LinkBlock } from "@/components/features/profile/blocks";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import PublicLinkBlocks from "@/components/features/links/public-link-blocks";
+import DraggableLinkBlock from "./draggable-link-block";
 import type { LinkBlockType, Link } from "@/types";
 
 interface Props {
@@ -10,6 +12,7 @@ interface Props {
   links?: Link[];
   onDelete?: (id: string) => void;
   onSave?: (block: Partial<LinkBlockType>) => void;
+  onMove?: (dragIndex: number, hoverIndex: number) => void;
   isPublic?: boolean;
 }
 
@@ -18,6 +21,7 @@ export default function LinkBlocks({
   links = [],
   onDelete,
   onSave,
+  onMove,
   isPublic = false,
 }: Props) {
   const [linkBlocks, setLinkBlocks] =
@@ -27,18 +31,34 @@ export default function LinkBlocks({
     setLinkBlocks(initialLinkBlocks);
   }, [initialLinkBlocks]);
 
+  // Handle move locally for immediate UI feedback
+  const handleMove = (dragIndex: number, hoverIndex: number) => {
+    setLinkBlocks((prevBlocks) => {
+      const newBlocks = [...prevBlocks];
+      const [removed] = newBlocks.splice(dragIndex, 1);
+      newBlocks.splice(hoverIndex, 0, removed);
+      return newBlocks;
+    });
+    // Call parent's onMove to persist the change
+    onMove?.(dragIndex, hoverIndex);
+  };
+
   const renderRegularBlocks = () => {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {linkBlocks.map((block) => (
-          <LinkBlock
-            key={block.id}
-            linkBlock={block}
-            onDelete={onDelete ? () => onDelete(block.id) : undefined}
-            onSave={onSave}
-          />
-        ))}
-      </div>
+      <DndProvider backend={HTML5Backend}>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {linkBlocks.map((block, index) => (
+            <DraggableLinkBlock
+              key={block.id}
+              linkBlock={block}
+              index={index}
+              onMove={handleMove}
+              onDelete={onDelete ? () => onDelete(block.id) : undefined}
+              onSave={onSave}
+            />
+          ))}
+        </div>
+      </DndProvider>
     );
   };
 

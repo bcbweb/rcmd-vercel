@@ -25,12 +25,18 @@ interface CollectionStore {
     rcmdIds: string[];
     profile_id?: string;
   }) => Promise<Collection | null>;
-  fetchCollections: (userId?: string) => Promise<void>;
+  fetchCollections: (userId?: string, profileId?: string) => Promise<void>;
   deleteCollection: (id: string) => Promise<void>;
   updateCollection: (
     id: string,
     updatedCollection: Partial<CollectionWithItems> | any
   ) => Promise<{ data: any; error: string | null }>;
+  reorderCollections: (
+    collectionId: string,
+    newOrder: number,
+    profileId?: string,
+    ownerId?: string
+  ) => Promise<void>;
   updateCollectionItems: (
     collectionId: string,
     rcmdIds: string[],
@@ -114,7 +120,7 @@ export const useCollectionStore = create<CollectionStore>()(
         }
       },
 
-      fetchCollections: async (userId?: string) => {
+      fetchCollections: async (userId?: string, profileId?: string) => {
         const supabase = createClient();
         set({ isLoading: true, error: null });
 
@@ -132,17 +138,64 @@ export const useCollectionStore = create<CollectionStore>()(
             )
             .order("created_at", { ascending: false });
 
-          if (userId) {
-            query = query.eq("owner_id", userId);
+          if (profileId) {
+            // If profileId is explicitly provided, use it
+            console.log("[DEBUG] Querying collections by profile_id:", profileId);
+            query = query.eq("profile_id", profileId);
+          } else if (userId) {
+            // Support both profile_id and legacy owner_id
+            console.log("[DEBUG] Querying collections by profile_id or owner_id:", userId);
+            query = query.or(`profile_id.eq.${userId},owner_id.eq.${userId}`);
           }
 
           const { data, error } = await query;
 
-          if (error) throw error;
+          if (error) {
+            console.error("[DEBUG] Error fetching collections:", error);
+            // If error is about display_order column not existing, that's okay
+            if (
+              error.message?.includes("display_order") ||
+              error.message?.includes("column")
+            ) {
+              console.log(
+                "[DEBUG] display_order column not found, using created_at ordering only"
+              );
+            } else {
+              throw error;
+            }
+          }
+
+          console.log(`[DEBUG] Fetched ${data?.length || 0} collections from database`);
+
+          // Sort client-side by display_order if available, then by created_at
+          let sortedData = data || [];
+          if (sortedData.length > 0) {
+            // Check if any collection has display_order property (column exists)
+            const hasDisplayOrder = sortedData.some(
+              (collection: Collection) =>
+                "display_order" in collection && collection.display_order != null
+            );
+
+            if (hasDisplayOrder) {
+              sortedData = [...sortedData].sort((a, b) => {
+                // If both have display_order, sort by it
+                if (a.display_order != null && b.display_order != null) {
+                  return a.display_order - b.display_order;
+                }
+                // If only one has display_order, prioritize it
+                if (a.display_order != null) return -1;
+                if (b.display_order != null) return 1;
+                // Otherwise sort by created_at
+                const aDate = new Date(a.created_at || 0).getTime();
+                const bDate = new Date(b.created_at || 0).getTime();
+                return bDate - aDate; // descending
+              });
+            }
+          }
 
           set({
             isLoading: false,
-            collections: data as Collection[],
+            collections: sortedData as Collection[],
           });
         } catch (error) {
           const errorMessage =
@@ -752,6 +805,59 @@ export const useCollectionStore = create<CollectionStore>()(
             data: null,
             error: error.message || "Failed to update collection",
           };
+        }
+      },
+
+      reorderCollections: async (
+        collectionId: string,
+        newOrder: number,
+        profileId?: string,
+        ownerId?: string
+      ) => {
+        const supabase = createClient();
+        set({ isLoading: true, error: null });
+
+        try {
+          const { error } = await supabase.rpc("reorder_collections", {
+            p_collection_id: collectionId,
+            p_new_order: newOrder,
+            p_profile_id: profileId || null,
+            p_owner_id: ownerId || null,
+          });
+
+          if (error) {
+            // Check if the function doesn't exist (migration not applied)
+            if (
+              error.message?.includes("Could not find the function") ||
+              error.code === "PGRST202"
+            ) {
+              console.error(
+                "[DEBUG] reorder_collections function not found. Please apply migration: supabase/migrations/20250115_add_display_order_to_collections.sql"
+              );
+              throw new Error(
+                "Reordering is not available yet. Please apply the database migration first."
+              );
+            }
+            throw error;
+          }
+
+          // Refetch collections to get updated order
+          const currentState = get();
+          if (profileId) {
+            await currentState.fetchCollections(ownerId, profileId);
+          } else if (ownerId) {
+            await currentState.fetchCollections(ownerId);
+          } else {
+            await currentState.fetchCollections();
+          }
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Failed to reorder collections";
+          console.error("Error reordering collections:", errorMessage);
+          set({ error: errorMessage, isLoading: false });
+          throw error;
         }
       },
     }),

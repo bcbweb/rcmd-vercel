@@ -21,7 +21,8 @@ export default function RCMDsPage() {
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const userId = useAuthStore((state) => state.userId);
-  const { rcmds, fetchRCMDs, deleteRCMD, updateRCMD } = useRCMDStore();
+  const { rcmds, fetchRCMDs, deleteRCMD, updateRCMD, reorderRCMDs } =
+    useRCMDStore();
   const [userHandle, setUserHandle] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string>("");
 
@@ -73,7 +74,10 @@ export default function RCMDsPage() {
 
   // Update blocks when RCMDs change
   useEffect(() => {
-    setRCMDBlocks(transformRCMDsToBlocks(rcmds));
+    console.log("[DEBUG] RCMDs changed, count:", rcmds.length);
+    const blocks = transformRCMDsToBlocks(rcmds);
+    console.log("[DEBUG] Transformed to blocks, count:", blocks.length);
+    setRCMDBlocks(blocks);
   }, [rcmds, transformRCMDsToBlocks]);
 
   // Set up modal success handler
@@ -133,6 +137,39 @@ export default function RCMDsPage() {
     }
   };
 
+  // Handler for reordering RCMDs
+  const handleMoveRCMD = async (dragIndex: number, hoverIndex: number) => {
+    if (!rcmdBlocks.length || dragIndex < 0 || hoverIndex < 0) return;
+
+    try {
+      setIsRCMDSaving(true);
+
+      const draggedBlock = rcmdBlocks[dragIndex];
+      if (!draggedBlock?.rcmd_id) return;
+
+      // Calculate new order (1-indexed)
+      const newOrder = hoverIndex + 1;
+
+      // Call the reorder function
+      await reorderRCMDs(
+        draggedBlock.rcmd_id,
+        newOrder,
+        profileId || undefined,
+        userId || undefined
+      );
+
+      // Refetch to get updated order
+      await fetchRCMDs();
+    } catch (error) {
+      console.error("Error reordering RCMD:", error);
+      toast.error("Failed to reorder RCMD");
+      // Refetch to restore original order
+      await fetchRCMDs();
+    } finally {
+      setIsRCMDSaving(false);
+    }
+  };
+
   return (
     <div className="max-w-screen-xl mx-auto relative">
       <div className="flex justify-between items-center border-b pb-4 mb-4">
@@ -186,6 +223,7 @@ export default function RCMDsPage() {
         initialRCMDBlocks={rcmdBlocks}
         onDelete={handleDeleteRCMD}
         onSave={handleSaveRCMD}
+        onMove={handleMoveRCMD}
       />
 
       {isRCMDSaving && (

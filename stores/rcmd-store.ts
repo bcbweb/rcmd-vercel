@@ -29,6 +29,12 @@ interface RCMDStore {
   fetchRCMDs: (userId?: string) => Promise<void>;
   deleteRCMD: (id: string) => Promise<void>;
   updateRCMD: (id: string, updates: Partial<RCMD>) => Promise<void>;
+  reorderRCMDs: (
+    rcmdId: string,
+    newOrder: number,
+    profileId?: string,
+    ownerId?: string
+  ) => Promise<void>;
 }
 
 export const useRCMDStore = create<RCMDStore>((set, get) => ({
@@ -99,6 +105,8 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
+      // Build the query - use created_at as primary sort for now
+      // display_order will be used for client-side sorting if available
       let query = supabase
         .from("rcmds")
         .select("*")
@@ -135,10 +143,45 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        // If error is about display_order column not existing, that's okay
+        // We'll just use created_at ordering
+        if (error.message?.includes("display_order")) {
+          console.log(
+            "[DEBUG] display_order column not found, using created_at ordering only"
+          );
+        } else {
+          throw error;
+        }
+      }
 
-      console.log(`Found ${data?.length || 0} RCMDs`);
-      set({ rcmds: data || [], isLoading: false });
+      // Sort client-side by display_order if available, then by created_at
+      let sortedData = data || [];
+      if (sortedData.length > 0) {
+        // Check if any RCMD has display_order property (column exists)
+        const hasDisplayOrder = sortedData.some(
+          (rcmd: RCMD) => "display_order" in rcmd && rcmd.display_order != null
+        );
+
+        if (hasDisplayOrder) {
+          sortedData = [...sortedData].sort((a, b) => {
+            // If both have display_order, sort by it
+            if (a.display_order != null && b.display_order != null) {
+              return a.display_order - b.display_order;
+            }
+            // If only one has display_order, prioritize it
+            if (a.display_order != null) return -1;
+            if (b.display_order != null) return 1;
+            // Otherwise sort by created_at
+            const aDate = new Date(a.created_at || 0).getTime();
+            const bDate = new Date(b.created_at || 0).getTime();
+            return bDate - aDate; // descending
+          });
+        }
+      }
+
+      console.log(`Found ${sortedData.length} RCMDs`);
+      set({ rcmds: sortedData, isLoading: false });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to fetch RCMDs";
@@ -232,6 +275,51 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         });
       }
 
+      throw error;
+    }
+  },
+
+  reorderRCMDs: async (
+    rcmdId: string,
+    newOrder: number,
+    profileId?: string,
+    ownerId?: string
+  ) => {
+    const supabase = createClient();
+    set({ isLoading: true, error: null });
+
+    try {
+      const { error } = await supabase.rpc("reorder_rcmds", {
+        p_rcmd_id: rcmdId,
+        p_new_order: newOrder,
+        p_profile_id: profileId || null,
+        p_owner_id: ownerId || null,
+      });
+
+      if (error) {
+        // Check if the function doesn't exist (migration not applied)
+        if (
+          error.message?.includes("Could not find the function") ||
+          error.code === "PGRST202"
+        ) {
+          console.error(
+            "[DEBUG] reorder_rcmds function not found. Please apply migration: supabase/migrations/20250115_add_display_order_to_rcmds.sql"
+          );
+          throw new Error(
+            "Reordering is not available yet. Please apply the database migration first."
+          );
+        }
+        throw error;
+      }
+
+      // Refetch RCMDs to get updated order
+      const currentState = get();
+      await currentState.fetchRCMDs(profileId || ownerId);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to reorder RCMDs";
+      console.error("Error reordering RCMDs:", errorMessage);
+      set({ error: errorMessage, isLoading: false });
       throw error;
     }
   },

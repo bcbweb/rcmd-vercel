@@ -27,8 +27,13 @@ export default function CollectionsPage() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const userId = useAuthStore((state) => state.userId);
-  const { collections, fetchCollections, deleteCollection, updateCollection } =
-    useCollectionStore();
+  const {
+    collections,
+    fetchCollections,
+    deleteCollection,
+    updateCollection,
+    reorderCollections,
+  } = useCollectionStore();
   const [userHandle, setUserHandle] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string>("");
 
@@ -82,10 +87,14 @@ export default function CollectionsPage() {
   );
 
   useEffect(() => {
-    if (userId) {
-      fetchCollections();
+    if (userId && profileId) {
+      console.log("[DEBUG] Fetching collections for profileId:", profileId);
+      fetchCollections(userId, profileId);
+    } else if (userId) {
+      console.log("[DEBUG] Fetching collections for userId:", userId);
+      fetchCollections(userId);
     }
-  }, [userId, fetchCollections]);
+  }, [userId, profileId, fetchCollections]);
 
   useEffect(() => {
     setCollectionBlocks(transformCollectionsToBlocks(collections));
@@ -95,7 +104,11 @@ export default function CollectionsPage() {
     useModalStore.setState({
       onModalSuccess: () => {
         if (userId) {
-          fetchCollections();
+          if (profileId) {
+            fetchCollections(userId, profileId);
+          } else {
+            fetchCollections(userId);
+          }
         }
       },
     });
@@ -140,6 +153,50 @@ export default function CollectionsPage() {
     // Refresh profile data to get updated default page settings
     if (userId) {
       fetchProfile(userId);
+    }
+  };
+
+  // Handler for reordering collections
+  const handleMoveCollection = async (
+    dragIndex: number,
+    hoverIndex: number
+  ) => {
+    if (!collectionBlocks.length || dragIndex < 0 || hoverIndex < 0) return;
+
+    try {
+      setIsCollectionSaving(true);
+
+      const draggedBlock = collectionBlocks[dragIndex];
+      if (!draggedBlock?.collection_id) return;
+
+      // Calculate new order (1-indexed)
+      const newOrder = hoverIndex + 1;
+
+      // Call the reorder function
+      await reorderCollections(
+        draggedBlock.collection_id,
+        newOrder,
+        profileId || undefined,
+        userId ? userId : undefined
+      );
+
+      // Refetch to get updated order
+      if (profileId) {
+        await fetchCollections(userId || undefined, profileId);
+      } else {
+        await fetchCollections(userId || undefined);
+      }
+    } catch (error) {
+      console.error("Error reordering collection:", error);
+      toast.error("Failed to reorder collection");
+      // Refetch to restore original order
+      if (profileId) {
+        await fetchCollections(userId || undefined, profileId);
+      } else {
+        await fetchCollections(userId || undefined);
+      }
+    } finally {
+      setIsCollectionSaving(false);
     }
   };
 
@@ -196,6 +253,7 @@ export default function CollectionsPage() {
         initialCollectionBlocks={collectionBlocks}
         onDelete={handleDeleteCollection}
         onSave={handleSaveCollection}
+        onMove={handleMoveCollection}
       />
 
       {isCollectionSaving && (
