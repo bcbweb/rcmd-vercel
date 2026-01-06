@@ -49,7 +49,9 @@ export default function DraggableBlock({
     <div
       ref={ref}
       style={{ opacity: isDragging ? 0.5 : 1 }}
-      className={`relative ${isOver ? "border-2 border-blue-500" : ""}`}
+      className={`relative transition-all ${
+        isOver ? "ring-2 ring-blue-500 rounded-lg" : ""
+      } ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
     >
       {/* Not passing onSave to hide the edit button */}
       <BlockRenderer
