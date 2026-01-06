@@ -142,10 +142,14 @@ export default function ProfileHeaderMain({
       }
 
       // Call the RPC function - it uses the active profile from user_active_profiles
-      const { error } = await supabase.rpc("insert_profile_page", {
-        page_name: pageName.trim(),
-        page_slug: slug,
-      });
+      // The function will automatically handle duplicate slugs by appending numbers
+      const { data: newPageId, error } = await supabase.rpc(
+        "insert_profile_page",
+        {
+          page_name: pageName.trim(),
+          page_slug: slug,
+        }
+      );
 
       if (error) {
         console.error("[AddPage] RPC error:", error);
@@ -153,17 +157,8 @@ export default function ProfileHeaderMain({
       }
 
       // If this should be the default page, update that as well
-      if (isDefault) {
-        const { data: newPage } = await supabase
-          .from("profile_pages")
-          .select("id")
-          .eq("profile_id", profileId)
-          .eq("slug", slug)
-          .single();
-
-        if (newPage) {
-          await handleMakeDefault(newPage.id);
-        }
+      if (isDefault && newPageId) {
+        await handleMakeDefault(newPageId);
       }
 
       toast.success("Page created successfully");
