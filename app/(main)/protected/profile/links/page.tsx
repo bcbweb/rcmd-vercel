@@ -21,7 +21,8 @@ export default function LinksPage() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const userId = useAuthStore((state) => state.userId);
-  const { links, fetchLinks, deleteLink, updateLink, reorderLinks } = useLinkStore();
+  const { links, fetchLinks, deleteLink, updateLink, reorderLinks } =
+    useLinkStore();
   const [userHandle, setUserHandle] = useState<string | null>(null);
   const [profileId, setProfileId] = useState<string>("");
 
@@ -98,7 +99,7 @@ export default function LinksPage() {
         }
       },
     });
-  }, [userId, fetchLinks]);
+  }, [userId, profileId, fetchLinks]);
 
   // Handle link deletion
   const handleDeleteLink = async (id: string) => {
@@ -165,18 +166,18 @@ export default function LinksPage() {
 
       // Refetch to get updated order
       if (profileId) {
-        await fetchLinks(userId, profileId);
+        await fetchLinks(userId || undefined, profileId);
       } else {
-        await fetchLinks(userId);
+        await fetchLinks(userId || undefined);
       }
     } catch (error) {
       console.error("Error reordering link:", error);
       toast.error("Failed to reorder link");
       // Refetch to restore original order
       if (profileId) {
-        await fetchLinks(userId, profileId);
+        await fetchLinks(userId || undefined, profileId);
       } else {
-        await fetchLinks(userId);
+        await fetchLinks(userId || undefined);
       }
     } finally {
       setIsLinksSaving(false);

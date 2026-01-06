@@ -112,7 +112,7 @@ export default function CollectionsPage() {
         }
       },
     });
-  }, [userId, fetchCollections]);
+  }, [userId, profileId, fetchCollections]);
 
   // Handle collection deletion
   const handleDeleteCollection = async (id: string) => {

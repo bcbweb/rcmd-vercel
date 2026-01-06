@@ -4,7 +4,6 @@ import { useRef } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { CollectionBlock } from "@/components/features/profile/blocks";
 import type { CollectionBlockType, CollectionWithItems } from "@/types";
-import { useCollectionStore } from "@/stores/collection-store";
 
 interface Props {
   collectionBlock: CollectionBlockType;
@@ -58,10 +57,11 @@ export default function DraggableCollectionBlock({
     >
       <CollectionBlock
         collection={collection}
-        onDelete={onDelete ? () => onDelete(collectionBlock.collection_id!) : undefined}
+        onDelete={
+          onDelete ? () => onDelete(collectionBlock.collection_id!) : undefined
+        }
         onSave={onSave}
       />
     </div>
   );
 }
-
