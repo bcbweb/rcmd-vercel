@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { createClient } from "@/utils/supabase/client";
 import type { Collection, RCMDVisibility, CollectionWithItems } from "@/types";
+import { useProfileStore } from "@/stores/profile-store";
 
 // Define the RCMDVisibility enum for use as values
 enum RCMDVisibilityEnum {
@@ -54,7 +55,7 @@ interface CollectionStore {
 
 export const useCollectionStore = create<CollectionStore>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       isLoading: false,
       error: null,
       currentCollection: null,
@@ -65,6 +66,34 @@ export const useCollectionStore = create<CollectionStore>()(
         set({ isLoading: true, error: null });
 
         try {
+          // Get active profile_id from profile store if not provided
+          let activeProfileId = input.profile_id;
+          if (!activeProfileId) {
+            const profileState = useProfileStore.getState();
+            if (profileState.profile?.id) {
+              activeProfileId = profileState.profile.id;
+              console.log(
+                "[Collection Store] Using active profile_id:",
+                activeProfileId
+              );
+            } else {
+              // Fallback: get the active profile from database
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+              if (user) {
+                const { data: activeProfile } = await supabase
+                  .from("user_active_profiles")
+                  .select("profile_id")
+                  .eq("auth_user_id", user.id)
+                  .single();
+                if (activeProfile) {
+                  activeProfileId = activeProfile.profile_id;
+                }
+              }
+            }
+          }
+
           const { data: collection, error } = await supabase.rpc(
             "insert_collection",
             {
@@ -74,7 +103,7 @@ export const useCollectionStore = create<CollectionStore>()(
                 visibility: input.visibility,
                 linkIds: input.linkIds,
                 rcmdIds: input.rcmdIds,
-                profile_id: input.profile_id,
+                profile_id: activeProfileId,
               },
             }
           );
@@ -138,14 +167,58 @@ export const useCollectionStore = create<CollectionStore>()(
             )
             .order("created_at", { ascending: false });
 
-          if (profileId) {
-            // If profileId is explicitly provided, use it
-            console.log("[DEBUG] Querying collections by profile_id:", profileId);
-            query = query.eq("profile_id", profileId);
+          // Get active profile_id from profile store
+          let activeProfileId: string | undefined = profileId;
+          if (!activeProfileId) {
+            const profileState = useProfileStore.getState();
+            if (profileState.profile?.id) {
+              activeProfileId = profileState.profile.id;
+              console.log(
+                "[Collection Store] Using active profile_id from store:",
+                activeProfileId
+              );
+            } else {
+              // Fallback: get the active profile from database
+              const {
+                data: { user },
+              } = await supabase.auth.getUser();
+              if (user) {
+                const { data: activeProfile } = await supabase
+                  .from("user_active_profiles")
+                  .select("profile_id")
+                  .eq("auth_user_id", user.id)
+                  .single();
+                if (activeProfile) {
+                  activeProfileId = activeProfile.profile_id;
+                  console.log(
+                    "[Collection Store] Using active profile_id from DB:",
+                    activeProfileId
+                  );
+                }
+              }
+            }
+          }
+
+          if (activeProfileId) {
+            // Use active profile_id to filter collections - they are unique per profile
+            query = query.eq("profile_id", activeProfileId);
           } else if (userId) {
-            // Support both profile_id and legacy owner_id
-            console.log("[DEBUG] Querying collections by profile_id or owner_id:", userId);
+            // Legacy support: if no active profile, support both profile_id and owner_id
             query = query.or(`profile_id.eq.${userId},owner_id.eq.${userId}`);
+          } else {
+            const {
+              data: { user },
+              error: userError,
+            } = await supabase.auth.getUser();
+            if (userError) throw userError;
+            if (!user) throw new Error("No user found");
+
+            // Fall back to owner_id for backward compatibility
+            console.log(
+              "[Collection Store] No active profile found, falling back to owner_id:",
+              user.id
+            );
+            query = query.eq("owner_id", user.id);
           }
 
           const { data, error } = await query;
@@ -165,7 +238,9 @@ export const useCollectionStore = create<CollectionStore>()(
             }
           }
 
-          console.log(`[DEBUG] Fetched ${data?.length || 0} collections from database`);
+          console.log(
+            `[DEBUG] Fetched ${data?.length || 0} collections from database`
+          );
 
           // Sort client-side by display_order if available, then by created_at
           let sortedData = data || [];
@@ -173,7 +248,8 @@ export const useCollectionStore = create<CollectionStore>()(
             // Check if any collection has display_order property (column exists)
             const hasDisplayOrder = sortedData.some(
               (collection: Collection) =>
-                "display_order" in collection && collection.display_order != null
+                "display_order" in collection &&
+                collection.display_order != null
             );
 
             if (hasDisplayOrder) {

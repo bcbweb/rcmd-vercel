@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { createClient } from "@/utils/supabase/client";
 import type { RCMD } from "@/types";
+import { useProfileStore } from "@/stores/profile-store";
 
 interface RCMDStore {
   rcmds: RCMD[];
@@ -64,6 +65,31 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
+      // Get active profile_id from profile store if not provided
+      let activeProfileId = profile_id;
+      if (!activeProfileId) {
+        const profileState = useProfileStore.getState();
+        if (profileState.profile?.id) {
+          activeProfileId = profileState.profile.id;
+          console.log("[RCMD Store] Using active profile_id:", activeProfileId);
+        } else {
+          // Fallback: get the active profile from database
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          if (user) {
+            const { data: activeProfile } = await supabase
+              .from("user_active_profiles")
+              .select("profile_id")
+              .eq("auth_user_id", user.id)
+              .single();
+            if (activeProfile) {
+              activeProfileId = activeProfile.profile_id;
+            }
+          }
+        }
+      }
+
       const locationData = location
         ? {
             placeId: location.placeId,
@@ -81,7 +107,7 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         p_tags: tags,
         p_url: url,
         p_location: locationData,
-        p_profile_id: profile_id,
+        p_profile_id: activeProfileId,
       });
 
       if (error) throw error;
@@ -112,8 +138,41 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (userId) {
-        // Support both profile_id and legacy owner_id
+      // Get active profile_id from profile store
+      let activeProfileId: string | undefined;
+      const profileState = useProfileStore.getState();
+      if (profileState.profile?.id) {
+        activeProfileId = profileState.profile.id;
+        console.log(
+          "[RCMD Store] Using active profile_id from store:",
+          activeProfileId
+        );
+      } else {
+        // Fallback: get the active profile from database
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const { data: activeProfile } = await supabase
+            .from("user_active_profiles")
+            .select("profile_id")
+            .eq("auth_user_id", user.id)
+            .single();
+          if (activeProfile) {
+            activeProfileId = activeProfile.profile_id;
+            console.log(
+              "[RCMD Store] Using active profile_id from DB:",
+              activeProfileId
+            );
+          }
+        }
+      }
+
+      if (activeProfileId) {
+        // Use active profile_id to filter RCMDs - they are unique per profile
+        query = query.eq("profile_id", activeProfileId);
+      } else if (userId) {
+        // Legacy support: if no active profile, support both profile_id and owner_id
         query = query.or(`profile_id.eq.${userId},owner_id.eq.${userId}`);
       } else {
         const {
@@ -123,22 +182,12 @@ export const useRCMDStore = create<RCMDStore>((set, get) => ({
         if (userError) throw userError;
         if (!user) throw new Error("No user found");
 
-        // First try to find profile_id from profiles table
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("auth_user_id", user.id)
-          .single();
-
-        if (profileData && profileData.id) {
-          // If profile exists, use profile_id
-          console.log("Using profile_id for RCMDs query:", profileData.id);
-          query = query.eq("profile_id", profileData.id);
-        } else {
-          // Fall back to owner_id for backward compatibility
-          console.log("No profile found, falling back to owner_id:", user.id);
-          query = query.eq("owner_id", user.id);
-        }
+        // Fall back to owner_id for backward compatibility
+        console.log(
+          "[RCMD Store] No active profile found, falling back to owner_id:",
+          user.id
+        );
+        query = query.eq("owner_id", user.id);
       }
 
       const { data, error } = await query;

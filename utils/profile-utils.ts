@@ -72,6 +72,7 @@ export async function ensureUserProfile(
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           is_onboarded: false,
+          profile_type: "default", // Default profile type for new users
         })
       );
 
@@ -138,6 +139,7 @@ export async function ensureUserProfile(
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             is_onboarded: false,
+            profile_type: "default", // Default profile type for new users
           },
           {
             onConflict: "auth_user_id",

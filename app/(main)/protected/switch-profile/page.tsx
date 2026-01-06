@@ -162,6 +162,8 @@ export default function ProfileSwitchPage() {
         return "Business";
       case "creator":
         return "Content Creator";
+      case "default":
+        return "Personal";
       default:
         return "Personal";
     }
