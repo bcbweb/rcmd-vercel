@@ -10,17 +10,27 @@ export const createClient = () => {
   if (supabaseClient) return supabaseClient;
 
   try {
+    // Support both publishable key (new) and anon key (legacy) for backward compatibility
+    const apiKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
+                   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!apiKey) {
+      throw new Error("Missing Supabase API key. Please set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    }
+
     supabaseClient = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      apiKey
     );
     return supabaseClient;
   } catch (error) {
     console.error("[Supabase Client] Error creating client:", error);
     // Create a new client as a fallback
+    const apiKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
+                   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     return createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      apiKey!
     );
   }
 };

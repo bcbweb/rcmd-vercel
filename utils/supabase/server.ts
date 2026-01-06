@@ -4,9 +4,17 @@ import { cookies } from "next/headers";
 export const createClient = async () => {
   const cookieStore = await cookies();
 
+  // Support both publishable key (new) and anon key (legacy) for backward compatibility
+  const apiKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
+                 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!apiKey) {
+    throw new Error("Missing Supabase API key. Please set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  }
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    apiKey,
     {
       cookies: {
         getAll() {

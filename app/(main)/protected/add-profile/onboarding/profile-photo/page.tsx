@@ -65,12 +65,16 @@ export default function ProfilePhotoPage() {
       const profileData = JSON.parse(profileDataStr);
       const { basicInfo } = profileData;
 
+      // Get profile type from session storage
+      const profileType = sessionStorage.getItem("new_profile_type") || profileData.profileType || "creator";
+
       // Create the profile in the database
       const { data: newProfile, error: profileError } = await supabase
         .from("profiles")
         .insert({
           ...basicInfo,
           profile_picture_url: avatarUrl,
+          profile_type: profileType,
           is_onboarded: true,
         })
         .select("id")
@@ -83,6 +87,11 @@ export default function ProfilePhotoPage() {
       }
 
       const realProfileId = newProfile.id;
+
+      // Set this profile as the active profile
+      await supabase.rpc("set_active_profile", {
+        p_profile_id: realProfileId,
+      });
 
       // Save additional data based on profile type
       if (profileType === "business" && profileData.businessDetails) {

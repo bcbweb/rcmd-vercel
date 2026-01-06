@@ -94,14 +94,50 @@ export const useProfileStore = create<ProfileState>()(
 
             const supabase = createClient();
 
-            // Ensure a profile exists for this user
-            const profileId = await ensureUserProfile(userId);
-            if (!profileId) {
-              throw new Error("Failed to ensure profile exists");
+            // First, try to get the active profile from user_active_profiles
+            let activeProfileId: string | null = null;
+            const { data: activeProfile } = await supabase
+              .from("user_active_profiles")
+              .select("profile_id")
+              .eq("auth_user_id", userId)
+              .single();
+
+            if (activeProfile) {
+              activeProfileId = activeProfile.profile_id;
+              console.log("Found active profile:", activeProfileId);
+            } else {
+              // If no active profile is set, get the first profile or create one
+              const { data: profiles } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("auth_user_id", userId)
+                .order("created_at", { ascending: true })
+                .limit(1);
+
+              if (profiles && profiles.length > 0) {
+                activeProfileId = profiles[0].id;
+                // Set it as active
+                await supabase.rpc("set_active_profile", {
+                  p_profile_id: activeProfileId,
+                });
+                console.log("Set first profile as active:", activeProfileId);
+              } else {
+                // Ensure a profile exists for this user
+                const profileId = await ensureUserProfile(userId);
+                if (!profileId) {
+                  throw new Error("Failed to ensure profile exists");
+                }
+                activeProfileId = profileId;
+                // Set it as active
+                await supabase.rpc("set_active_profile", {
+                  p_profile_id: profileId,
+                });
+                console.log("Created and set new profile as active:", profileId);
+              }
             }
 
-            // First check if we have a profile
-            console.log("Querying profiles table for auth_user_id:", userId);
+            // Fetch the active profile
+            console.log("Querying profiles table for profile_id:", activeProfileId);
             const { data: profile, error: profileError } = await supabase
               .from("profiles")
               .select(
@@ -121,7 +157,7 @@ export const useProfileStore = create<ProfileState>()(
                 default_page_id
               `
               )
-              .eq("auth_user_id", userId)
+              .eq("id", activeProfileId)
               .single();
 
             if (profileError) {
