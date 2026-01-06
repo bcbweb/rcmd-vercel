@@ -8,9 +8,15 @@ import { useProfileStore } from "@/stores/profile-store";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Briefcase, Newspaper, User, Check, Plus } from "lucide-react";
+import {
+  Briefcase,
+  Newspaper,
+  User,
+  Check,
+  Plus,
+  ArrowLeftRight,
+} from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Profile {
   id: string;
@@ -45,7 +51,9 @@ export default function ProfileSwitchPage() {
       // Fetch all profiles for this user
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, handle, first_name, profile_picture_url, profile_type, is_onboarded")
+        .select(
+          "id, handle, first_name, profile_picture_url, profile_type, is_onboarded"
+        )
         .eq("auth_user_id", userId)
         .order("created_at", { ascending: false });
 
@@ -78,7 +86,7 @@ export default function ProfileSwitchPage() {
       await fetchProfile(userId);
 
       toast.success("Profile switched successfully");
-      
+
       // Small delay to ensure state is updated
       setTimeout(() => {
         router.push("/protected/profile");
@@ -125,107 +133,132 @@ export default function ProfileSwitchPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg" />
-          ))}
+          <div className="h-32 w-96 bg-gray-200 dark:bg-gray-700 rounded-lg" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Switch Profile</h1>
-        <p className="text-muted-foreground">
-          Choose which profile you want to use. You can switch between profiles at any time.
-        </p>
-      </div>
+    <div className="min-h-screen">
+      <div className="mx-auto px-4 py-8 max-w-3xl">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+          <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center space-x-3 mb-2">
+              <ArrowLeftRight className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Switch Profile
+              </h2>
+            </div>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Choose which profile you want to use. You can switch between
+              profiles at any time.
+            </p>
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {profiles.map((profile) => {
-          const isActive = currentProfile?.id === profile.id;
-          const isSwitchingThis = isSwitching === profile.id;
+          <div className="p-6 space-y-4">
+            {profiles.map((profile) => {
+              const isActive = currentProfile?.id === profile.id;
+              const isSwitchingThis = isSwitching === profile.id;
 
-          return (
-            <Card
-              key={profile.id}
-              className={`relative ${
-                isActive
-                  ? "ring-2 ring-primary border-primary"
-                  : "hover:shadow-lg transition-shadow"
-              }`}
-            >
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage
-                        src={profile.profile_picture_url || ""}
-                        alt={profile.handle || "Profile"}
-                      />
-                      <AvatarFallback>
-                        {getInitials(profile.first_name, profile.handle)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-lg">
-                        {profile.handle ? `@${profile.handle}` : "Unnamed Profile"}
-                      </CardTitle>
-                      <CardDescription>
-                        {profile.first_name || "No name set"}
-                      </CardDescription>
+              return (
+                <div
+                  key={profile.id}
+                  className={`border rounded-lg p-6 transition-all ${
+                    isActive
+                      ? "border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                      : "border-gray-200 dark:border-gray-700 hover:shadow-md"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage
+                          src={profile.profile_picture_url || ""}
+                          alt={profile.handle || "Profile"}
+                        />
+                        <AvatarFallback>
+                          {getInitials(profile.first_name, profile.handle)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                          {profile.handle
+                            ? `@${profile.handle}`
+                            : "Unnamed Profile"}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {profile.first_name || "No name set"}
+                        </p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <div className="text-gray-400 dark:text-gray-500">
+                            {getProfileIcon(profile.profile_type)}
+                          </div>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {getProfileTypeLabel(profile.profile_type)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      {isActive && (
+                        <div className="flex items-center space-x-1 text-blue-600 dark:text-blue-400">
+                          <Check className="h-5 w-5" />
+                          <span className="text-sm font-medium">Active</span>
+                        </div>
+                      )}
+                      <Button
+                        onClick={() => handleSwitchProfile(profile.id)}
+                        disabled={isActive || isSwitchingThis || !!isSwitching}
+                        variant={isActive ? "outline" : "default"}
+                        className={
+                          isActive
+                            ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                            : ""
+                        }
+                      >
+                        {isSwitchingThis
+                          ? "Switching..."
+                          : isActive
+                            ? "Current"
+                            : "Switch"}
+                      </Button>
                     </div>
                   </div>
-                  {isActive && (
-                    <div className="flex items-center space-x-1 text-primary">
-                      <Check className="h-5 w-5" />
-                      <span className="text-sm font-medium">Active</span>
-                    </div>
-                  )}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    {getProfileIcon(profile.profile_type)}
-                    <span>{getProfileTypeLabel(profile.profile_type)}</span>
-                  </div>
-                  <Button
-                    onClick={() => handleSwitchProfile(profile.id)}
-                    disabled={isActive || isSwitchingThis || !!isSwitching}
-                    variant={isActive ? "outline" : "default"}
-                  >
-                    {isSwitchingThis
-                      ? "Switching..."
-                      : isActive
-                      ? "Current"
-                      : "Switch"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+              );
+            })}
 
-        {/* Add New Profile Card */}
-        <Card className="border-dashed hover:border-primary transition-colors">
-          <Link href="/protected/add-profile">
-            <CardContent className="flex flex-col items-center justify-center h-full min-h-[200px] cursor-pointer">
-              <div className="p-4 bg-muted rounded-full mb-4">
-                <Plus className="h-8 w-8 text-muted-foreground" />
+            {/* Add New Profile Card */}
+            <Link href="/protected/add-profile">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 cursor-pointer transition-all hover:border-blue-500 dark:hover:border-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <div className="flex flex-col items-center justify-center">
+                  <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-3">
+                    <Plus className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+                    Add New Profile
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                    Create a business or content creator profile
+                  </p>
+                </div>
               </div>
-              <CardTitle className="text-lg mb-2">Add New Profile</CardTitle>
-              <CardDescription className="text-center">
-                Create a business or content creator profile
-              </CardDescription>
-            </CardContent>
-          </Link>
-        </Card>
+            </Link>
+          </div>
+
+          <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700 p-6">
+            <Link
+              href="/protected/profile"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            >
+              Cancel
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-

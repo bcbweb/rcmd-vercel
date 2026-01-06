@@ -1,6 +1,10 @@
 import { client } from "@/lib/sanity";
 import { NextRequest, NextResponse } from "next/server";
 
+// Force dynamic rendering to avoid build-time issues
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get("slug");

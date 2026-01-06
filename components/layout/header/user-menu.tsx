@@ -110,7 +110,7 @@ export default function UserMenu() {
               {profile?.handle ? `@${profile.handle}` : "Profile"}
             </span>
             <Link
-              href="/protected/profile/switch"
+              href="/protected/switch-profile"
               className="flex items-center text-xs text-muted-foreground hover:text-foreground"
             >
               <ArrowLeftRight className="mr-1 h-3 w-3" />

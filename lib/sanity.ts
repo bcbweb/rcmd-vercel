@@ -36,7 +36,20 @@ type SanityImageValue =
 // Use fallback values from the sanity.config.js if environment variables are not available
 // This ensures the build process can still access Sanity even if env vars aren't set
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || "ce6vefd3";
-const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || "production";
+// Validate dataset - must be lowercase, alphanumeric, underscores, dashes, max 64 chars
+// Sanity dataset names: lowercase, alphanumeric, underscores, dashes only, max 64 chars
+let dataset = (process.env.NEXT_PUBLIC_SANITY_DATASET || "production").trim();
+// Ensure dataset is valid: lowercase, alphanumeric, underscores, dashes only
+if (dataset) {
+  dataset = dataset
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "")
+    .substring(0, 64);
+}
+// Fallback to production if dataset is empty or invalid
+if (!dataset || dataset.length === 0) {
+  dataset = "production";
+}
 
 export const client = createClient({
   projectId,

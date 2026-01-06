@@ -208,7 +208,7 @@ export default function LinksPage() {
               >
                 <NextLink
                   href={`/${userHandle}/links`}
-                  className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-primary"
+                  className="flex items-center space-x-1 text-sm"
                   target="_blank"
                 >
                   <Eye className="w-3.5 h-3.5" />
