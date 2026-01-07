@@ -75,63 +75,20 @@ export async function ensureUserProfile(
 
     console.log(`[Profile Utils] No profile found for ${userId}, creating one`);
 
-    // Generate a profile ID and handle
-    const newProfileId = uuidv4();
-    const handle = `user_${newProfileId.substring(0, 8)}`;
-    const email = `${handle}@placeholder.com`;
-
-    // Try multiple approaches with retry utility
-
-    // First try: Use direct insert with correct column names
+    // Use the new RPC function that prevents duplicates
     try {
-      const { error } = await withRetry<{ data: null; error: any }>(() =>
-        supabase.from("profiles").insert({
-          id: newProfileId,
-          auth_user_id: userId,
-          handle: handle,
-          email: email,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          is_onboarded: false,
-          profile_type: "default", // Default profile type for new users
-        })
-      );
-
-      if (!error) {
-        console.log(
-          `[Profile Utils] Created profile via direct insert: ${newProfileId}`
-        );
-        return newProfileId;
-      } else {
-        console.warn(
-          "[Profile Utils] Insert error:",
-          error.code,
-          error.message,
-          error.details
-        );
-      }
-    } catch (insertError) {
-      console.warn("[Profile Utils] Direct insert failed:", insertError);
-    }
-
-    // Second try: Use the RPC function with updated parameter names
-    try {
-      console.log("[Profile Utils] Attempting RPC function");
-
-      const { data, error } = await withRetry<{
+      const { data: profileId, error } = await withRetry<{
         data: string | null;
         error: any;
       }>(() =>
-        supabase.rpc("create_user_profile", {
-          auth_id: userId,
-          handle_param: handle,
-          profile_id_param: newProfileId,
+        supabase.rpc("ensure_default_profile", {
+          p_auth_user_id: userId,
         })
       );
 
       if (error) {
         console.error(
-          "[Profile Utils] RPC error details:",
+          "[Profile Utils] ensure_default_profile RPC error:",
           error.code,
           error.message,
           error.details
@@ -139,65 +96,14 @@ export async function ensureUserProfile(
         throw error;
       }
 
-      if (data) {
-        console.log(`[Profile Utils] Created profile via RPC: ${data}`);
-        return data;
-      }
-    } catch (rpcError) {
-      // If RPC fails, try one last method
-      console.warn("[Profile Utils] RPC function failed:", rpcError);
-    }
-
-    // Third try: Upsert operation with conflict handling
-    try {
-      const { error } = await withRetry<{ data: null; error: any }>(() =>
-        supabase.from("profiles").upsert(
-          {
-            id: newProfileId,
-            auth_user_id: userId,
-            handle: handle,
-            email: email,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_onboarded: false,
-            profile_type: "default", // Default profile type for new users
-          },
-          {
-            onConflict: "auth_user_id",
-          }
-        )
-      );
-
-      if (error) {
-        console.warn(
-          "[Profile Utils] Upsert error:",
-          error.code,
-          error.message,
-          error.details
+      if (profileId) {
+        console.log(
+          `[Profile Utils] Created or found default profile: ${profileId}`
         );
-        throw error;
-      }
-
-      // Verify the profile was created
-      const verifyProfiles = await withRetry<{
-        data: Profile[] | null;
-        error: any;
-      }>(() =>
-        supabase
-          .from("profiles")
-          .select("id")
-          .eq("auth_user_id", userId)
-          .order("created_at", { ascending: true })
-          .limit(1)
-      );
-
-      if (verifyProfiles?.data && verifyProfiles.data.length > 0) {
-        const profileId = verifyProfiles.data[0].id;
-        console.log(`[Profile Utils] Created profile via upsert: ${profileId}`);
         return profileId;
       }
-    } catch (upsertError) {
-      console.warn("[Profile Utils] Upsert operation failed:", upsertError);
+    } catch (rpcError) {
+      console.error("[Profile Utils] ensure_default_profile failed:", rpcError);
     }
 
     // If we get here, all profile creation attempts failed
