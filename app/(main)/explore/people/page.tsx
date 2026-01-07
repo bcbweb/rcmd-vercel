@@ -21,6 +21,7 @@ export default function PeoplePage() {
       const query = supabase
         .from("profiles")
         .select("*")
+        .eq("profile_type", "default")
         .not("profile_picture_url", "is", null)
         .order("created_at", { ascending: false });
 

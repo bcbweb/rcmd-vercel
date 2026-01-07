@@ -6,11 +6,11 @@ import { SearchBar } from "@/components/ui/search-bar";
 import { GridSkeleton } from "@/components/common";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type { Creator } from "@/types";
+import type { Profile } from "@/types";
 
 export default function CreatorsPage() {
   const router = useRouter();
-  const [creators, setCreators] = useState<Creator[]>([]);
+  const [creators, setCreators] = useState<Profile[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
@@ -19,13 +19,15 @@ export default function CreatorsPage() {
     async function fetchCreators() {
       setIsLoading(true);
       const query = supabase
-        .from("creators")
+        .from("profiles")
         .select("*")
+        .eq("profile_type", "creator")
+        .not("profile_picture_url", "is", null)
         .order("created_at", { ascending: false });
 
       if (searchQuery) {
         query.or(
-          `name.ilike.%${searchQuery}%,handle.ilike.%${searchQuery}%,bio.ilike.%${searchQuery}%`
+          `first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,handle.ilike.%${searchQuery}%,bio.ilike.%${searchQuery}%`
         );
       }
 
@@ -66,29 +68,15 @@ export default function CreatorsPage() {
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black opacity-90" />
 
               <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                <h3 className="font-medium text-sm">{creator.name}</h3>
+                <h3 className="font-medium text-sm">
+                  {creator.first_name} {creator.last_name}
+                </h3>
                 <p className="text-xs text-gray-200">@{creator.handle}</p>
-                <p className="text-xs text-gray-300">{creator.category}</p>
-                <div className="flex items-center mt-1">
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      creator.status === "approved"
-                        ? "bg-green-500"
-                        : creator.status === "pending"
-                          ? "bg-yellow-500"
-                          : creator.status === "rejected"
-                            ? "bg-red-500"
-                            : "bg-gray-500"
-                    } bg-opacity-50`}
-                  >
-                    {creator.status}
-                  </span>
-                  {creator.verified && (
-                    <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-blue-500 bg-opacity-50">
-                      Verified
-                    </span>
-                  )}
-                </div>
+                {creator.bio && (
+                  <p className="text-xs mt-1 text-gray-300 line-clamp-2">
+                    {creator.bio}
+                  </p>
+                )}
               </div>
             </div>
           ))}
