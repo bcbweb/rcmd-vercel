@@ -25,22 +25,43 @@ export async function ensureUserProfile(
     const supabase = createClient();
 
     // First try to get the profile if it already exists - using retry utility
+    // Since multiple profiles are allowed, we'll get the first one (or the active one)
     try {
-      const { data: existingProfile } = await withRetry<
-        PostgrestSingleResponse<Profile>
+      // First check for an active profile
+      const { data: activeProfile } = await withRetry<
+        PostgrestSingleResponse<{ profile_id: string }>
       >(() =>
         supabase
-          .from("profiles")
-          .select("id")
+          .from("user_active_profiles")
+          .select("profile_id")
           .eq("auth_user_id", userId)
           .single()
       );
 
-      if (existingProfile?.id) {
+      if (activeProfile?.profile_id) {
         console.log(
-          `[Profile Utils] Found existing profile: ${existingProfile.id}`
+          `[Profile Utils] Found active profile: ${activeProfile.profile_id}`
         );
-        return existingProfile.id;
+        return activeProfile.profile_id;
+      }
+
+      // If no active profile, get the first profile for this user
+      const existingProfiles = await withRetry<{
+        data: Profile[] | null;
+        error: any;
+      }>(() =>
+        supabase
+          .from("profiles")
+          .select("id")
+          .eq("auth_user_id", userId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+      );
+
+      if (existingProfiles?.data && existingProfiles.data.length > 0) {
+        const profileId = existingProfiles.data[0].id;
+        console.log(`[Profile Utils] Found existing profile: ${profileId}`);
+        return profileId;
       }
     } catch (error: any) {
       // Ignore PGRST116 errors (not found)
@@ -158,21 +179,22 @@ export async function ensureUserProfile(
       }
 
       // Verify the profile was created
-      const { data: verifyProfile } = await withRetry<
-        PostgrestSingleResponse<Profile>
-      >(() =>
+      const verifyProfiles = await withRetry<{
+        data: Profile[] | null;
+        error: any;
+      }>(() =>
         supabase
           .from("profiles")
           .select("id")
           .eq("auth_user_id", userId)
-          .single()
+          .order("created_at", { ascending: true })
+          .limit(1)
       );
 
-      if (verifyProfile?.id) {
-        console.log(
-          `[Profile Utils] Created profile via upsert: ${verifyProfile.id}`
-        );
-        return verifyProfile.id;
+      if (verifyProfiles?.data && verifyProfiles.data.length > 0) {
+        const profileId = verifyProfiles.data[0].id;
+        console.log(`[Profile Utils] Created profile via upsert: ${profileId}`);
+        return profileId;
       }
     } catch (upsertError) {
       console.warn("[Profile Utils] Upsert operation failed:", upsertError);
@@ -198,20 +220,39 @@ export async function getProfileId(userId: string): Promise<string | null> {
   try {
     const supabase = createClient();
 
-    const { data, error } = await withRetry<PostgrestSingleResponse<Profile>>(
-      () =>
-        supabase
-          .from("profiles")
-          .select("id")
-          .eq("auth_user_id", userId)
-          .single()
+    // First check for an active profile
+    const { data: activeProfile } = await withRetry<
+      PostgrestSingleResponse<{ profile_id: string }>
+    >(() =>
+      supabase
+        .from("user_active_profiles")
+        .select("profile_id")
+        .eq("auth_user_id", userId)
+        .single()
     );
 
-    if (error || !data) {
+    if (activeProfile?.profile_id) {
+      return activeProfile.profile_id;
+    }
+
+    // If no active profile, get the first profile for this user
+    const result = await withRetry<{
+      data: Profile[] | null;
+      error: any;
+    }>(() =>
+      supabase
+        .from("profiles")
+        .select("id")
+        .eq("auth_user_id", userId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+    );
+
+    if (result?.error || !result?.data || result.data.length === 0) {
       return null;
     }
 
-    return data.id;
+    return result.data[0].id;
   } catch (error) {
     console.error("[Profile Utils] Error getting profile ID:", error);
     return null;
