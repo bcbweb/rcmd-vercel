@@ -94,12 +94,10 @@ export function URLHandleInput({
           }, 5000);
         });
 
-        // Race between the query and timeout
-        const queryPromise = supabase
-          .from("profiles")
-          .select("handle")
-          .ilike("handle", handle)
-          .maybeSingle();
+        // Use RPC function to check handle availability (bypasses RLS)
+        const queryPromise = supabase.rpc("check_handle_availability", {
+          p_handle: handle,
+        });
 
         const result = await Promise.race([queryPromise, timeoutPromise]);
 
@@ -117,7 +115,8 @@ export function URLHandleInput({
             console.error("Error checking handle:", error);
             setIsHandleAvailable(false);
           } else {
-            setIsHandleAvailable(!data);
+            // RPC function returns true if available, false if taken
+            setIsHandleAvailable(data === true);
           }
           setIsCheckingHandle(false);
         }
