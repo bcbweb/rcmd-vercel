@@ -22,7 +22,7 @@ async function fetchMetadata(url: string) {
     const microlinkController = new AbortController();
     const microlinkTimeout = setTimeout(() => {
       microlinkController.abort();
-    }, 5000); // 5 second timeout for Microlink
+    }, 10000); // 10 second timeout for Microlink (increased)
 
     try {
       const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=true&audio=true&video=true&iframe=true`;
@@ -36,14 +36,23 @@ async function fetchMetadata(url: string) {
 
       clearTimeout(microlinkTimeout);
 
+      if (!microlinkResponse.ok) {
+        console.log(
+          `[DEBUG] Microlink returned ${microlinkResponse.status}, trying direct fetch`
+        );
+        throw new Error(`Microlink returned ${microlinkResponse.status}`);
+      }
+
       const microlinkData = await microlinkResponse.json();
+      console.log("[DEBUG] Microlink response:", {
+        ok: microlinkResponse.ok,
+        hasData: !!microlinkData.data,
+        hasError: !!microlinkData.data?.error,
+        status: microlinkResponse.status,
+      });
 
       // If Microlink returns valid data, use it
-      if (
-        microlinkResponse.ok &&
-        microlinkData.data &&
-        !microlinkData.data.error
-      ) {
+      if (microlinkData.data && !microlinkData.data.error) {
         const metadata = {
           title: microlinkData.data?.title || new URL(url).hostname,
           description:
@@ -64,27 +73,37 @@ async function fetchMetadata(url: string) {
           iframe: microlinkData.data?.iframe,
         };
 
+        console.log("[DEBUG] Microlink returned valid metadata");
         return NextResponse.json(metadata);
+      } else {
+        console.log(
+          "[DEBUG] Microlink returned invalid data or error, trying direct fetch"
+        );
+        throw new Error("Microlink returned invalid data");
       }
     } catch (microlinkError) {
       clearTimeout(microlinkTimeout);
       // If Microlink fails (timeout or error), continue to direct fetch
-      if (
-        microlinkError instanceof Error &&
-        microlinkError.name !== "AbortError"
-      ) {
-        console.log("[DEBUG] Microlink error:", microlinkError.message);
+      if (microlinkError instanceof Error) {
+        if (microlinkError.name === "AbortError") {
+          console.log("[DEBUG] Microlink timed out, trying direct fetch");
+        } else {
+          console.log(
+            `[DEBUG] Microlink error: ${microlinkError.message}, trying direct fetch`
+          );
+        }
       }
+      // Don't throw - continue to direct fetch
     }
 
     // If Microlink fails, try fetching directly with timeout
-    console.log("[DEBUG] Microlink failed or timed out, trying direct fetch");
     const directController = new AbortController();
     const directTimeout = setTimeout(() => {
       directController.abort();
-    }, 5000); // 5 second timeout for direct fetch
+    }, 8000); // 8 second timeout for direct fetch (increased for slower sites)
 
     try {
+      console.log("[DEBUG] Attempting direct fetch for:", url);
       const response = await fetch(url, {
         headers: {
           "User-Agent":
@@ -108,25 +127,28 @@ async function fetchMetadata(url: string) {
       clearTimeout(directTimeout);
 
       if (!response.ok) {
+        console.log(
+          `[DEBUG] Direct fetch returned ${response.status}, using fallback`
+        );
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-    const text = await response.text();
+      const text = await response.text();
 
-    // Use regex to extract basic metadata
-    const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const descriptionMatch = text.match(
-      /<meta[^>]*name="description"[^>]*content="([^"]*)"[^>]*>/i
-    );
-    const ogImageMatch = text.match(
-      /<meta[^>]*property="og:image"[^>]*content="([^"]*)"[^>]*>/i
-    );
-    const faviconMatch = text.match(
-      /<link[^>]*rel="(?:shortcut )?icon"[^>]*href="([^"]*)"[^>]*>/i
-    );
+      // Use regex to extract basic metadata
+      const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const descriptionMatch = text.match(
+        /<meta[^>]*name="description"[^>]*content="([^"]*)"[^>]*>/i
+      );
+      const ogImageMatch = text.match(
+        /<meta[^>]*property="og:image"[^>]*content="([^"]*)"[^>]*>/i
+      );
+      const faviconMatch = text.match(
+        /<link[^>]*rel="(?:shortcut )?icon"[^>]*href="([^"]*)"[^>]*>/i
+      );
 
-    const domain = new URL(url).hostname;
-    const baseUrl = new URL(url).origin;
+      const domain = new URL(url).hostname;
+      const baseUrl = new URL(url).origin;
 
       const metadata = {
         title: titleMatch?.[1]?.trim() || domain,
@@ -141,22 +163,53 @@ async function fetchMetadata(url: string) {
         url: url,
       };
 
+      console.log("[DEBUG] Direct fetch returned metadata:", {
+        title: metadata.title,
+        hasDescription: !!metadata.description,
+        hasImage: !!metadata.image,
+      });
+
       return NextResponse.json(metadata);
     } catch (directError) {
       clearTimeout(directTimeout);
-      // If direct fetch also fails, throw to be caught by outer catch
-      if (
-        directError instanceof Error &&
-        directError.name !== "AbortError"
-      ) {
-        throw directError;
+      // Log the error but don't throw - let it fall through to fallback
+      if (directError instanceof Error) {
+        if (directError.name === "AbortError") {
+          console.log("[DEBUG] Direct fetch timed out, using fallback");
+        } else {
+          console.log(
+            `[DEBUG] Direct fetch error: ${directError.message}, using fallback`
+          );
+        }
       }
-      // If it's an abort error, continue to fallback
-      throw new Error("Request timed out");
+      // Don't throw - continue to fallback
+    }
+
+    // If we get here, both Microlink and direct fetch failed
+    // Return fallback metadata
+    console.log(
+      "[DEBUG] Both Microlink and direct fetch failed, returning fallback"
+    );
+    try {
+      const domain = new URL(url).hostname;
+      return NextResponse.json({
+        title: domain,
+        description: `Content from ${domain}`,
+        type: "website",
+        url: url,
+      });
+    } catch {
+      // If even URL parsing fails, return minimal response
+      return NextResponse.json({
+        title: "Unknown",
+        description: "Unable to fetch metadata",
+        type: "website",
+        url: url,
+      });
     }
   } catch (error) {
-    console.error("[DEBUG] Error fetching metadata:", error);
-    // Return basic metadata as fallback
+    console.error("[DEBUG] Unexpected error in fetchMetadata:", error);
+    // Return basic metadata as fallback for any unexpected errors
     try {
       const domain = new URL(url).hostname;
       return NextResponse.json({
