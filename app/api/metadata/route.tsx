@@ -1,4 +1,12 @@
 import { NextResponse } from "next/server";
+import metascraper from "metascraper";
+import metascraperTitle from "metascraper-title";
+import metascraperDescription from "metascraper-description";
+import metascraperImage from "metascraper-image";
+import metascraperLogo from "metascraper-logo";
+import metascraperAuthor from "metascraper-author";
+import metascraperPublisher from "metascraper-publisher";
+import metascraperUrl from "metascraper-url";
 
 async function fetchMetadata(url: string) {
   if (!url) {
@@ -26,6 +34,8 @@ async function fetchMetadata(url: string) {
 
     try {
       const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=true&audio=true&video=true&iframe=true`;
+      console.log("[DEBUG] Fetching from Microlink:", microlinkUrl);
+
       const microlinkResponse = await fetch(microlinkUrl, {
         headers: {
           "User-Agent":
@@ -37,8 +47,11 @@ async function fetchMetadata(url: string) {
       clearTimeout(microlinkTimeout);
 
       if (!microlinkResponse.ok) {
+        const errorText = await microlinkResponse
+          .text()
+          .catch(() => "Unable to read error");
         console.log(
-          `[DEBUG] Microlink returned ${microlinkResponse.status}, trying direct fetch`
+          `[DEBUG] Microlink returned ${microlinkResponse.status}: ${errorText.substring(0, 200)}`
         );
         throw new Error(`Microlink returned ${microlinkResponse.status}`);
       }
@@ -46,10 +59,23 @@ async function fetchMetadata(url: string) {
       const microlinkData = await microlinkResponse.json();
       console.log("[DEBUG] Microlink response:", {
         ok: microlinkResponse.ok,
+        status: microlinkResponse.status,
+        microlinkStatus: microlinkData.status,
         hasData: !!microlinkData.data,
         hasError: !!microlinkData.data?.error,
-        status: microlinkResponse.status,
+        errorCode: microlinkData.code,
+        title: microlinkData.data?.title?.substring(0, 50),
+        description: microlinkData.data?.description?.substring(0, 50),
       });
+
+      // Check if Microlink returned an error (e.g., antibot protection)
+      if (microlinkData.status === "fail" || microlinkData.data?.error) {
+        console.log(
+          "[DEBUG] Microlink failed:",
+          microlinkData.data?.error || microlinkData.message || "Unknown error"
+        );
+        throw new Error("Microlink returned error");
+      }
 
       // If Microlink returns valid data, use it
       if (microlinkData.data && !microlinkData.data.error) {
@@ -73,11 +99,18 @@ async function fetchMetadata(url: string) {
           iframe: microlinkData.data?.iframe,
         };
 
-        console.log("[DEBUG] Microlink returned valid metadata");
+        console.log("[DEBUG] Microlink returned valid metadata:", {
+          title: metadata.title,
+          hasDescription:
+            !!metadata.description &&
+            metadata.description !== `Content from ${new URL(url).hostname}`,
+          hasImage: !!metadata.image,
+        });
         return NextResponse.json(metadata);
       } else {
         console.log(
-          "[DEBUG] Microlink returned invalid data or error, trying direct fetch"
+          "[DEBUG] Microlink returned invalid data or error:",
+          microlinkData.data?.error || "No data"
         );
         throw new Error("Microlink returned invalid data");
       }
@@ -86,12 +119,16 @@ async function fetchMetadata(url: string) {
       // If Microlink fails (timeout or error), continue to direct fetch
       if (microlinkError instanceof Error) {
         if (microlinkError.name === "AbortError") {
-          console.log("[DEBUG] Microlink timed out, trying direct fetch");
+          console.log(
+            "[DEBUG] Microlink timed out after 10s, trying direct fetch"
+          );
         } else {
           console.log(
-            `[DEBUG] Microlink error: ${microlinkError.message}, trying direct fetch`
+            `[DEBUG] Microlink error: ${microlinkError.name} - ${microlinkError.message}, trying direct fetch`
           );
         }
+      } else {
+        console.log("[DEBUG] Microlink unknown error:", microlinkError);
       }
       // Don't throw - continue to direct fetch
     }
@@ -134,25 +171,87 @@ async function fetchMetadata(url: string) {
       }
 
       const text = await response.text();
+      console.log("[DEBUG] Direct fetch got HTML, length:", text.length);
 
-      // Use regex to extract basic metadata
+      // Check if we got a Cloudflare challenge page
+      if (
+        text.includes("Just a moment") ||
+        text.includes("challenge-platform") ||
+        text.includes("cf-browser-verification") ||
+        text.includes("Enable JavaScript and cookies")
+      ) {
+        console.log("[DEBUG] Detected Cloudflare challenge page");
+        throw new Error("Cloudflare challenge detected");
+      }
+
+      // Try using metascraper for better metadata extraction
+      try {
+        const scraper = metascraper([
+          metascraperTitle(),
+          metascraperDescription(),
+          metascraperImage(),
+          metascraperLogo(),
+          metascraperAuthor(),
+          metascraperPublisher(),
+          metascraperUrl(),
+        ]);
+
+        const metadata = await scraper({ html: text, url });
+
+        console.log("[DEBUG] Metascraper extracted metadata:", {
+          title: metadata.title?.substring(0, 50),
+          hasDescription: !!metadata.description,
+          hasImage: !!metadata.image,
+          hasLogo: !!metadata.logo,
+        });
+
+        // If metascraper found good data, use it
+        if (metadata.title && metadata.title !== new URL(url).hostname) {
+          return NextResponse.json({
+            title: metadata.title,
+            description:
+              metadata.description || `Content from ${new URL(url).hostname}`,
+            image: metadata.image || null,
+            favicon: metadata.logo || null,
+            author: metadata.author || null,
+            publisher: metadata.publisher || null,
+            type: "website",
+            url: metadata.url || url,
+          });
+        }
+      } catch (scraperError) {
+        console.log(
+          "[DEBUG] Metascraper failed, falling back to regex:",
+          scraperError
+        );
+      }
+
+      // Fallback to regex extraction if metascraper fails
       const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
       const descriptionMatch = text.match(
-        /<meta[^>]*name="description"[^>]*content="([^"]*)"[^>]*>/i
+        /<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["'][^>]*>/i
+      );
+      // Also try og:description
+      const ogDescriptionMatch = text.match(
+        /<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']*)["'][^>]*>/i
       );
       const ogImageMatch = text.match(
-        /<meta[^>]*property="og:image"[^>]*content="([^"]*)"[^>]*>/i
+        /<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']*)["'][^>]*>/i
       );
       const faviconMatch = text.match(
-        /<link[^>]*rel="(?:shortcut )?icon"[^>]*href="([^"]*)"[^>]*>/i
+        /<link[^>]*rel=["'](?:shortcut )?icon["'][^>]*href=["']([^"']*)["'][^>]*>/i
       );
 
       const domain = new URL(url).hostname;
       const baseUrl = new URL(url).origin;
 
+      const extractedTitle = titleMatch?.[1]?.trim();
+      const extractedDescription =
+        descriptionMatch?.[1]?.trim() || ogDescriptionMatch?.[1]?.trim();
+
       const metadata = {
-        title: titleMatch?.[1]?.trim() || domain,
-        description: descriptionMatch?.[1]?.trim() || `Content from ${domain}`,
+        title: extractedTitle || domain,
+        description: extractedDescription || `Content from ${domain}`,
         image: ogImageMatch?.[1]
           ? new URL(ogImageMatch[1], baseUrl).toString()
           : null,
@@ -163,13 +262,33 @@ async function fetchMetadata(url: string) {
         url: url,
       };
 
-      console.log("[DEBUG] Direct fetch returned metadata:", {
+      console.log("[DEBUG] Direct fetch extracted metadata:", {
         title: metadata.title,
-        hasDescription: !!metadata.description,
+        titleIsDomain: metadata.title === domain,
+        description: metadata.description?.substring(0, 50),
+        descriptionIsFallback:
+          metadata.description === `Content from ${domain}`,
         hasImage: !!metadata.image,
+        foundTitle: !!extractedTitle,
+        foundDescription: !!extractedDescription,
       });
 
-      return NextResponse.json(metadata);
+      // Only return if we got actual metadata, not just fallback
+      if (extractedTitle && extractedTitle !== domain) {
+        return NextResponse.json(metadata);
+      } else if (
+        extractedDescription &&
+        extractedDescription !== `Content from ${domain}`
+      ) {
+        // Even if title is just domain, if we have a real description, return it
+        return NextResponse.json(metadata);
+      } else {
+        // If we only got fallback data, throw to try other methods or return fallback
+        console.log(
+          "[DEBUG] Direct fetch only got fallback data, will return fallback"
+        );
+        throw new Error("Direct fetch returned only fallback data");
+      }
     } catch (directError) {
       clearTimeout(directTimeout);
       // Log the error but don't throw - let it fall through to fallback
@@ -186,17 +305,27 @@ async function fetchMetadata(url: string) {
     }
 
     // If we get here, both Microlink and direct fetch failed
-    // Return fallback metadata
+    // Try to extract basic info from the URL itself
     console.log(
-      "[DEBUG] Both Microlink and direct fetch failed, returning fallback"
+      "[DEBUG] Both Microlink and direct fetch failed, trying URL-based extraction"
     );
     try {
-      const domain = new URL(url).hostname;
+      const urlObj = new URL(url);
+      const domain = urlObj.hostname;
+
+      // Try to create a better title from the domain
+      const domainParts = domain.replace(/^www\./, "").split(".");
+      const siteName = domainParts[0]
+        .split(/[-_]/)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+
       return NextResponse.json({
-        title: domain,
+        title: siteName || domain,
         description: `Content from ${domain}`,
         type: "website",
         url: url,
+        _fallback: true, // Flag to indicate this is fallback data
       });
     } catch {
       // If even URL parsing fails, return minimal response
@@ -205,6 +334,7 @@ async function fetchMetadata(url: string) {
         description: "Unable to fetch metadata",
         type: "website",
         url: url,
+        _fallback: true,
       });
     }
   } catch (error) {
