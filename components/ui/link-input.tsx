@@ -199,7 +199,9 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
 
         // Extremely safe fetch with proper abortion
         const controller = new AbortController();
-        const fetchTimeoutId = setTimeout(() => controller.abort(), 3000);
+        const fetchTimeoutId = setTimeout(() => {
+          controller.abort();
+        }, 8000); // Increased to 8 seconds for slower sites
 
         try {
           // Minimal URL encoding
@@ -208,6 +210,8 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
           // Safer fetch with timeout
           const response = await fetch(`/api/metadata?url=${encodedUrl}`, {
             signal: controller.signal,
+            // Add cache control to prevent stale data
+            cache: "no-cache",
           });
 
           clearTimeout(fetchTimeoutId);
@@ -260,6 +264,22 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
             onMetadataFetch(processedMetadata);
           }
         } catch (fetchError: unknown) {
+          // Don't show error for intentional aborts (timeouts) - these are expected
+          const isAbortError =
+            fetchError instanceof Error &&
+            (fetchError.name === "AbortError" ||
+              fetchError.message.includes("aborted"));
+
+          if (isAbortError) {
+            // If this was a timeout, don't show an error - just silently fail
+            // The user can try again if needed
+            console.log("[DEBUG] Fetch aborted (timeout or cancelled)");
+            clearTimeout(fetchTimeoutId);
+            setIsFetching(false);
+            setShouldFetch(false);
+            return; // Exit early without showing error
+          }
+
           console.error("Fetch error:", fetchError);
 
           // User-friendly error messages
@@ -271,15 +291,15 @@ const LinkInput = forwardRef<HTMLInputElement, LinkInputProps>(
             console.error("Technical details:", fetchError.message);
 
             // Map specific technical errors to user-friendly messages
-            if (fetchError.message.includes("aborted")) {
-              userMessage =
-                "This website isn't responding. Try a different URL or check if the website is accessible.";
-            } else if (fetchError.message.includes("Server error: 404")) {
+            if (fetchError.message.includes("Server error: 404")) {
               userMessage = "Website not found. Please check the URL.";
             } else if (fetchError.message.includes("Server error: 403")) {
               userMessage = "This website is not accessible.";
             } else if (fetchError.message.includes("Invalid response format")) {
               userMessage = "Unable to read website information.";
+            } else if (fetchError.message.includes("Failed to fetch")) {
+              userMessage =
+                "Network error. Please check your connection and try again.";
             }
           }
 

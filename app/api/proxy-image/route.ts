@@ -138,7 +138,16 @@ async function proxyImage(imageUrl: string) {
     if (fetchError instanceof Error && fetchError.name === "AbortError") {
       return NextResponse.json({ error: "Request timed out" }, { status: 408 });
     }
-    throw fetchError;
+
+    // Return a proper error response instead of throwing
+    return NextResponse.json(
+      {
+        error: `Failed to fetch image: ${
+          fetchError instanceof Error ? fetchError.message : "Unknown error"
+        }`,
+      },
+      { status: 500 }
+    );
   }
 }
 

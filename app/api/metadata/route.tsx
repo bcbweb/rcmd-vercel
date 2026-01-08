@@ -18,70 +18,98 @@ async function fetchMetadata(url: string) {
   }
 
   try {
-    // First try with Microlink's API
-    const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=true&audio=true&video=true&iframe=true`;
-    const microlinkResponse = await fetch(microlinkUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; RCMDBot/1.0; +https://rcmd.world)",
-      },
-    });
+    // First try with Microlink's API with timeout
+    const microlinkController = new AbortController();
+    const microlinkTimeout = setTimeout(() => {
+      microlinkController.abort();
+    }, 5000); // 5 second timeout for Microlink
 
-    const microlinkData = await microlinkResponse.json();
+    try {
+      const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=true&audio=true&video=true&iframe=true`;
+      const microlinkResponse = await fetch(microlinkUrl, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; RCMDBot/1.0; +https://rcmd.world)",
+        },
+        signal: microlinkController.signal,
+      });
 
-    // If Microlink returns valid data, use it
-    if (
-      microlinkResponse.ok &&
-      microlinkData.data &&
-      !microlinkData.data.error
-    ) {
-      const metadata = {
-        title: microlinkData.data?.title || new URL(url).hostname,
-        description:
-          microlinkData.data?.description ||
-          `Content from ${new URL(url).hostname}`,
-        image: microlinkData.data?.image?.url,
-        favicon: microlinkData.data?.logo?.url,
-        type: microlinkData.data?.type || "website",
-        url: microlinkData.data?.url || url,
-        author: microlinkData.data?.author,
-        publisher: microlinkData.data?.publisher,
-        date: microlinkData.data?.date,
-        lang: microlinkData.data?.lang,
-        logo: microlinkData.data?.logo?.url,
-        palette: microlinkData.data?.palette,
-        audio: microlinkData.data?.audio,
-        video: microlinkData.data?.video,
-        iframe: microlinkData.data?.iframe,
-      };
+      clearTimeout(microlinkTimeout);
 
-      return NextResponse.json(metadata);
+      const microlinkData = await microlinkResponse.json();
+
+      // If Microlink returns valid data, use it
+      if (
+        microlinkResponse.ok &&
+        microlinkData.data &&
+        !microlinkData.data.error
+      ) {
+        const metadata = {
+          title: microlinkData.data?.title || new URL(url).hostname,
+          description:
+            microlinkData.data?.description ||
+            `Content from ${new URL(url).hostname}`,
+          image: microlinkData.data?.image?.url,
+          favicon: microlinkData.data?.logo?.url,
+          type: microlinkData.data?.type || "website",
+          url: microlinkData.data?.url || url,
+          author: microlinkData.data?.author,
+          publisher: microlinkData.data?.publisher,
+          date: microlinkData.data?.date,
+          lang: microlinkData.data?.lang,
+          logo: microlinkData.data?.logo?.url,
+          palette: microlinkData.data?.palette,
+          audio: microlinkData.data?.audio,
+          video: microlinkData.data?.video,
+          iframe: microlinkData.data?.iframe,
+        };
+
+        return NextResponse.json(metadata);
+      }
+    } catch (microlinkError) {
+      clearTimeout(microlinkTimeout);
+      // If Microlink fails (timeout or error), continue to direct fetch
+      if (
+        microlinkError instanceof Error &&
+        microlinkError.name !== "AbortError"
+      ) {
+        console.log("[DEBUG] Microlink error:", microlinkError.message);
+      }
     }
 
-    // If Microlink fails, try fetching directly
-    console.log("[DEBUG] Microlink failed, trying direct fetch");
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "Upgrade-Insecure-Requests": "1",
-      },
-      redirect: "follow",
-      credentials: "omit",
-    });
+    // If Microlink fails, try fetching directly with timeout
+    console.log("[DEBUG] Microlink failed or timed out, trying direct fetch");
+    const directController = new AbortController();
+    const directTimeout = setTimeout(() => {
+      directController.abort();
+    }, 5000); // 5 second timeout for direct fetch
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+          "Sec-Fetch-Site": "none",
+          "Sec-Fetch-User": "?1",
+          "Upgrade-Insecure-Requests": "1",
+        },
+        redirect: "follow",
+        credentials: "omit",
+        signal: directController.signal,
+      });
+
+      clearTimeout(directTimeout);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
     const text = await response.text();
 
@@ -100,30 +128,52 @@ async function fetchMetadata(url: string) {
     const domain = new URL(url).hostname;
     const baseUrl = new URL(url).origin;
 
-    const metadata = {
-      title: titleMatch?.[1]?.trim() || domain,
-      description: descriptionMatch?.[1]?.trim() || `Content from ${domain}`,
-      image: ogImageMatch?.[1]
-        ? new URL(ogImageMatch[1], baseUrl).toString()
-        : null,
-      favicon: faviconMatch?.[1]
-        ? new URL(faviconMatch[1], baseUrl).toString()
-        : `${baseUrl}/favicon.ico`,
-      type: "website",
-      url: url,
-    };
+      const metadata = {
+        title: titleMatch?.[1]?.trim() || domain,
+        description: descriptionMatch?.[1]?.trim() || `Content from ${domain}`,
+        image: ogImageMatch?.[1]
+          ? new URL(ogImageMatch[1], baseUrl).toString()
+          : null,
+        favicon: faviconMatch?.[1]
+          ? new URL(faviconMatch[1], baseUrl).toString()
+          : `${baseUrl}/favicon.ico`,
+        type: "website",
+        url: url,
+      };
 
-    return NextResponse.json(metadata);
+      return NextResponse.json(metadata);
+    } catch (directError) {
+      clearTimeout(directTimeout);
+      // If direct fetch also fails, throw to be caught by outer catch
+      if (
+        directError instanceof Error &&
+        directError.name !== "AbortError"
+      ) {
+        throw directError;
+      }
+      // If it's an abort error, continue to fallback
+      throw new Error("Request timed out");
+    }
   } catch (error) {
     console.error("[DEBUG] Error fetching metadata:", error);
     // Return basic metadata as fallback
-    const domain = new URL(url).hostname;
-    return NextResponse.json({
-      title: domain,
-      description: `Content from ${domain}`,
-      type: "website",
-      url: url,
-    });
+    try {
+      const domain = new URL(url).hostname;
+      return NextResponse.json({
+        title: domain,
+        description: `Content from ${domain}`,
+        type: "website",
+        url: url,
+      });
+    } catch {
+      // If even URL parsing fails, return minimal response
+      return NextResponse.json({
+        title: "Unknown",
+        description: "Unable to fetch metadata",
+        type: "website",
+        url: url,
+      });
+    }
   }
 }
 
