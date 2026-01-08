@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import debounce from "lodash/debounce";
 import { createClient } from "@/utils/supabase/client";
 
@@ -41,6 +41,11 @@ export function URLHandleInput({
   const [isCheckingHandle, setIsCheckingHandle] = useState(false);
   const [isHandleAvailable, setIsHandleAvailable] = useState(false);
   const supabase = createClient();
+  
+  // Track the current request to prevent race conditions
+  const currentRequestRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Memoize this function to prevent recreating it on every render
   const checkHandleAvailability = useCallback(
@@ -48,34 +53,98 @@ export function URLHandleInput({
       // If handle matches currentHandle, consider it available and skip check
       if (handle === currentHandle) {
         setIsHandleAvailable(true);
+        setIsCheckingHandle(false);
         return;
       }
 
       if (!handle) {
         setIsHandleAvailable(false);
+        setIsCheckingHandle(false);
         return;
       }
 
       // Skip check if handle is too short
       if (handle.length < minLength) {
         setIsHandleAvailable(false);
+        setIsCheckingHandle(false);
         return;
       }
 
+      // Cancel any previous request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      // Mark this as the current request
+      currentRequestRef.current = handle;
       setIsCheckingHandle(true);
+
+      // Create new AbortController for this request (for tracking cancellation)
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       try {
-        const { data } = await supabase
+        // Create a timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutRef.current = setTimeout(() => {
+            reject(new Error("Request timeout"));
+          }, 5000);
+        });
+
+        // Race between the query and timeout
+        const queryPromise = supabase
           .from("profiles")
           .select("handle")
           .ilike("handle", handle)
           .maybeSingle();
 
-        setIsHandleAvailable(!data);
+        const result = await Promise.race([queryPromise, timeoutPromise]);
+
+        // Clear timeout since we got a result
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+
+        // Only update state if this is still the current request and not aborted
+        if (currentRequestRef.current === handle && !controller.signal.aborted) {
+          const { data, error } = result;
+          
+          if (error) {
+            console.error("Error checking handle:", error);
+            setIsHandleAvailable(false);
+          } else {
+            setIsHandleAvailable(!data);
+          }
+          setIsCheckingHandle(false);
+        }
       } catch (error) {
-        console.error("Error checking handle:", error);
-        setIsHandleAvailable(false);
+        // Clear timeout on error
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+
+        // Only update state if this is still the current request and not aborted
+        if (currentRequestRef.current === handle && !controller.signal.aborted) {
+          // Check if it's a timeout error
+          if (error instanceof Error && error.message === "Request timeout") {
+            console.warn("[DEBUG] Handle check timed out for:", handle);
+            setIsHandleAvailable(false);
+          } else if (error instanceof Error && error.name !== "AbortError") {
+            console.error("Error checking handle:", error);
+            setIsHandleAvailable(false);
+          }
+          setIsCheckingHandle(false);
+        }
       } finally {
-        setIsCheckingHandle(false);
+        // Clean up abort controller if this was the current request
+        if (currentRequestRef.current === handle) {
+          abortControllerRef.current = null;
+        }
       }
     },
     [currentHandle, minLength, supabase]
@@ -83,19 +152,35 @@ export function URLHandleInput({
 
   // Effect to trigger handle check when value changes
   useEffect(() => {
+    // Cancel any pending requests when value changes
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
     if (value === "") {
       setIsHandleAvailable(false);
+      setIsCheckingHandle(false);
+      currentRequestRef.current = null;
       return;
     }
 
     // Skip for handles that match the current handle
     if (value === currentHandle) {
       setIsHandleAvailable(true);
+      setIsCheckingHandle(false);
+      currentRequestRef.current = null;
       return;
     }
 
     // Create a debounced function inside the effect
-    const debouncedCheck = debounce(checkHandleAvailability, 300);
+    const debouncedCheck = debounce((handle: string) => {
+      checkHandleAvailability(handle);
+    }, 500); // Increased debounce to 500ms to reduce requests
 
     // Call the debounced function
     debouncedCheck(value);
@@ -103,8 +188,31 @@ export function URLHandleInput({
     // Clean up the debounced call when component unmounts or value changes
     return () => {
       debouncedCheck.cancel();
+      // Cancel any in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      currentRequestRef.current = null;
     };
   }, [value, checkHandleAvailability, currentHandle]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Cancel any pending requests on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   // Effect to notify parent component of status changes
   useEffect(() => {
