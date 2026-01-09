@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack(config) {
+  webpack(config, { isServer }) {
     // Handle deprecated punycode module
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -11,6 +11,21 @@ const nextConfig = {
       test: /\.svg$/,
       use: ["@svgr/webpack"],
     });
+
+    // Ignore .node files (native modules) - these are binary files that webpack can't process
+    // They're used by metascraper dependencies like re2 and should only run server-side
+    config.module.rules.push({
+      test: /\.node$/,
+      loader: 'ignore-loader',
+    });
+
+    // Mark native modules as externals for server-side builds
+    if (isServer) {
+      config.externals = config.externals || [];
+      // re2 is a native module used by url-regex-safe (metascraper dependency)
+      config.externals.push('re2');
+    }
+
     return config;
   },
   // Temporarily ignore TypeScript errors during build
