@@ -8,6 +8,22 @@ import metascraperAuthor from "metascraper-author";
 import metascraperPublisher from "metascraper-publisher";
 import metascraperUrl from "metascraper-url";
 
+/**
+ * Metadata fetching API route
+ *
+ * Uses a multi-tier approach:
+ * 1. Microlink API (free tier) - handles most sites, including some Cloudflare-protected
+ * 2. Direct fetch + metascraper - fallback for sites Microlink can't handle
+ * 3. URL-based fallback - creates metadata from domain name
+ *
+ * To upgrade to Microlink PRO for better Cloudflare bypass:
+ * 1. Get your API key from https://microlink.io/dashboard
+ * 2. Add to .env.local: MICROLINK_API_KEY=your_api_key_here
+ * 3. The code will automatically use PRO features (proxy, enhanced antibot handling)
+ *
+ * See: https://microlink.io/blog/antibot-at-scale for more info on antibot handling
+ */
+
 async function fetchMetadata(url: string) {
   if (!url) {
     return NextResponse.json({ error: "URL is required" }, { status: 400 });
@@ -33,13 +49,40 @@ async function fetchMetadata(url: string) {
     }, 10000); // 10 second timeout for Microlink (increased)
 
     try {
-      const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=true&audio=true&video=true&iframe=true`;
-      console.log("[DEBUG] Fetching from Microlink:", microlinkUrl);
+      // Build Microlink URL with optimal parameters
+      // See: https://microlink.io/docs/api/getting-started/overview
+      const microlinkParams = new URLSearchParams({
+        url: url,
+        palette: "true",
+        audio: "true",
+        video: "true",
+        iframe: "true",
+        // Add proxy parameter if API key is available (PRO plan feature)
+        // PRO plan enables automatic proxy resolution for antibot bypass
+        // See: https://microlink.io/blog/antibot-at-scale
+        ...(process.env.MICROLINK_API_KEY && {
+          proxy: "true", // Enable proxy for enhanced antibot bypass (PRO feature)
+        }),
+      });
+
+      const microlinkUrl = `https://api.microlink.io/?${microlinkParams.toString()}`;
+      const hasApiKey = !!process.env.MICROLINK_API_KEY;
+
+      console.log("[DEBUG] Fetching from Microlink:", {
+        url: microlinkUrl,
+        hasApiKey,
+        usingProxy: hasApiKey,
+      });
 
       const microlinkResponse = await fetch(microlinkUrl, {
         headers: {
           "User-Agent":
             "Mozilla/5.0 (compatible; RCMDBot/1.0; +https://rcmd.world)",
+          // Add API key in header for PRO plan authentication
+          // Get your API key from: https://microlink.io/dashboard
+          ...(process.env.MICROLINK_API_KEY && {
+            "x-api-key": process.env.MICROLINK_API_KEY,
+          }),
         },
         signal: microlinkController.signal,
       });
@@ -69,11 +112,28 @@ async function fetchMetadata(url: string) {
       });
 
       // Check if Microlink returned an error (e.g., antibot protection)
+      // See: https://microlink.io/blog/antibot-at-scale for error codes
       if (microlinkData.status === "fail" || microlinkData.data?.error) {
-        console.log(
-          "[DEBUG] Microlink failed:",
-          microlinkData.data?.error || microlinkData.message || "Unknown error"
-        );
+        const errorCode = microlinkData.code;
+        const errorMessage =
+          microlinkData.data?.error || microlinkData.message || "Unknown error";
+
+        console.log("[DEBUG] Microlink failed:", {
+          code: errorCode,
+          message: errorMessage,
+          hasApiKey: !!process.env.MICROLINK_API_KEY,
+        });
+
+        // Check for specific antibot error codes
+        // EPROXYNEEDED = needs proxy (PRO plan feature)
+        // EINVAL = invalid request
+        // ETIMEDOUT = timeout
+        if (errorCode === "EPROXYNEEDED") {
+          console.log(
+            "[DEBUG] Microlink detected antibot protection requiring PRO plan proxy"
+          );
+        }
+
         throw new Error("Microlink returned error");
       }
 
