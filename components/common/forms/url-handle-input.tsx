@@ -40,7 +40,10 @@ export function URLHandleInput({
 }: URLHandleInputProps) {
   const [isCheckingHandle, setIsCheckingHandle] = useState(false);
   const [isHandleAvailable, setIsHandleAvailable] = useState(false);
-  const supabase = createClient();
+  
+  // Create Supabase client once and reuse it
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   
   // Track the current request to prevent race conditions
   const currentRequestRef = useRef<string | null>(null);
@@ -87,6 +90,8 @@ export function URLHandleInput({
       abortControllerRef.current = controller;
 
       try {
+        console.log("[DEBUG] Starting handle availability check for:", handle);
+        
         // Create a timeout promise
         const timeoutPromise = new Promise<never>((_, reject) => {
           timeoutRef.current = setTimeout(() => {
@@ -95,11 +100,19 @@ export function URLHandleInput({
         });
 
         // Use RPC function to check handle availability (bypasses RLS)
+        console.log("[DEBUG] Calling Supabase RPC with handle:", handle);
+        console.log("[DEBUG] Supabase client type:", typeof supabase);
+        console.log("[DEBUG] Supabase RPC method exists:", typeof supabase.rpc === 'function');
+        
         const queryPromise = supabase.rpc("check_handle_availability", {
           p_handle: handle,
         });
+        
+        console.log("[DEBUG] Query promise created:", typeof queryPromise);
 
+        console.log("[DEBUG] RPC call initiated, waiting for response...");
         const result = await Promise.race([queryPromise, timeoutPromise]);
+        console.log("[DEBUG] RPC call completed, result:", JSON.stringify(result, null, 2));
 
         // Clear timeout since we got a result
         if (timeoutRef.current) {
@@ -111,14 +124,20 @@ export function URLHandleInput({
         if (currentRequestRef.current === handle && !controller.signal.aborted) {
           const { data, error } = result;
           
+          console.log("[DEBUG] Handle check result:", { data, error, handle });
+          
           if (error) {
-            console.error("Error checking handle:", error);
+            console.error("[DEBUG] Error checking handle:", error);
             setIsHandleAvailable(false);
           } else {
             // RPC function returns true if available, false if taken
-            setIsHandleAvailable(data === true);
+            const isAvailable = data === true;
+            console.log("[DEBUG] Handle availability:", { handle, isAvailable, data });
+            setIsHandleAvailable(isAvailable);
           }
           setIsCheckingHandle(false);
+        } else {
+          console.log("[DEBUG] Request was aborted or superseded, ignoring result");
         }
       } catch (error) {
         // Clear timeout on error
@@ -151,6 +170,13 @@ export function URLHandleInput({
 
   // Effect to trigger handle check when value changes
   useEffect(() => {
+    console.log("[DEBUG] Handle input effect triggered:", { 
+      value, 
+      currentHandle, 
+      minLength,
+      valueLength: value.length 
+    });
+    
     // Cancel any pending requests when value changes
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -162,6 +188,7 @@ export function URLHandleInput({
     }
 
     if (value === "") {
+      console.log("[DEBUG] Value is empty, skipping check");
       setIsHandleAvailable(false);
       setIsCheckingHandle(false);
       currentRequestRef.current = null;
@@ -170,7 +197,17 @@ export function URLHandleInput({
 
     // Skip for handles that match the current handle
     if (value === currentHandle) {
+      console.log("[DEBUG] Value matches current handle, marking as available");
       setIsHandleAvailable(true);
+      setIsCheckingHandle(false);
+      currentRequestRef.current = null;
+      return;
+    }
+
+    // Check if handle is too short
+    if (value.length < minLength) {
+      console.log("[DEBUG] Handle too short, skipping check:", { value, minLength });
+      setIsHandleAvailable(false);
       setIsCheckingHandle(false);
       currentRequestRef.current = null;
       return;
@@ -178,10 +215,12 @@ export function URLHandleInput({
 
     // Create a debounced function inside the effect
     const debouncedCheck = debounce((handle: string) => {
+      console.log("[DEBUG] Debounced check triggered for:", handle);
       checkHandleAvailability(handle);
     }, 500); // Increased debounce to 500ms to reduce requests
 
     // Call the debounced function
+    console.log("[DEBUG] Value changed, scheduling debounced check for:", value);
     debouncedCheck(value);
 
     // Clean up the debounced call when component unmounts or value changes
