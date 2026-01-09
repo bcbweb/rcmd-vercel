@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
-import metascraper from "metascraper";
-import metascraperTitle from "metascraper-title";
-import metascraperDescription from "metascraper-description";
-import metascraperImage from "metascraper-image";
-import metascraperLogo from "metascraper-logo";
-import metascraperAuthor from "metascraper-author";
-import metascraperPublisher from "metascraper-publisher";
-import metascraperUrl from "metascraper-url";
+
+// Use dynamic imports for metascraper to avoid webpack bundling issues with native modules
+// These are only used server-side in API routes, so dynamic import is safe
 
 /**
  * Metadata fetching API route
@@ -245,15 +240,36 @@ async function fetchMetadata(url: string) {
       }
 
       // Try using metascraper for better metadata extraction
+      // Use dynamic import to avoid webpack bundling native modules
       try {
-        const scraper = metascraper([
-          metascraperTitle(),
-          metascraperDescription(),
-          metascraperImage(),
-          metascraperLogo(),
-          metascraperAuthor(),
-          metascraperPublisher(),
-          metascraperUrl(),
+        const [
+          metascraper,
+          metascraperTitle,
+          metascraperDescription,
+          metascraperImage,
+          metascraperLogo,
+          metascraperAuthor,
+          metascraperPublisher,
+          metascraperUrl,
+        ] = await Promise.all([
+          import("metascraper"),
+          import("metascraper-title"),
+          import("metascraper-description"),
+          import("metascraper-image"),
+          import("metascraper-logo"),
+          import("metascraper-author"),
+          import("metascraper-publisher"),
+          import("metascraper-url"),
+        ]);
+
+        const scraper = metascraper.default([
+          metascraperTitle.default(),
+          metascraperDescription.default(),
+          metascraperImage.default(),
+          metascraperLogo.default(),
+          metascraperAuthor.default(),
+          metascraperPublisher.default(),
+          metascraperUrl.default(),
         ]);
 
         const metadata = await scraper({ html: text, url });

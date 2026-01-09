@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack(config, { isServer }) {
+  webpack(config, { isServer, webpack }) {
     // Handle deprecated punycode module
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -12,18 +12,39 @@ const nextConfig = {
       use: ["@svgr/webpack"],
     });
 
-    // Ignore .node files (native modules) - these are binary files that webpack can't process
-    // They're used by metascraper dependencies like re2 and should only run server-side
-    config.module.rules.push({
-      test: /\.node$/,
-      loader: 'ignore-loader',
-    });
-
-    // Mark native modules as externals for server-side builds
+    // Handle native Node.js modules used by metascraper
+    // These are binary .node files that webpack can't bundle
     if (isServer) {
+      // Mark native modules as externals for server-side builds
+      // This prevents webpack from trying to bundle them
       config.externals = config.externals || [];
+      
       // re2 is a native module used by url-regex-safe (metascraper dependency)
-      config.externals.push('re2');
+      // Externalize it so it's loaded at runtime instead of bundled
+      if (Array.isArray(config.externals)) {
+        config.externals.push({
+          're2': 'commonjs re2',
+        });
+      } else if (typeof config.externals === 'function') {
+        const originalExternals = config.externals;
+        config.externals = [
+          originalExternals,
+          { 're2': 'commonjs re2' },
+        ];
+      } else {
+        config.externals = [config.externals, { 're2': 'commonjs re2' }];
+      }
+
+      // Ignore .node files from re2 package specifically
+      // These are binary files that webpack can't process
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          checkResource(resource, context) {
+            // Only ignore .node files from node_modules/re2
+            return /node_modules[\\/]re2[\\/].*\.node$/.test(resource);
+          },
+        })
+      );
     }
 
     return config;
