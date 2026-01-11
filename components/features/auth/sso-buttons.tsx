@@ -182,8 +182,8 @@ export function SSOButtons({
         const providers = await getEnabledSSOProviders();
         setEnabledProviders(providers);
 
-        // Cache the result
-        if (typeof window !== "undefined") {
+        // Cache the result only if we got valid providers
+        if (typeof window !== "undefined" && providers.length > 0) {
           sessionStorage.setItem(
             CACHE_KEY,
             JSON.stringify({
@@ -191,17 +191,18 @@ export function SSOButtons({
               timestamp: Date.now(),
             })
           );
+        } else if (typeof window !== "undefined") {
+          // Clear cache if no providers are enabled
+          sessionStorage.removeItem(CACHE_KEY);
         }
       } catch (error) {
         console.error("Error checking enabled SSO providers:", error);
-        // On error, show all providers as fallback (better UX than showing nothing)
-        setEnabledProviders([
-          "google",
-          "apple",
-          "github",
-          "facebook",
-          "twitter",
-        ]);
+        // On error, don't show any providers (safer than showing disabled ones)
+        // Clear cache to force re-check on next load
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem(CACHE_KEY);
+        }
+        setEnabledProviders([]);
       } finally {
         setIsLoading(false);
       }

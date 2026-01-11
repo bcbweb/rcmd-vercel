@@ -327,7 +327,7 @@ export const signInWithTwitter = async () => {
 
 // Check which SSO providers are enabled in Supabase
 // This checks by attempting to get OAuth URLs - if a provider is not configured,
-// Supabase will return an error or null URL
+// Supabase will return an error with specific error codes or messages
 export const getEnabledSSOProviders = async (): Promise<string[]> => {
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
@@ -347,19 +347,67 @@ export const getEnabledSSOProviders = async (): Promise<string[]> => {
         },
       });
 
-      // If we get a URL, the provider is enabled
-      // Some providers might return an error if not configured
-      if (data?.url && !error) {
-        return provider;
+      // If there's an error, check if it indicates the provider is disabled
+      if (error) {
+        const errorMessage = (error.message || "").toLowerCase();
+        const errorStatus = error.status?.toString() || "";
+        
+        // Common indicators that a provider is not enabled/configured:
+        // - Error messages containing "not configured", "not enabled", "disabled"
+        // - Status codes 400 (bad request) or 404 (not found)
+        // - Specific Supabase error codes
+        if (
+          errorMessage.includes("not configured") ||
+          errorMessage.includes("not enabled") ||
+          errorMessage.includes("disabled") ||
+          errorMessage.includes("provider_disabled") ||
+          errorMessage.includes("invalid provider") ||
+          errorStatus === "400" ||
+          errorStatus === "404"
+        ) {
+          console.log(`[DEBUG] Provider ${provider} is not enabled:`, error.message);
+          return null;
+        }
+        // Other errors might indicate a problem, but we'll be conservative
+        console.log(`[DEBUG] Provider ${provider} returned error:`, error.message);
+        return null;
       }
+
+      // If we get a URL, validate it's a proper OAuth URL for this provider
+      if (data?.url) {
+        const url = data.url.toLowerCase();
+        const providerDomains: Record<string, string[]> = {
+          google: ["accounts.google.com", "oauth2.googleapis.com"],
+          apple: ["appleid.apple.com"],
+          github: ["github.com"],
+          facebook: ["facebook.com"],
+          twitter: ["twitter.com", "x.com", "api.twitter.com"],
+        };
+
+        const domains = providerDomains[provider] || [];
+        const isValid = domains.some((domain) => url.includes(domain));
+        
+        if (isValid) {
+          console.log(`[DEBUG] Provider ${provider} is enabled`);
+          return provider;
+        } else {
+          console.log(`[DEBUG] Provider ${provider} returned invalid URL:`, url);
+          return null;
+        }
+      }
+      
+      // No URL and no error - likely not configured
+      console.log(`[DEBUG] Provider ${provider} returned no URL`);
       return null;
     } catch (error) {
       // Provider is not enabled or configured
-      console.log(`[DEBUG] Provider ${provider} check failed:`, error);
+      console.log(`[DEBUG] Provider ${provider} check exception:`, error);
       return null;
     }
   });
 
   const results = await Promise.all(checks);
-  return results.filter((p): p is string => p !== null);
+  const enabled = results.filter((p): p is string => p !== null);
+  console.log(`[DEBUG] Enabled SSO providers:`, enabled);
+  return enabled;
 };
