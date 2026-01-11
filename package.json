@@ -25,6 +25,7 @@
     "@sanity/client": "^6.28.4",
     "@sanity/image-url": "^1.1.0",
     "@sanity/vision": "^3.83.0",
+    "@stripe/stripe-js": "^8.6.1",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
@@ -71,6 +72,7 @@
     "react-swipeable": "^7.0.2",
     "sanity": "^3.83.0",
     "sonner": "^1.7.0",
+    "stripe": "^20.1.2",
     "styled-components": "^6.1.15",
     "zod": "^3.23.8",
     "zustand": "^5.0.1"
