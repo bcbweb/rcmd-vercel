@@ -344,28 +344,36 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Ensure a profile exists for this user
-    const profileId = await ensureUserProfile(user.id);
+    let profileId = await ensureUserProfile(user.id);
+    
+    // If ensureUserProfile didn't return a profile, try to get it manually
     if (!profileId) {
-      console.error("Failed to create profile for user:", user.id);
-      return NextResponse.redirect(
-        generateRedirectUrl(
-          platform,
-          "profile_error",
-          "Failed to create profile",
-          request
-        )
-      );
+      // First try to get the active profile
+      const { data: activeProfile } = await supabase
+        .from("user_active_profiles")
+        .select("profile_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (activeProfile?.profile_id) {
+        profileId = activeProfile.profile_id;
+      } else {
+        // Fallback: get the first profile for the user
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("auth_user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1);
+
+        if (profiles && profiles.length > 0) {
+          profileId = profiles[0].id;
+        }
+      }
     }
 
-    // Get the profile ID - this should now find the profile we just ensured exists
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("auth_user_id", user.id)
-      .single();
-
-    if (!profileData?.id || profileError) {
-      console.error("Profile not found after creation attempt:", profileError);
+    if (!profileId) {
+      console.error("Failed to create or find profile for user:", user.id);
       return NextResponse.redirect(
         generateRedirectUrl(
           platform,
@@ -384,7 +392,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { error: integrationError } = await supabase
       .from("profile_social_integrations")
       .upsert({
-        profile_id: profileData.id,
+        profile_id: profileId,
         platform: platform,
         username: userProfile.username,
         profile_url:
@@ -416,7 +424,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Update profile_social_links as well
     await supabase.from("profile_social_links").upsert({
-      profile_id: profileData.id,
+      profile_id: profileId,
       platform: platform,
       handle: userProfile.username,
       updated_at: new Date().toISOString(),

@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { ensureUserProfile } from "@/utils/profile-utils";
 import punycode from "punycode";
 
 // Define a type for the TikTok response
@@ -191,14 +192,36 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Get the profile ID
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("auth_user_id", user.id)
-      .single();
+    // Ensure a profile exists for this user
+    let profileId = await ensureUserProfile(user.id);
+    
+    // If ensureUserProfile didn't return a profile, try to get it manually
+    if (!profileId) {
+      // First try to get the active profile
+      const { data: activeProfile } = await supabase
+        .from("user_active_profiles")
+        .select("profile_id")
+        .eq("auth_user_id", user.id)
+        .single();
 
-    if (!profile?.id) {
+      if (activeProfile?.profile_id) {
+        profileId = activeProfile.profile_id;
+      } else {
+        // Fallback: get the first profile for the user
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("auth_user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1);
+
+        if (profiles && profiles.length > 0) {
+          profileId = profiles[0].id;
+        }
+      }
+    }
+
+    if (!profileId) {
       console.error("Profile not found for user:", user.id);
       return NextResponse.redirect(
         generateRedirectUrl("profile_error", "User profile not found", request)
@@ -214,7 +237,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { error: integrationError } = await supabase
       .from("profile_social_integrations")
       .upsert({
-        profile_id: profile.id,
+        profile_id: profileId,
         platform: "tiktok",
         username: display_name,
         profile_url: profile_deep_link,
@@ -237,7 +260,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Update the profile social links
     await supabase.from("profile_social_links").upsert({
-      profile_id: profile.id,
+      profile_id: profileId,
       platform: "tiktok",
       handle: display_name,
       updated_at: new Date().toISOString(),
