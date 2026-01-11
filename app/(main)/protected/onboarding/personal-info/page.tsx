@@ -199,20 +199,52 @@ export default function PersonalInfoPage() {
         throw new Error("No authenticated user found");
       }
 
-      // Save to profiles table
-      const { error } = await supabase.from("profiles").upsert(
-        {
-          auth_user_id: user.id,
+      // Get the active profile or first profile for this user
+      let profileId: string | null = null;
+      
+      // Try to get active profile first
+      const { data: activeProfile } = await supabase
+        .from("user_active_profiles")
+        .select("profile_id")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (activeProfile?.profile_id) {
+        profileId = activeProfile.profile_id;
+      } else {
+        // Fallback: get the first profile for this user
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("auth_user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1);
+
+        if (profiles && profiles.length > 0) {
+          profileId = profiles[0].id;
+        }
+      }
+
+      // If no profile exists, ensure one is created
+      if (!profileId) {
+        const { ensureUserProfile } = await import("@/utils/profile-utils");
+        profileId = await ensureUserProfile(user.id);
+        if (!profileId) {
+          throw new Error("Failed to create or find profile");
+        }
+      }
+
+      // Update the profile
+      const { error } = await supabase
+        .from("profiles")
+        .update({
           email: user.email,
           first_name: data.first_name,
           last_name: data.last_name,
           bio: data.bio,
           updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "auth_user_id",
-        }
-      );
+        })
+        .eq("id", profileId);
 
       if (error) throw error;
 

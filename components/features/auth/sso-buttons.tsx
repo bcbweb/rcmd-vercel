@@ -6,9 +6,10 @@ import {
   signInWithGitHub,
   signInWithFacebook,
   signInWithTwitter,
+  getEnabledSSOProviders,
 } from "@/app/(main)/actions";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SSOButtonProps {
   provider: "google" | "apple" | "github" | "facebook" | "twitter";
@@ -79,7 +80,11 @@ const providerConfig = {
   },
 };
 
-export function SSOButton({ provider, variant = "outline", className = "" }: SSOButtonProps) {
+export function SSOButton({
+  provider,
+  variant = "outline",
+  className = "",
+}: SSOButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const config = providerConfig[provider];
 
@@ -141,7 +146,80 @@ interface SSOButtonsProps {
   showDivider?: boolean;
 }
 
-export function SSOButtons({ variant = "outline", className = "", showDivider = true }: SSOButtonsProps) {
+// Cache enabled providers in sessionStorage to avoid repeated checks
+const CACHE_KEY = "sso_enabled_providers";
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+export function SSOButtons({
+  variant = "outline",
+  className = "",
+  showDivider = true,
+}: SSOButtonsProps) {
+  const [enabledProviders, setEnabledProviders] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function checkEnabledProviders() {
+      // Check cache first
+      if (typeof window !== "undefined") {
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        if (cached) {
+          try {
+            const { providers, timestamp } = JSON.parse(cached);
+            const now = Date.now();
+            if (now - timestamp < CACHE_DURATION) {
+              setEnabledProviders(providers);
+              setIsLoading(false);
+              return;
+            }
+          } catch (e) {
+            // Invalid cache, continue to fetch
+          }
+        }
+      }
+
+      try {
+        const providers = await getEnabledSSOProviders();
+        setEnabledProviders(providers);
+
+        // Cache the result
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              providers,
+              timestamp: Date.now(),
+            })
+          );
+        }
+      } catch (error) {
+        console.error("Error checking enabled SSO providers:", error);
+        // On error, show all providers as fallback (better UX than showing nothing)
+        setEnabledProviders([
+          "google",
+          "apple",
+          "github",
+          "facebook",
+          "twitter",
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    checkEnabledProviders();
+  }, []);
+
+  // Don't show anything while loading
+  if (isLoading) {
+    return null;
+  }
+
+  // Don't show anything if no providers are enabled
+  if (enabledProviders.length === 0) {
+    return null;
+  }
+
   return (
     <div className={className}>
       {showDivider && (
@@ -157,11 +235,21 @@ export function SSOButtons({ variant = "outline", className = "", showDivider = 
         </div>
       )}
       <div className="space-y-3">
-        <SSOButton provider="google" variant={variant} />
-        <SSOButton provider="apple" variant={variant} />
-        <SSOButton provider="github" variant={variant} />
-        <SSOButton provider="facebook" variant={variant} />
-        <SSOButton provider="twitter" variant={variant} />
+        {enabledProviders.includes("google") && (
+          <SSOButton provider="google" variant={variant} />
+        )}
+        {enabledProviders.includes("apple") && (
+          <SSOButton provider="apple" variant={variant} />
+        )}
+        {enabledProviders.includes("github") && (
+          <SSOButton provider="github" variant={variant} />
+        )}
+        {enabledProviders.includes("facebook") && (
+          <SSOButton provider="facebook" variant={variant} />
+        )}
+        {enabledProviders.includes("twitter") && (
+          <SSOButton provider="twitter" variant={variant} />
+        )}
       </div>
     </div>
   );

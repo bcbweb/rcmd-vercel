@@ -214,7 +214,11 @@ export const signInWithGoogle = async () => {
     return redirect(data.url);
   }
 
-  return encodedRedirect("error", "/sign-in", "Failed to initiate Google sign-in");
+  return encodedRedirect(
+    "error",
+    "/sign-in",
+    "Failed to initiate Google sign-in"
+  );
 };
 
 export const signInWithApple = async () => {
@@ -236,7 +240,11 @@ export const signInWithApple = async () => {
     return redirect(data.url);
   }
 
-  return encodedRedirect("error", "/sign-in", "Failed to initiate Apple sign-in");
+  return encodedRedirect(
+    "error",
+    "/sign-in",
+    "Failed to initiate Apple sign-in"
+  );
 };
 
 export const signInWithGitHub = async () => {
@@ -258,7 +266,11 @@ export const signInWithGitHub = async () => {
     return redirect(data.url);
   }
 
-  return encodedRedirect("error", "/sign-in", "Failed to initiate GitHub sign-in");
+  return encodedRedirect(
+    "error",
+    "/sign-in",
+    "Failed to initiate GitHub sign-in"
+  );
 };
 
 export const signInWithFacebook = async () => {
@@ -280,7 +292,11 @@ export const signInWithFacebook = async () => {
     return redirect(data.url);
   }
 
-  return encodedRedirect("error", "/sign-in", "Failed to initiate Facebook sign-in");
+  return encodedRedirect(
+    "error",
+    "/sign-in",
+    "Failed to initiate Facebook sign-in"
+  );
 };
 
 export const signInWithTwitter = async () => {
@@ -302,5 +318,49 @@ export const signInWithTwitter = async () => {
     return redirect(data.url);
   }
 
-  return encodedRedirect("error", "/sign-in", "Failed to initiate Twitter sign-in");
+  return encodedRedirect(
+    "error",
+    "/sign-in",
+    "Failed to initiate Twitter sign-in"
+  );
+};
+
+// Check which SSO providers are enabled in Supabase
+// This checks by attempting to get OAuth URLs - if a provider is not configured,
+// Supabase will return an error or null URL
+export const getEnabledSSOProviders = async (): Promise<string[]> => {
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+  const providers: string[] = [];
+  const providerList: Array<
+    "google" | "apple" | "github" | "facebook" | "twitter"
+  > = ["google", "apple", "github", "facebook", "twitter"];
+
+  // Check each provider by attempting to get its OAuth URL
+  // We use skipBrowserRedirect to avoid actually redirecting
+  const checks = providerList.map(async (provider) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${origin}/auth/callback`,
+          skipBrowserRedirect: true, // Don't redirect, just check if configured
+        },
+      });
+
+      // If we get a URL, the provider is enabled
+      // Some providers might return an error if not configured
+      if (data?.url && !error) {
+        return provider;
+      }
+      return null;
+    } catch (error) {
+      // Provider is not enabled or configured
+      console.log(`[DEBUG] Provider ${provider} check failed:`, error);
+      return null;
+    }
+  });
+
+  const results = await Promise.all(checks);
+  return results.filter((p): p is string => p !== null);
 };
