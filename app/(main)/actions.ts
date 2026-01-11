@@ -189,3 +189,118 @@ export const signOutAction = async () => {
   await supabase.auth.signOut();
   return redirect("/sign-in");
 };
+
+// SSO Actions
+export const signInWithGoogle = async () => {
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
+    },
+  });
+
+  if (error) {
+    return encodedRedirect("error", "/sign-in", error.message);
+  }
+
+  if (data?.url) {
+    return redirect(data.url);
+  }
+
+  return encodedRedirect("error", "/sign-in", "Failed to initiate Google sign-in");
+};
+
+export const signInWithApple = async () => {
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "apple",
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return encodedRedirect("error", "/sign-in", error.message);
+  }
+
+  if (data?.url) {
+    return redirect(data.url);
+  }
+
+  return encodedRedirect("error", "/sign-in", "Failed to initiate Apple sign-in");
+};
+
+export const signInWithGitHub = async () => {
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "github",
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return encodedRedirect("error", "/sign-in", error.message);
+  }
+
+  if (data?.url) {
+    return redirect(data.url);
+  }
+
+  return encodedRedirect("error", "/sign-in", "Failed to initiate GitHub sign-in");
+};
+
+export const signInWithFacebook = async () => {
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "facebook",
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return encodedRedirect("error", "/sign-in", error.message);
+  }
+
+  if (data?.url) {
+    return redirect(data.url);
+  }
+
+  return encodedRedirect("error", "/sign-in", "Failed to initiate Facebook sign-in");
+};
+
+export const signInWithTwitter = async () => {
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "twitter",
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return encodedRedirect("error", "/sign-in", error.message);
+  }
+
+  if (data?.url) {
+    return redirect(data.url);
+  }
+
+  return encodedRedirect("error", "/sign-in", "Failed to initiate Twitter sign-in");
+};

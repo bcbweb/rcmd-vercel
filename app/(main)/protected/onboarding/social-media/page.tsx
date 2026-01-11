@@ -92,6 +92,12 @@ export default function SocialMediaPage() {
     const success = searchParams.get("success");
     const error = searchParams.get("error");
     const errorMessage = searchParams.get("message");
+    const verified = searchParams.get("verified");
+
+    // Show email verification success message
+    if (verified === "true") {
+      toast.success("Your email has been verified! Welcome to RCMD.");
+    }
 
     if (success?.startsWith("connected_")) {
       const platform = success.replace("connected_", "");

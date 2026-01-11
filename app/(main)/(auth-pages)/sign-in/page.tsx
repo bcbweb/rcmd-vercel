@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { SSOButtons } from "@/components/features/auth/sso-buttons";
 
 export default function Login() {
   const searchParams = useSearchParams();
@@ -23,7 +24,7 @@ export default function Login() {
   }
 
   return (
-    <form className="flex-1 flex flex-col min-w-64 max-w-64 mx-auto">
+    <div className="flex-1 flex flex-col min-w-64 max-w-64 mx-auto">
       <h1 className="text-2xl font-medium">Sign in</h1>
       <p className="text-sm text-foreground">
         Don't have an account?{" "}
@@ -31,7 +32,10 @@ export default function Login() {
           Sign up
         </Link>
       </p>
-      <div className="flex flex-col gap-2 [&>input]:mb-3 mt-8 w-full">
+      
+      <SSOButtons className="mt-8" />
+
+      <form className="flex flex-col gap-2 [&>input]:mb-3 mt-6 w-full">
         <Label htmlFor="email">Email</Label>
         <Input name="email" placeholder="you@example.com" required />
         <div className="flex justify-between items-center">
@@ -53,7 +57,7 @@ export default function Login() {
           Sign in
         </SubmitButton>
         {message && <FormMessage message={message} />}
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }

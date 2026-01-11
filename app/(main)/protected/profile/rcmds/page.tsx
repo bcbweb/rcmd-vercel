@@ -14,8 +14,10 @@ import { Eye, Settings, Share2 } from "lucide-react";
 import Link from "next/link";
 import { PageConfigModal } from "@/components/features/profile/modals";
 import { ShareModal } from "@/components/common/modals";
+import { useSearchParams } from "next/navigation";
 
 export default function RCMDsPage() {
+  const searchParams = useSearchParams();
   const [rcmdBlocks, setRCMDBlocks] = useState<RCMDBlockType[]>([]);
   const [isRCMDSaving, setIsRCMDSaving] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
@@ -28,6 +30,14 @@ export default function RCMDsPage() {
 
   // Get profile store state and actions
   const { profile, fetchProfile, lastFetchTimestamp } = useProfileStore();
+
+  // Handle email verification success message
+  useEffect(() => {
+    const verified = searchParams.get("verified");
+    if (verified === "true") {
+      toast.success("Your email has been verified! Welcome to RCMD.");
+    }
+  }, [searchParams]);
 
   // Determine if this is the default page
   const isDefaultPage = profile?.default_page_type === "rcmd";
