@@ -6,10 +6,9 @@ import {
   signInWithGitHub,
   signInWithFacebook,
   signInWithTwitter,
-  getEnabledSSOProviders,
 } from "@/app/(main)/actions";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface SSOButtonProps {
   provider: "google" | "apple" | "github" | "facebook" | "twitter";
@@ -146,75 +145,16 @@ interface SSOButtonsProps {
   showDivider?: boolean;
 }
 
-// Cache enabled providers in sessionStorage to avoid repeated checks
-const CACHE_KEY = "sso_enabled_providers";
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Currently enabled providers - only show Google for now
+// All provider code is kept intact, just visually hidden
+const ENABLED_PROVIDERS = ["google"];
 
 export function SSOButtons({
   variant = "outline",
   className = "",
   showDivider = true,
 }: SSOButtonsProps) {
-  const [enabledProviders, setEnabledProviders] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function checkEnabledProviders() {
-      // Check cache first
-      if (typeof window !== "undefined") {
-        const cached = sessionStorage.getItem(CACHE_KEY);
-        if (cached) {
-          try {
-            const { providers, timestamp } = JSON.parse(cached);
-            const now = Date.now();
-            if (now - timestamp < CACHE_DURATION) {
-              setEnabledProviders(providers);
-              setIsLoading(false);
-              return;
-            }
-          } catch {
-            // Invalid cache, continue to fetch
-          }
-        }
-      }
-
-      try {
-        const providers = await getEnabledSSOProviders();
-        setEnabledProviders(providers);
-
-        // Cache the result only if we got valid providers
-        if (typeof window !== "undefined" && providers.length > 0) {
-          sessionStorage.setItem(
-            CACHE_KEY,
-            JSON.stringify({
-              providers,
-              timestamp: Date.now(),
-            })
-          );
-        } else if (typeof window !== "undefined") {
-          // Clear cache if no providers are enabled
-          sessionStorage.removeItem(CACHE_KEY);
-        }
-      } catch (error) {
-        console.error("Error checking enabled SSO providers:", error);
-        // On error, don't show any providers (safer than showing disabled ones)
-        // Clear cache to force re-check on next load
-        if (typeof window !== "undefined") {
-          sessionStorage.removeItem(CACHE_KEY);
-        }
-        setEnabledProviders([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    checkEnabledProviders();
-  }, []);
-
-  // Don't show anything while loading
-  if (isLoading) {
-    return null;
-  }
+  const enabledProviders = ENABLED_PROVIDERS;
 
   // Don't show anything if no providers are enabled
   if (enabledProviders.length === 0) {

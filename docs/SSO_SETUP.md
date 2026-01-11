@@ -183,7 +183,39 @@ This guide will help you set up SSO authentication for RCMD using Supabase's bui
 
 ## Environment Variables
 
-No additional environment variables are needed! Supabase handles all OAuth configuration server-side. The redirect URIs are automatically configured when you set up providers in the Supabase dashboard.
+Supabase handles all OAuth configuration server-side, but you need to configure which providers to **display** on your frontend using environment variables.
+
+### Configure Enabled Providers
+
+Add this to your `.env.local` file to control which SSO providers appear on the sign-in/sign-up pages:
+
+**Option 1: Comma-separated list (recommended)**
+
+```bash
+NEXT_PUBLIC_ENABLED_SSO_PROVIDERS=google,apple,github,facebook,twitter
+```
+
+**Option 2: Individual flags (more explicit)**
+
+```bash
+NEXT_PUBLIC_SSO_GOOGLE_ENABLED=true
+NEXT_PUBLIC_SSO_APPLE_ENABLED=true
+NEXT_PUBLIC_SSO_GITHUB_ENABLED=true
+NEXT_PUBLIC_SSO_FACEBOOK_ENABLED=true
+NEXT_PUBLIC_SSO_TWITTER_ENABLED=true
+```
+
+**Example: Only show Google and Apple**
+
+```bash
+NEXT_PUBLIC_ENABLED_SSO_PROVIDERS=google,apple
+```
+
+**Important:**
+
+- Only include providers you've actually enabled in your Supabase Dashboard
+- If you don't set these variables, all providers will be shown by default (for backward compatibility)
+- After changing these variables, restart your development server or redeploy
 
 ---
 
