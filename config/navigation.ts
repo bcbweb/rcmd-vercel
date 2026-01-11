@@ -29,4 +29,8 @@ export const mainNavItems: MainNavItem[] = [
     title: "Help",
     href: "/help",
   },
+  {
+    title: "Pricing",
+    href: "/pricing",
+  },
 ];

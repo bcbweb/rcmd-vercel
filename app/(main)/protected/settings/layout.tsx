@@ -63,6 +63,7 @@ export default function SettingsLayout({
   const navItems = [
     { name: "Edit profile", href: "/protected/settings/profile" },
     { name: "Account management", href: "/protected/settings/account" },
+    { name: "Subscription", href: "/protected/settings/subscription" },
   ];
 
   // Show the same initializing component as other layouts
