@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { stripe } from "@/utils/stripe";
+import { stripe, isStripeConfigured } from "@/utils/stripe";
 
 export async function POST(request: NextRequest) {
+  if (!isStripeConfigured() || !stripe) {
+    return NextResponse.json(
+      { error: "Stripe is not configured. Please set up your Stripe account." },
+      { status: 503 }
+    );
+  }
+
   try {
     const supabase = await createClient();
     const {

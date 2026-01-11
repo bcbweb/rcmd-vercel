@@ -58,6 +58,12 @@ export default function SubscriptionPage() {
   }, [userId]);
 
   const handleManageSubscription = async () => {
+    const isStripeEnabled = process.env.NEXT_PUBLIC_STRIPE_ENABLED === "true";
+    if (!isStripeEnabled) {
+      toast.info("Stripe integration is being set up. Subscription management will be available soon.");
+      return;
+    }
+
     try {
       setOpeningPortal(true);
       const portalUrl = await openCustomerPortal();
@@ -66,9 +72,12 @@ export default function SubscriptionPage() {
       }
     } catch (error) {
       console.error("Error opening portal:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to open customer portal"
-      );
+      const errorMessage = error instanceof Error ? error.message : "Failed to open customer portal";
+      if (errorMessage.includes("not configured")) {
+        toast.info("Stripe integration is being set up. Subscription management will be available soon.");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setOpeningPortal(false);
     }
@@ -182,7 +191,7 @@ export default function SubscriptionPage() {
           {isPro && subscription ? (
             <Button
               onClick={handleManageSubscription}
-              disabled={openingPortal}
+              disabled={openingPortal || process.env.NEXT_PUBLIC_STRIPE_ENABLED !== "true"}
               className="flex-1"
             >
               {openingPortal ? (
@@ -190,6 +199,8 @@ export default function SubscriptionPage() {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Opening...
                 </>
+              ) : process.env.NEXT_PUBLIC_STRIPE_ENABLED !== "true" ? (
+                "Stripe Setup Required"
               ) : (
                 <>
                   <ExternalLink className="mr-2 h-4 w-4" />

@@ -1,13 +1,14 @@
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY is not set");
-}
+// Make Stripe optional - only initialize if key is provided
+export const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-12-18.acacia",
+      typescript: true,
+    })
+  : null;
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-12-18.acacia",
-  typescript: true,
-});
+export const isStripeConfigured = () => !!process.env.STRIPE_SECRET_KEY;
 
 export const STRIPE_PRICE_IDS = {
   pro_monthly: process.env.STRIPE_PRICE_ID_PRO_MONTHLY || "",

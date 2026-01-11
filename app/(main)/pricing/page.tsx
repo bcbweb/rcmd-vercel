@@ -47,6 +47,13 @@ export default function PricingPage() {
       return;
     }
 
+    // Check if Stripe is configured
+    const isStripeEnabled = process.env.NEXT_PUBLIC_STRIPE_ENABLED === "true";
+    if (!isStripeEnabled) {
+      toast.info("Subscription upgrades are coming soon! Stripe integration is being set up.");
+      return;
+    }
+
     try {
       setProcessingPlan(plan.name);
       const priceId =
@@ -69,9 +76,12 @@ export default function PricingPage() {
       }
     } catch (error) {
       console.error("Error creating checkout:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to start checkout"
-      );
+      const errorMessage = error instanceof Error ? error.message : "Failed to start checkout";
+      if (errorMessage.includes("not configured")) {
+        toast.info("Subscription upgrades are coming soon! Stripe integration is being set up.");
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setProcessingPlan(null);
     }
@@ -229,13 +239,15 @@ export default function PricingPage() {
               <Button
                 className="w-full bg-white text-blue-600 hover:bg-gray-100"
                 onClick={() => handleUpgrade(proPlan)}
-                disabled={processingPlan === proPlan.name}
+                disabled={processingPlan === proPlan.name || process.env.NEXT_PUBLIC_STRIPE_ENABLED !== "true"}
               >
                 {processingPlan === proPlan.name ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Processing...
                   </>
+                ) : process.env.NEXT_PUBLIC_STRIPE_ENABLED !== "true" ? (
+                  "Coming Soon"
                 ) : status === "authenticated" ? (
                   "Upgrade to Pro"
                 ) : (
