@@ -331,7 +331,6 @@ export const signInWithTwitter = async () => {
 export const getEnabledSSOProviders = async (): Promise<string[]> => {
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
-  const providers: string[] = [];
   const providerList: Array<
     "google" | "apple" | "github" | "facebook" | "twitter"
   > = ["google", "apple", "github", "facebook", "twitter"];

@@ -172,7 +172,7 @@ export function SSOButtons({
               setIsLoading(false);
               return;
             }
-          } catch (e) {
+          } catch {
             // Invalid cache, continue to fetch
           }
         }

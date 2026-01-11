@@ -237,7 +237,7 @@ export function URLHandleInput({
       }
       currentRequestRef.current = null;
     };
-  }, [value, checkHandleAvailability, currentHandle]);
+  }, [value, checkHandleAvailability, currentHandle, minLength]);
 
   // Cleanup on unmount
   useEffect(() => {
