@@ -72,11 +72,17 @@ STRIPE_PRICE_ID_PRO_YEARLY=price_...
 # Stripe Webhook Secret (from Step 2)
 STRIPE_WEBHOOK_SECRET=whsec_...
 
+# Enable Stripe (set to "true" when ready)
+NEXT_PUBLIC_STRIPE_ENABLED=true
+
 # Supabase Service Role Key (for webhooks to bypass RLS)
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
-**Important**: 
+**Note**: The app can build and deploy without Stripe credentials. Set `NEXT_PUBLIC_STRIPE_ENABLED=true` only after you've configured all Stripe settings. Until then, the pricing page will show "Coming Soon" for upgrade buttons.
+
+**Important**:
+
 - Use test keys (`sk_test_...`, `pk_test_...`) for development
 - Use live keys (`sk_live_...`, `pk_live_...`) for production
 - Never commit these keys to version control
@@ -99,7 +105,7 @@ If you want to customize the prices shown in the database (they're also pulled f
 
 ```sql
 UPDATE subscription_plans
-SET 
+SET
   price_monthly = 999, -- $9.99 in cents
   price_yearly = 9999, -- $99.99 in cents
   stripe_price_id_monthly = 'price_...',
