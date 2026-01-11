@@ -33,9 +33,7 @@ export default function Login() {
         </Link>
       </p>
       
-      <SSOButtons className="mt-8" />
-
-      <form className="flex flex-col gap-2 [&>input]:mb-3 mt-6 w-full">
+      <form className="flex flex-col gap-2 [&>input]:mb-3 mt-8 w-full">
         <Label htmlFor="email">Email</Label>
         <Input name="email" placeholder="you@example.com" required />
         <div className="flex justify-between items-center">
@@ -58,6 +56,8 @@ export default function Login() {
         </SubmitButton>
         {message && <FormMessage message={message} />}
       </form>
+
+      <SSOButtons className="mt-6" />
     </div>
   );
 }

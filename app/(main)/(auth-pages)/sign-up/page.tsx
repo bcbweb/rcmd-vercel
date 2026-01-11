@@ -44,9 +44,7 @@ export default function Signup() {
         </Link>
       </p>
       
-      <SSOButtons className="mt-8" />
-
-      <form className="flex flex-col gap-2 [&>input]:mb-3 mt-6 w-full">
+      <form className="flex flex-col gap-2 [&>input]:mb-3 mt-8 w-full">
         <Label htmlFor="email">Email</Label>
         <Input name="email" placeholder="you@example.com" required />
         <Label htmlFor="password">Password</Label>
@@ -62,6 +60,8 @@ export default function Signup() {
         </SubmitButton>
         {message && <FormMessage message={message} />}
       </form>
+
+      <SSOButtons className="mt-6" />
     </div>
   );
 }
