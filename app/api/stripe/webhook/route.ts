@@ -94,9 +94,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // Get subscription details
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const priceId = subscription.items.data[0]?.price.id;
 
-  // Find the plan that matches this price ID
+  // Find the pro plan (we currently only support pro as the paid plan)
   const { data: plans } = await supabaseAdmin
     .from("subscription_plans")
     .select("*")

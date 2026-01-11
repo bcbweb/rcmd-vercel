@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/utils/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
